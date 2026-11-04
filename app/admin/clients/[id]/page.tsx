@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, FileText, Globe2, Layers3, Mail, UsersRound } from "lucide-react";
 import { prisma } from "@ai-rankers/db";
 import { AppShell } from "../../../../components/app-shell";
+import { ClientSettingsForm } from "../../../../components/client-settings-form";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,13 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
           <article className="card admin-stat"><div className="admin-stat-label">Dashboard sections</div><div className="admin-stat-value">{client.sections.length}</div><div className="admin-stat-note">Ready for configuration</div></article>
           <article className="card admin-stat"><div className="admin-stat-label">Published metrics</div><div className="admin-stat-value">{client._count.metrics}</div><div className="admin-stat-note">Data source connections next</div></article>
           <article className="card admin-stat"><div className="admin-stat-label">Portal users</div><div className="admin-stat-value">{client._count.users}</div><div className="admin-stat-note">Invite client stakeholders</div></article>
+        </div>
+
+        <div className="dashboard-grid">
+          <section className="card panel">
+            <div className="panel-heading"><div><h2>SEO project configuration</h2><p>Choose the services and reporting details for this client.</p></div><Building2 size={18} color="#f26b38" /></div>
+            <ClientSettingsForm client={{ id: client.id, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
+          </section>
         </div>
 
         <div className="dashboard-grid">
