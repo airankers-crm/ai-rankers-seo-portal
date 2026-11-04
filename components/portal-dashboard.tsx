@@ -44,6 +44,8 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const reports = databaseData?.reports ?? demoReports;
   const clientName = databaseData?.businessName ?? demoClient.businessName;
   const chartData = useMemo(() => metrics.organicTraffic.history.map((point) => ({ label: point.label, value: point.value })), [metrics.organicTraffic.history]);
+  const trafficTrend = getMetricTrend(metrics.organicTraffic);
+  const keywordTrend = getMetricTrend(metrics.topTen);
 
   return (
     <AppShell mode="portal">
@@ -51,13 +53,26 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
         <div className="page-heading">
           <div>
             <p className="eyebrow">Client portal / November 2026</p>
-            <h1>Good morning, {clientName}.</h1>
-            <p>Your SEO program is moving in the right direction. Here is the clearest view of your performance and the work completed by your team.</p>
+            <h1>Your SEO progress, at a glance.</h1>
+            <p>A calm, clear view of what changed, what is working, and where your team is focusing next for {clientName}.</p>
           </div>
           <div className="heading-actions">
-            <button className="button"><Download size={14} /> Export view</button>
+            <button className="button" onClick={() => window.print()}><Download size={14} /> Print summary</button>
           </div>
         </div>
+
+        <section className="card executive-hero" aria-labelledby="executive-summary-title">
+          <div className="executive-copy">
+            <div className="executive-label"><span className="signal-dot" /> Executive summary <span>·</span> November 2026</div>
+            <h2 id="executive-summary-title">Momentum is building across search and local visibility.</h2>
+            <p>Organic traffic and search visibility are both trending up this period. The next focus is turning that visibility into more consistent local engagement and qualified demand.</p>
+            <div className="executive-points">
+              <div><CheckCircle2 size={16} /><span><strong>{formatMetricTrend(trafficTrend)} organic traffic</strong><small>vs previous period</small></span></div>
+              <div><CheckCircle2 size={16} /><span><strong>{metrics.topTen.value} top-10 keywords</strong><small>{formatMetricTrend(keywordTrend)} this period</small></span></div>
+            </div>
+          </div>
+          <div className="executive-signal"><div className="signal-orbit"><span>✓</span></div><p>Program status</p><strong>On track</strong><small>Healthy progress across active workstreams</small></div>
+        </section>
 
         <div className="range-bar">
           <div className="range-tabs" aria-label="Date range">
@@ -71,6 +86,17 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
           <MetricCard label="Search impressions" value={`${(metrics.impressions.value / 1000).toFixed(1)}K`} trend={formatMetricTrend(getMetricTrend(metrics.impressions))} icon={<TrendingUp size={15} />} positive />
           <MetricCard label="Keywords in top 10" value={metrics.topTen.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.topTen))} icon={<Sparkles size={15} />} tone="teal" positive />
           <MetricCard label="GBP calls generated" value={metrics.calls.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.calls))} icon={<MapPin size={15} />} tone="teal" positive />
+        </div>
+
+        <div className="insight-grid">
+          <section className="card insight-card insight-orange">
+            <div className="insight-icon"><TrendingUp size={16} /></div>
+            <div><p className="insight-label">What changed</p><h2>Visibility is compounding.</h2><p>Search impressions reached {(metrics.impressions.value / 1000).toFixed(1)}K while {metrics.topTen.value} keywords now appear in the top 10. That gives the next round of content and conversion work a stronger base.</p></div>
+          </section>
+          <section className="card insight-card insight-teal">
+            <div className="insight-icon"><Sparkles size={16} /></div>
+            <div><p className="insight-label">Next focus</p><h2>Turn attention into action.</h2><p>Keep the momentum moving through review responses, local content, and the service pages that are already attracting more organic visits.</p></div>
+          </section>
         </div>
 
         <div className="dashboard-grid">
