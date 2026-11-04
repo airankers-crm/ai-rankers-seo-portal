@@ -43,12 +43,15 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const activities = databaseData?.activities ?? demoActivities;
   const reports = databaseData?.reports ?? demoReports;
   const clientName = databaseData?.businessName ?? demoClient.businessName;
-  const chartData = useMemo(() => metrics.organicTraffic.history.map((point) => ({ label: point.label, value: point.value })), [metrics.organicTraffic.history]);
+  const chartData = useMemo(() => {
+    const visiblePoints = range === ranges[0] ? 2 : range === ranges[1] ? 3 : metrics.organicTraffic.history.length;
+    return metrics.organicTraffic.history.slice(-visiblePoints).map((point) => ({ label: point.label, value: point.value }));
+  }, [metrics.organicTraffic.history, range]);
   const trafficTrend = getMetricTrend(metrics.organicTraffic);
   const keywordTrend = getMetricTrend(metrics.topTen);
 
   return (
-    <AppShell mode="portal">
+    <AppShell mode="portal" clientName={clientName}>
       <div className="content">
         <div className="page-heading">
           <div>

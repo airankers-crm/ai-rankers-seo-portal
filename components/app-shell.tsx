@@ -17,6 +17,7 @@ import {
 type AppShellProps = {
   children: React.ReactNode;
   mode: "portal" | "admin";
+  clientName?: string;
 };
 
 const portalNav = [
@@ -34,7 +35,7 @@ const adminNav = [
   { label: "Audit activity", href: "/admin#audit", icon: Activity },
 ];
 
-export function AppShell({ children, mode }: AppShellProps) {
+export function AppShell({ children, mode, clientName }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = mode === "admin" ? adminNav : portalNav;
 
@@ -73,8 +74,8 @@ export function AppShell({ children, mode }: AppShellProps) {
           <div className="profile">
             <div className="avatar">JM</div>
             <div>
-              <div className="profile-name">Jordan Mitchell</div>
-              <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "Riverstone Dental"}</div>
+              <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
+              <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "SEO client"}</div>
             </div>
           </div>
         </div>
@@ -89,7 +90,7 @@ export function AppShell({ children, mode }: AppShellProps) {
             <div className="breadcrumb">{mode === "admin" ? "AI Rankers / " : "Client portal / "}<strong>{mode === "admin" ? "Workspace overview" : "Overview"}</strong></div>
           </div>
           <div className="top-actions">
-            <div className="preview-pill"><span className="dot" /> Demo workspace</div>
+            <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Demo workspace"}</div>
             <button className="icon-button" aria-label="Notifications"><Activity size={16} /></button>
             {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}
           </div>
