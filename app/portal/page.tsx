@@ -1,12 +1,14 @@
 import { PortalDashboard } from "../../components/portal-dashboard";
 import { prisma } from "@ai-rankers/db";
 import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
+import { requirePortalAccess } from "../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortalPage() {
+  const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: { slug: "riverstone-dental" },
+    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
     include: {
       metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
       activities: { orderBy: { createdAt: "desc" }, take: 3 },

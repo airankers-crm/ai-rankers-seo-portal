@@ -19,7 +19,7 @@ export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClie
             <h1>Workspace overview</h1>
             <p>Manage client dashboards, review publishing status, and keep the delivery team moving from one calm workspace.</p>
           </div>
-          <div className="heading-actions"><button className="button primary"><Plus size={14} /> Add client</button></div>
+          <div className="heading-actions"><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
         </div>
 
         <div className="admin-stat-grid">
@@ -30,7 +30,7 @@ export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClie
 
         <section className="card panel" id="clients">
           <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has an isolated dashboard, activity log, and publishing state.</p></div><button className="button"><UsersRound size={14} /> Manage users</button></div>
-          <div className="table-scroll"><table className="client-table"><thead><tr><th>Client</th><th>Services</th><th>Last published</th><th>Status</th><th /></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td><div className="client-name"><span className="client-logo">{client.initials}</span>{client.businessName}</div></td><td>{client.services.map((service) => <span className="service-tag" key={service}>{service}</span>)}</td><td>{client.lastPublished}</td><td><span className="status complete">{client.status}</span></td><td><Link className="table-action" href="/portal">Open portal <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></Link></td></tr>)}</tbody></table></div>
+          <div className="table-scroll"><table className="client-table"><thead><tr><th>Client</th><th>Services</th><th>Last published</th><th>Status</th><th /></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td><div className="client-name"><span className="client-logo">{client.initials}</span>{client.businessName}</div></td><td>{client.services.map((service) => <span className="service-tag" key={service}>{service}</span>)}</td><td>{client.lastPublished}</td><td><span className="status complete">{client.status}</span></td><td><Link className="table-action" href={`/admin/clients/${client.id}`}>Manage client <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></Link></td></tr>)}</tbody></table></div>
         </section>
 
         <div className="dashboard-grid" id="builder">
