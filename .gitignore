@@ -1,0 +1,8 @@
+.neon
+.agents/
+node_modules/
+.env
+.env.*
+!.env.example
+.next/
+tsconfig.tsbuildinfo
