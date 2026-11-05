@@ -98,8 +98,8 @@ async function main() {
   });
   await prisma.goalAnnotation.upsert({
     where: { id: `${client.id}-goal-milestone-pages` },
-    update: { goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published as the next organic growth milestone.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
-    create: { id: `${client.id}-goal-milestone-pages`, goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published as the next organic growth milestone.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
+    update: { goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
+    create: { id: `${client.id}-goal-milestone-pages`, goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
   });
   await prisma.goalAnnotation.upsert({
     where: { id: `${client.id}-goal-milestone-keywords` },

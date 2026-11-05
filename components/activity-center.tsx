@@ -15,17 +15,19 @@ import type { DemoActivity } from "@ai-rankers/core";
 import { demoActivities, demoClient } from "@ai-rankers/core";
 import { AppShell } from "./app-shell";
 import { EmptyState } from "./ui/primitives";
+import { ClientTaskCenter, type ClientTask } from "./client-task-center";
 
 type ActivityCenterProps = {
   businessName?: string;
   brandMark?: string | null;
   brandAccent?: string;
   activities?: DemoActivity[];
+  tasks?: ClientTask[];
 };
 
 type ActivityStatusFilter = "All statuses" | "Completed" | "In progress";
 
-export function ActivityCenter({ businessName, brandMark, brandAccent, activities = demoActivities }: ActivityCenterProps) {
+export function ActivityCenter({ businessName, brandMark, brandAccent, activities = demoActivities, tasks = [] }: ActivityCenterProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All workstreams");
   const [status, setStatus] = useState<ActivityStatusFilter>("All statuses");
@@ -71,9 +73,9 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
       <div className="content">
         <div className="page-heading activity-heading">
           <div>
-            <p className="eyebrow">Client portal / Activity log</p>
-            <h1>Work in motion, with context.</h1>
-            <p>A clear record of the SEO work completed, what is in progress, and where your team is focusing next for {clientName}.</p>
+            <p className="eyebrow">Client portal / Activities</p>
+            <h1>SEO activity</h1>
+            <p>{clientName} · Client-visible completed and in-progress work.</p>
           </div>
           <div className="heading-actions">
             <button className="button" type="button" onClick={exportCsv}><Download size={14} /> Export CSV</button>
@@ -93,13 +95,15 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
           <div><strong>{filteredActivities.length}</strong><span>visible activities</span></div>
           <div><strong>{completedCount}</strong><span>completed</span></div>
           <div><strong>{inProgressCount}</strong><span>in progress</span></div>
-          <div className="activity-summary-note"><Sparkles size={15} /><span>Published work is shared here as your team completes it.</span></div>
+          <div className="activity-summary-note"><Sparkles size={15} /><span>Activity records are visible after agency publication.</span></div>
         </div>
 
         <section className="card activity-panel" aria-labelledby="activity-log-title">
-          <div className="activity-panel-heading"><div><p className="eyebrow">Workspace history</p><h2 id="activity-log-title">SEO activity</h2><p>Completed and in-progress work across your active services.</p></div><span className="panel-meta">{activities.length} total</span></div>
+          <div className="activity-panel-heading"><div><p className="eyebrow">Activity records</p><h2 id="activity-log-title">SEO work</h2><p>Completed and in-progress work by service.</p></div><span className="panel-meta">{activities.length} total</span></div>
           {filteredActivities.length === 0 ? <EmptyState message="No activities match these filters. Try a broader search or clear the current view." /> : <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Workstream</th><th>Date</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredActivities.map((activity) => <tr key={activity.id}><td><div className="activity-name"><span className={`activity-status-icon ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</span><strong>{activity.title}</strong></div></td><td><span className="workstream-tag">{activity.category}</span></td><td className="activity-date">{activity.date}</td><td><span className={`status ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</span></td><td className="activity-detail-cell"><button className="table-action" type="button" onClick={() => setSelectedActivity(activity)}>View details</button></td></tr>)}</tbody></table></div>}
         </section>
+
+        <ClientTaskCenter initialTasks={tasks} />
       </div>
       {selectedActivity && <ActivityDetail activity={selectedActivity} onClose={() => setSelectedActivity(null)} />}
     </AppShell>
@@ -107,5 +111,5 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
 }
 
 function ActivityDetail({ activity, onClose }: { activity: DemoActivity; onClose: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onClick={onClose}><section className="report-modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-detail-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><p className="eyebrow">Activity detail</p><h2 id="activity-detail-title">{activity.title}</h2><p>{activity.category} · {activity.date}</p></div><button className="icon-button" type="button" aria-label="Close activity details" onClick={onClose}><X size={16} /></button></div><div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>{activity.status === "COMPLETED" ? "Work completed" : "Work in progress"}</strong><p>{activity.status === "COMPLETED" ? "This activity has been published to your client workspace." : "Your SEO team is actively working on this item and will update the workspace when it is complete."}</p></div></div><div className="report-preview-grid"><div><span>Workstream</span><strong>{activity.category}</strong></div><div><span>Timing</span><strong>{activity.date}</strong></div><div><span>Owner</span><strong>SEO team</strong></div></div><div className="modal-actions"><button className="button" type="button" onClick={onClose}>Close</button></div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onClick={onClose}><section className="report-modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-detail-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><p className="eyebrow">Activity detail</p><h2 id="activity-detail-title">{activity.title}</h2><p>{activity.category} · {activity.date}</p></div><button className="icon-button" type="button" aria-label="Close activity details" onClick={onClose}><X size={16} /></button></div><div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</strong><p>{activity.status === "COMPLETED" ? "This activity is published in the client workspace." : "The agency team has not marked this activity complete."}</p></div></div><div className="report-preview-grid"><div><span>Workstream</span><strong>{activity.category}</strong></div><div><span>Timing</span><strong>{activity.date}</strong></div><div><span>Owner</span><strong>SEO team</strong></div></div><div className="modal-actions"><button className="button" type="button" onClick={onClose}>Close</button></div></section></div>;
 }

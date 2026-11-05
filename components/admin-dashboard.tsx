@@ -17,7 +17,7 @@ export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClie
           <div>
             <p className="eyebrow">AI Rankers / Operations</p>
             <h1>Workspace overview</h1>
-            <p>Manage client dashboards, review publishing status, and keep the delivery team moving from one calm workspace.</p>
+            <p>Manage client workspaces, report status, and delivery operations.</p>
           </div>
           <div className="heading-actions"><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
         </div>

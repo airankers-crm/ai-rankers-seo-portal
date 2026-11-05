@@ -10,6 +10,7 @@ import {
   Building2,
   FileText,
   LayoutDashboard,
+  MessageCircle,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,15 +33,17 @@ const portalNav = [
   { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
   { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
   { label: "Activities", href: "/portal/activities", icon: Activity },
+  { label: "Team communication", href: "/portal/messages", icon: MessageCircle },
   { label: "Reports", href: "/portal/reports", icon: FileText },
 ];
 
 const adminNav = [
   { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
-  { label: "Clients", href: "/admin#clients", icon: UsersRound },
+  { label: "Clients", href: "/admin/clients", icon: UsersRound },
   { label: "Users", href: "/admin/users", icon: UsersRound },
-  { label: "Dashboard builder", href: "/admin#builder", icon: Settings2 },
-  { label: "Audit activity", href: "/admin#audit", icon: Activity },
+  { label: "Reports", href: "/admin/reports", icon: FileText },
+  { label: "Integrations", href: "/admin/integrations", icon: Settings2 },
+  { label: "Audit activity", href: "/admin/audit", icon: Activity },
 ];
 
 export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav }: AppShellProps) {

@@ -15,5 +15,5 @@ export function SignOutButton({ compact = false }: { compact?: boolean }) {
     router.refresh();
   }
 
-  return <button type="button" className={`profile-signout${compact ? " compact" : ""}`} aria-label="Sign out" title="Sign out" onClick={signOut}><LogOut size={13} /> {!compact && "Sign out"}</button>;
+  return <button type="button" className={`profile-signout${compact ? " compact" : ""}`} aria-label="Sign out" title="Sign out" onClick={signOut}><LogOut size={13} /><span className="profile-signout-label">Sign out</span></button>;
 }

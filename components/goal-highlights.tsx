@@ -41,7 +41,7 @@ function formatGoalDate(value: string, includeYear = false) {
 }
 
 export function GoalHighlights({ goals }: { goals: PortalGoal[] }) {
-  return <section className="card panel goals-panel" id="goals" aria-labelledby="goals-title"><div className="panel-heading"><div><p className="eyebrow">Goals and achievements</p><h2 id="goals-title">Progress clients can understand.</h2><p>Shared targets connect the work your team delivers to the outcomes your client cares about.</p></div><div className="goals-heading-icon"><Target size={18} /></div></div>{goals.length === 0 ? <div className="goal-empty"><Flag size={17} /><div><strong>No goals published yet</strong><p>Your SEO team will add shared targets when the reporting plan is ready.</p></div></div> : <div className="goal-grid">{goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}</div>}</section>;
+  return <section className="card panel goals-panel" id="goals" aria-labelledby="goals-title"><div className="panel-heading"><div><p className="eyebrow">Goals and milestones</p><h2 id="goals-title">Target status</h2><p>Current value, target, reporting period, and published milestones.</p></div><div className="goals-heading-icon"><Target size={18} /></div></div>{goals.length === 0 ? <div className="goal-empty"><Flag size={17} /><div><strong>No goals published</strong><p>No target records are available for this workspace.</p></div></div> : <div className="goal-grid">{goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}</div>}</section>;
 }
 
 function GoalCard({ goal }: { goal: PortalGoal }) {

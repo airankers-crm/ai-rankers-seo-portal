@@ -10,17 +10,26 @@ export default async function PortalPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: {
-      metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
-      activities: { orderBy: { createdAt: "desc" }, take: 3 },
-      reports: { orderBy: { createdAt: "desc" }, take: 3 },
-      goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } } , annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
-    },
+    select: { id: true, businessName: true, brandMark: true, brandAccent: true },
   });
 
   if (!client) return <PortalDashboard />;
 
-  const metricByKey = new Map(client.metrics.map((metric) => [metric.key, metric]));
+  const [metrics, activityRecords, reportRecords, goalRecords] = await Promise.all([
+    prisma.metric.findMany({ where: { clientId: client.id }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } }),
+    prisma.activity.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" }, take: 3 }),
+    prisma.report.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" }, take: 3 }),
+    prisma.goal.findMany({
+      where: { clientId: client.id, isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } },
+      include: {
+        metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } },
+        annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 },
+      },
+      orderBy: { endDate: "asc" },
+    }),
+  ]);
+
+  const metricByKey = new Map(metrics.map((metric) => [metric.key, metric]));
   const mapMetric = (key: string): DemoMetric | undefined => {
     const metric = metricByKey.get(key);
     if (!metric) return undefined;
@@ -31,9 +40,9 @@ export default async function PortalPage() {
   const impressions = mapMetric("gsc-impressions");
   const topTen = mapMetric("kw-top10");
   const calls = mapMetric("gbp-calls");
-  const activities: DemoActivity[] = client.activities.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress", status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS" }));
-  const reports: DemoReport[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel }));
-  const goals: PortalGoal[] = client.goals.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) }));
+  const activities: DemoActivity[] = activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress", status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS" }));
+  const reports: DemoReport[] = reportRecords.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel }));
+  const goals: PortalGoal[] = goalRecords.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) }));
 
   return <PortalDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, metrics: { organicTraffic, impressions, topTen, calls }, activities, reports, goals }} />;
 }

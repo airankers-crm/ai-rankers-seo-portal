@@ -73,16 +73,16 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
     <div className="content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Website SEO / Organic visibility</p>
-          <h1>See how search visibility is changing.</h1>
-          <p>Review the performance signals behind your client’s organic growth, then use the detail table to decide where the next work should focus.</p>
+          <p className="eyebrow">Website SEO / Reporting</p>
+          <h1>Website SEO performance</h1>
+          <p>{clientName} · Organic sessions, search impressions, and keyword coverage by reporting period.</p>
         </div>
         <div className="heading-actions"><span className="data-confidence"><CheckCircle2 size={13} /> Presentation data</span></div>
       </div>
 
       <section className="card seo-context-card" aria-labelledby="seo-context-title">
-        <div className="seo-context-copy"><div className="seo-context-label"><span className="client-brand-mark" style={{ backgroundColor: brandAccent }}>{brandMark}</span> SEO performance context</div><h2 id="seo-context-title">Visibility has a stronger base for the next optimization cycle.</h2><p>Organic sessions, Search Console impressions, and top-10 keyword coverage are shown together so the client can see both demand and discoverability.</p></div>
-        <div className="seo-context-note"><Info size={15} /><div><strong>How to read this page</strong><span>Values are grouped by reporting period. Source labels and freshness cues stay visible until live provider sync is connected.</span></div></div>
+        <div className="seo-context-copy"><div className="seo-context-label"><span className="client-brand-mark" style={{ backgroundColor: brandAccent }}>{brandMark}</span> Metric context</div><h2 id="seo-context-title">Organic search metrics</h2><p>Organic sessions, Search Console impressions, and top-10 keyword coverage shown by reporting period.</p></div>
+        <div className="seo-context-note"><Info size={15} /><div><strong>Data status</strong><span>Source labels and freshness remain visible until live provider sync is connected.</span></div></div>
       </section>
 
       <div className="range-bar seo-range-bar"><DateRangePicker value={dateRange} onApply={setDateRange} /><div className="freshness-summary"><span className="freshness-dot" /> Sources labeled · last synced Nov 3, 2026</div></div>
@@ -95,13 +95,13 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
       </div>
 
       <section className="card panel seo-table-panel" aria-labelledby="seo-table-title">
-        <div className="panel-heading"><div><p className="eyebrow">Performance detail</p><h2 id="seo-table-title">Organic visibility by period</h2><p>Use this view to spot sustained movement before opening a page or keyword-level detail view.</p></div><Table2 size={18} color="#148f83" /></div>
+        <div className="panel-heading"><div><p className="eyebrow">Performance detail</p><h2 id="seo-table-title">Organic search by period</h2><p>Compare period values before reviewing page or keyword detail.</p></div><Table2 size={18} color="#148f83" /></div>
         <div className="seo-table-toolbar"><label className="seo-search"><Search size={14} /><span className="sr-only">Search reporting periods</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search periods" /></label><span className="panel-meta">{visibleRows.length} periods · {dateRange.label}</span></div>
         {visibleRows.length === 0 ? <div className="empty-state"><div className="empty-state-mark"><Table2 size={15} /></div><p>No periods match this range. Try a broader date range or clear the search.</p></div> : <div className="seo-table-wrap"><table className="seo-table"><thead><tr><th>Reporting period</th><th><span>Organic sessions</span><small>GA4 · higher is better</small></th><th><span>Search impressions</span><small>GSC · higher is better</small></th><th><span>Top-10 keywords</span><small>Rank source · higher is better</small></th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={row.periodStart}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest available period" : "Historical period"}</span></td><td>{formatMetric(row.organicTraffic, organic?.format ?? "INTEGER")}</td><td>{formatMetric(row.impressions, impressions?.format ?? "INTEGER")}</td><td>{formatMetric(row.topTen, topTen?.format ?? "INTEGER")}</td></tr>)}</tbody></table></div>}
         <div className="seo-table-foot"><span><TrendingUp size={13} /> Trend direction is interpreted using each metric’s higher-is-better setting.</span><span>Provider sync will replace presentation values when connected.</span></div>
       </section>
 
-      <div className="seo-bottom-grid"><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Next focus</p><h2>Turn visibility into qualified demand.</h2><p>Use the strongest search signals to prioritize service-page improvements, internal linking, and conversion-focused content.</p></div></div><div className="seo-next-list"><div><CheckCircle2 size={15} /><span>Review pages attracting new organic sessions.</span></div><div><CheckCircle2 size={15} /><span>Connect source freshness before publishing a client report.</span></div><div><CheckCircle2 size={15} /><span>Compare keyword movement with completed SEO activities.</span></div></div></section><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Metric definitions</p><h2>Make the numbers clear.</h2><p>Every future provider-backed metric will keep its definition and source beside the value.</p></div></div><div className="definition-list">{metrics.map((metric) => <div key={metric.key}><strong>{metric.label}</strong><span>{metric.description}</span></div>)}</div></section></div>
+      <div className="seo-bottom-grid"><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Review items</p><h2>SEO delivery checks</h2><p>Use these checks when setting the next delivery task.</p></div></div><div className="seo-next-list"><div><CheckCircle2 size={15} /><span>Review pages with increasing organic sessions.</span></div><div><CheckCircle2 size={15} /><span>Confirm source freshness before publishing a report.</span></div><div><CheckCircle2 size={15} /><span>Compare keyword movement with completed activities.</span></div></div></section><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Metric definitions</p><h2>Definitions and sources</h2><p>Each metric includes its source and reporting definition.</p></div></div><div className="definition-list">{metrics.map((metric) => <div key={metric.key}><strong>{metric.label}</strong><span>{metric.description}</span></div>)}</div></section></div>
     </div>
   </AppShell>;
 }
