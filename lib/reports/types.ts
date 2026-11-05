@@ -23,6 +23,21 @@ export type ReportPeriodRow = {
   topTen: number | null;
 };
 
+export type ReportSearchDetailRow = {
+  label: string;
+  clicks: number | null;
+  impressions: number | null;
+  ctr: number | null;
+  position: number | null;
+};
+
+export type ReportLifecycleStage = {
+  label: string;
+  status: "AVAILABLE" | "PARTIAL" | "NOT_CONNECTED";
+  source: string;
+  detail: string;
+};
+
 export type ReportActivityView = {
   id: string;
   date: string;
@@ -64,8 +79,9 @@ export type ReportViewModel = {
   client: { businessName: string; brandMark: string; brandAccent: string; websiteUrl: string | null };
   period: { label: string; comparisonLabel: string; lastDataContext: string };
   summary: { status: "ON_TRACK" | "ATTENTION" | "NO_DATA"; title: string; body: string; highlights: string[]; risks: string[]; nextActions: string[] };
+  crm: { lifecycle: ReportLifecycleStage[]; availableNow: string[]; nextConnections: string[] };
   kpis: ReportMetricView[];
-  websiteSeo: { rows: ReportPeriodRow[]; highlights: string[]; opportunities: string[] };
+  websiteSeo: { rows: ReportPeriodRow[]; highlights: string[]; opportunities: string[]; queryRows: ReportSearchDetailRow[]; pageRows: ReportSearchDetailRow[] };
   goals: ReportGoalView[];
   localSeo: { metrics: { label: string; value: string; status: ReportMetricStatus; source: string }[]; summary: string };
   activities: ReportActivityView[];
