@@ -17,8 +17,7 @@ import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
 import { AppShell } from "./app-shell";
 import { TrendChart } from "./trend-chart";
 import { EmptyState, MetricCard, SectionHeader } from "./ui/primitives";
-
-const ranges = ["Last 30 days", "Last 90 days", "This year"];
+import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
 
 type PortalDatabaseData = {
   businessName: string;
@@ -35,7 +34,7 @@ type PortalDatabaseData = {
 };
 
 export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabaseData }) {
-  const [range, setRange] = useState(ranges[0]);
+  const [dateRange, setDateRange] = useState<DateRangeSelection>(getDefaultDateRange);
   const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null);
   const reportTriggerRef = useRef<HTMLButtonElement | null>(null);
   const metrics = {
@@ -48,9 +47,9 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const reports = databaseData?.reports ?? demoReports;
   const clientName = databaseData?.businessName ?? demoClient.businessName;
   const chartData = useMemo(() => {
-    const visiblePoints = range === ranges[0] ? 2 : range === ranges[1] ? 3 : metrics.organicTraffic.history.length;
+    const visiblePoints = dateRange.label === "Last 30 days" ? 2 : dateRange.label === "Last 90 days" ? 3 : metrics.organicTraffic.history.length;
     return metrics.organicTraffic.history.slice(-visiblePoints).map((point) => ({ label: point.label, value: point.value }));
-  }, [metrics.organicTraffic.history, range]);
+  }, [dateRange.label, metrics.organicTraffic.history]);
   const trafficTrend = getMetricTrend(metrics.organicTraffic);
   const keywordTrend = getMetricTrend(metrics.topTen);
   const brandMark = databaseData?.brandMark ?? clientName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
@@ -84,9 +83,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
         </section>
 
         <div className="range-bar">
-          <div className="range-tabs" aria-label="Date range">
-            {ranges.map((item) => <button key={item} type="button" className={`range-tab${range === item ? " active" : ""}`} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}
-          </div>
+          <DateRangePicker value={dateRange} onApply={setDateRange} />
           <div className="sync-note"><span className="dot" /> Last synced Nov 3, 2026 · Google data has a 2–3 day delay</div>
         </div>
 
@@ -110,7 +107,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
 
         <div className="dashboard-grid">
           <section className="card panel" id="website">
-            <SectionHeader title="Organic traffic trend" description={`Sessions from organic search · ${range.toLowerCase()}`} action={<div className="legend"><span className="legend-line" /> Organic sessions</div>} />
+            <SectionHeader title="Organic traffic trend" description={`Sessions from organic search · ${dateRange.label.toLowerCase()}`} action={<div className="legend"><span className="legend-line" /> Organic sessions</div>} />
             <TrendChart data={chartData} />
           </section>
           <section className="card panel" id="gbp">
