@@ -44,6 +44,21 @@ export type ReportRecommendationView = {
   status: "Proposed" | "Approved" | "In progress" | "Complete" | "Waiting for client" | "Rejected";
 };
 
+export type ReportGoalView = {
+  id: string;
+  name: string;
+  description: string | null;
+  target: number;
+  current: number | null;
+  metricName: string | null;
+  valueFormat: string | null;
+  condition: "GREATER_THAN_OR_EQUAL" | "LESS_THAN_OR_EQUAL" | "EQUALS";
+  status: "ACTIVE" | "ACHIEVED" | "PAUSED" | "ARCHIVED";
+  startDate: string;
+  endDate: string;
+  annotations: { id: string; title: string; body: string | null; happenedAt: string }[];
+};
+
 export type ReportViewModel = {
   report: { id: string; title: string; type: string; periodLabel: string; status: ReportStatus; publishedAt: string; updatedAt: string };
   client: { businessName: string; brandMark: string; brandAccent: string; websiteUrl: string | null };
@@ -51,6 +66,7 @@ export type ReportViewModel = {
   summary: { status: "ON_TRACK" | "ATTENTION" | "NO_DATA"; title: string; body: string; highlights: string[]; risks: string[]; nextActions: string[] };
   kpis: ReportMetricView[];
   websiteSeo: { rows: ReportPeriodRow[]; highlights: string[]; opportunities: string[] };
+  goals: ReportGoalView[];
   localSeo: { metrics: { label: string; value: string; status: ReportMetricStatus; source: string }[]; summary: string };
   activities: ReportActivityView[];
   recommendations: ReportRecommendationView[];
