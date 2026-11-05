@@ -57,7 +57,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const brandAccent = databaseData?.brandAccent ?? "#F26B38";
 
   return (
-    <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent}>
+    <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Overview">
       <div className="content">
         <div className="page-heading">
           <div>

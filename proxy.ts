@@ -7,7 +7,7 @@ export default function proxy(request: NextRequest) {
 
   return auth.middleware({
     loginUrl: "/auth/sign-in",
-    publicRoutes: ["/"],
+    publicRoutes: ["/", "/invite"],
   })(request);
 }
 

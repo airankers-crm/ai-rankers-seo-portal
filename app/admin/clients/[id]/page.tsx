@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, FileText, Globe2, Layers3, Mail, UsersRound } fro
 import { prisma } from "@ai-rankers/db";
 import { AppShell } from "../../../../components/app-shell";
 import { ClientSettingsForm } from "../../../../components/client-settings-form";
+import { ClientInvitationForm } from "../../../../components/client-invitation-form";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,10 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
           <section className="card panel">
             <div className="panel-heading"><div><h2>SEO project configuration</h2><p>Choose the services and reporting details for this client.</p></div><Building2 size={18} color="#f26b38" /></div>
             <ClientSettingsForm client={{ id: client.id, brandMark: client.brandMark, brandAccent: client.brandAccent, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
+          </section>
+          <section className="card panel">
+            <div className="panel-heading"><div><h2>Invite workspace users</h2><p>Share access with the client team when the presentation is ready.</p></div><UsersRound size={18} color="#148f83" /></div>
+            <ClientInvitationForm clientId={client.id} />
           </section>
         </div>
 

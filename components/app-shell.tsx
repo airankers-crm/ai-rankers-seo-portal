@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { SignOutButton } from "./sign-out-button";
 import {
   Activity,
   BarChart3,
@@ -20,24 +21,26 @@ type AppShellProps = {
   clientName?: string;
   brandMark?: string;
   brandAccent?: string;
+  activeNav?: string;
 };
 
 const portalNav = [
   { label: "Overview", href: "/portal", icon: LayoutDashboard },
   { label: "Website SEO", href: "/portal#website", icon: BarChart3 },
   { label: "GBP performance", href: "/portal#gbp", icon: Building2 },
-  { label: "Activities", href: "/portal#activities", icon: Activity },
+  { label: "Activities", href: "/portal/activities", icon: Activity },
   { label: "Reports", href: "/portal#reports", icon: FileText },
 ];
 
 const adminNav = [
   { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin#clients", icon: UsersRound },
+  { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Dashboard builder", href: "/admin#builder", icon: Settings2 },
   { label: "Audit activity", href: "/admin#audit", icon: Activity },
 ];
 
-export function AppShell({ children, mode, clientName, brandMark, brandAccent }: AppShellProps) {
+export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = mode === "admin" ? adminNav : portalNav;
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
@@ -58,7 +61,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent }:
           {nav.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.label} className={`nav-item${item.label === (mode === "admin" ? "Workspace overview" : "Overview") ? " active" : ""}`} href={item.href} onClick={() => setMobileOpen(false)}>
+              <Link key={item.label} className={`nav-item${item.label === (activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview")) ? " active" : ""}`} href={item.href} onClick={() => setMobileOpen(false)}>
                 <Icon size={16} strokeWidth={1.8} />
                 {item.label}
               </Link>
@@ -80,6 +83,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent }:
               <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "SEO client"}</div>
             </div>
+            <SignOutButton />
           </div>
         </div>
       </aside>
@@ -90,7 +94,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent }:
             <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu size={17} />
             </button>
-            <div className="breadcrumb">{mode === "admin" ? "AI Rankers / " : "Client portal / "}<strong>{mode === "admin" ? "Workspace overview" : "Overview"}</strong></div>
+            <div className="breadcrumb">{mode === "admin" ? "AI Rankers / " : "Client portal / "}<strong>{mode === "admin" ? activeNav ?? "Workspace overview" : activeNav === "Activities" ? "Activity log" : "Overview"}</strong></div>
           </div>
           <div className="top-actions">
             <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Demo workspace"}</div>

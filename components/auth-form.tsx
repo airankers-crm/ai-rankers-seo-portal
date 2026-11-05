@@ -48,6 +48,7 @@ export function AuthForm({ mode, redirectTo }: { mode: "sign-in" | "sign-up"; re
           {error && <p className="auth-error" role="alert">{error}</p>}
           <button className="button primary auth-submit" disabled={pending}>{pending ? "Working…" : mode === "sign-in" ? "Sign in" : "Create account"}</button>
         </form>
+        {mode === "sign-in" && <Link className="auth-recovery" href={`/auth/reset-password?redirectTo=${encodeURIComponent(redirectTo)}`}>Forgot your password?</Link>}
         <p className="auth-switch">{mode === "sign-in" ? "New to AI Rankers?" : "Already have an account?"} <Link href={`${mode === "sign-in" ? "/auth/sign-up" : "/auth/sign-in"}?redirectTo=${encodeURIComponent(redirectTo)}`}>{mode === "sign-in" ? "Create an account" : "Sign in"}</Link></p>
       </section>
     </main>

@@ -18,6 +18,13 @@ enum UserStatus {
   DISABLED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
 enum ClientStatus {
   ACTIVE
   PAUSED
@@ -76,6 +83,7 @@ model User {
   client          Client?      @relation(fields: [clientId], references: [id])
   allClients      Boolean      @default(false)
   assignedClients ClientAdmin[]
+  sentInvitations ClientInvitation[] @relation("InvitationSender")
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   auditLogs       AuditLog[]
@@ -95,6 +103,7 @@ model Client {
   status       ClientStatus  @default(ACTIVE)
   users        User[]
   admins       ClientAdmin[]
+  invitations  ClientInvitation[]
   sections     Section[]
   metrics      Metric[]
   activities   Activity[]
@@ -113,6 +122,25 @@ model ClientAdmin {
 
   @@id([clientId, userId])
   @@index([userId])
+}
+
+model ClientInvitation {
+  id          String           @id @default(cuid())
+  clientId    String
+  email       String
+  role        Role             @default(CLIENT)
+  tokenHash   String           @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invitedBy   User             @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Restrict)
+  createdAt   DateTime         @default(now())
+
+  @@index([clientId, status])
+  @@index([email, status])
+  @@index([expiresAt])
 }
 
 model Section {

@@ -29,7 +29,7 @@ export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClie
         </div>
 
         <section className="card panel" id="clients">
-          <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has an isolated dashboard, activity log, and publishing state.</p></div><button className="button"><UsersRound size={14} /> Manage users</button></div>
+          <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has an isolated dashboard, activity log, and publishing state.</p></div><Link className="button" href="/admin/users"><UsersRound size={14} /> Manage users</Link></div>
           <div className="table-scroll"><table className="client-table"><thead><tr><th>Client</th><th>Services</th><th>Last published</th><th>Status</th><th /></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td><div className="client-name"><span className="client-logo">{client.initials}</span>{client.businessName}</div></td><td>{client.services.map((service) => <span className="service-tag" key={service}>{service}</span>)}</td><td>{client.lastPublished}</td><td><span className="status complete">{client.status}</span></td><td><Link className="table-action" href={`/admin/clients/${client.id}`}>Manage client <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></Link></td></tr>)}</tbody></table></div>
         </section>
 
