@@ -18,6 +18,7 @@ import { AppShell } from "./app-shell";
 import { TrendChart } from "./trend-chart";
 import { EmptyState, MetricCard, SectionHeader } from "./ui/primitives";
 import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
+import { GoalHighlights, type PortalGoal } from "./goal-highlights";
 
 type PortalDatabaseData = {
   businessName: string;
@@ -31,6 +32,7 @@ type PortalDatabaseData = {
   };
   activities: DemoActivity[];
   reports: DemoReport[];
+  goals?: PortalGoal[];
 };
 
 export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabaseData }) {
@@ -45,6 +47,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   };
   const activities = databaseData?.activities ?? demoActivities;
   const reports = databaseData?.reports ?? demoReports;
+  const goals = databaseData?.goals ?? [];
   const clientName = databaseData?.businessName ?? demoClient.businessName;
   const chartData = useMemo(() => {
     const visiblePoints = dateRange.label === "Last 30 days" ? 2 : dateRange.label === "Last 90 days" ? 3 : metrics.organicTraffic.history.length;
@@ -104,6 +107,8 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
             <div><p className="insight-label">Next focus</p><h2>Turn attention into action.</h2><p>Keep the momentum moving through review responses, local content, and the service pages that are already attracting more organic visits.</p></div>
           </section>
         </div>
+
+        <GoalHighlights goals={goals} />
 
         <div className="dashboard-grid">
           <section className="card panel" id="website">

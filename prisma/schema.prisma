@@ -71,6 +71,19 @@ enum ActivityStatus {
   COMPLETED
 }
 
+enum GoalCondition {
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN_OR_EQUAL
+  EQUALS
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  PAUSED
+  ARCHIVED
+}
+
 model User {
   id              String       @id @default(cuid())
   authUserId       String?      @unique
@@ -84,6 +97,8 @@ model User {
   allClients      Boolean      @default(false)
   assignedClients ClientAdmin[]
   sentInvitations ClientInvitation[] @relation("InvitationSender")
+  createdGoals    Goal[]             @relation("GoalCreator")
+  goalAnnotations GoalAnnotation[]   @relation("GoalAnnotationCreator")
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   auditLogs       AuditLog[]
@@ -109,6 +124,7 @@ model Client {
   activities   Activity[]
   reports      Report[]
   versions     DashboardVersion[]
+  goals        Goal[]
   auditLogs    AuditLog[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -176,11 +192,51 @@ model Metric {
   client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   section       Section       @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   values        MetricValue[]
+  goals         Goal[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   @@unique([clientId, key])
   @@index([clientId, sectionId, position])
+}
+
+model Goal {
+  id          String        @id @default(cuid())
+  clientId    String
+  metricId    String?
+  createdById String?
+  name        String
+  description String?
+  condition   GoalCondition  @default(GREATER_THAN_OR_EQUAL)
+  target      Decimal       @db.Decimal(18, 4)
+  startDate   DateTime
+  endDate     DateTime
+  status      GoalStatus     @default(ACTIVE)
+  isVisible   Boolean        @default(true)
+  client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  metric      Metric?        @relation(fields: [metricId], references: [id], onDelete: SetNull)
+  createdBy   User?          @relation("GoalCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  annotations GoalAnnotation[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([clientId, status, endDate])
+  @@index([metricId])
+}
+
+model GoalAnnotation {
+  id          String    @id @default(cuid())
+  goalId      String
+  createdById String?
+  title       String
+  body        String?
+  happenedAt  DateTime
+  isVisible   Boolean   @default(true)
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("GoalAnnotationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  @@index([goalId, happenedAt])
 }
 
 model MetricValue {

@@ -5,6 +5,7 @@ import { prisma } from "@ai-rankers/db";
 import { AppShell } from "../../../../components/app-shell";
 import { ClientSettingsForm } from "../../../../components/client-settings-form";
 import { ClientInvitationForm } from "../../../../components/client-invitation-form";
+import { GoalManagement } from "../../../../components/goal-management";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,8 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
     where: { id },
     include: {
       sections: { orderBy: { position: "asc" } },
+      metrics: { select: { id: true, name: true, valueFormat: true }, orderBy: { position: "asc" } },
+      goals: { include: { metric: { select: { name: true } } }, orderBy: { endDate: "asc" } },
       _count: { select: { users: true, metrics: true, reports: true, activities: true } },
     },
   });
@@ -39,6 +42,10 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
           <article className="card admin-stat"><div className="admin-stat-label">Dashboard sections</div><div className="admin-stat-value">{client.sections.length}</div><div className="admin-stat-note">Ready for configuration</div></article>
           <article className="card admin-stat"><div className="admin-stat-label">Published metrics</div><div className="admin-stat-value">{client._count.metrics}</div><div className="admin-stat-note">Data source connections next</div></article>
           <article className="card admin-stat"><div className="admin-stat-label">Portal users</div><div className="admin-stat-value">{client._count.users}</div><div className="admin-stat-note">Invite client stakeholders</div></article>
+        </div>
+
+        <div className="dashboard-grid">
+          <GoalManagement clientId={client.id} metrics={client.metrics} initialGoals={client.goals.map((goal) => ({ id: goal.id, name: goal.name, target: goal.target.toString(), metricName: goal.metric?.name ?? null, status: goal.status }))} />
         </div>
 
         <div className="dashboard-grid">

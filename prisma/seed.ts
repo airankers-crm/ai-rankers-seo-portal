@@ -30,7 +30,7 @@ async function main() {
     },
   });
 
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: "admin@airankers.local" },
     update: { name: "Jordan Mitchell", role: "SUPER_ADMIN", status: "ACTIVE" },
     create: { email: "admin@airankers.local", name: "Jordan Mitchell", role: "SUPER_ADMIN", status: "ACTIVE", allClients: true },
@@ -83,6 +83,29 @@ async function main() {
       });
     }
   }
+
+  const organicMetric = await prisma.metric.findUnique({ where: { clientId_key: { clientId: client.id, key: "ga4-organic-sessions" } } });
+  const keywordMetric = await prisma.metric.findUnique({ where: { clientId_key: { clientId: client.id, key: "kw-top10" } } });
+  const organicGoal = await prisma.goal.upsert({
+    where: { id: `${client.id}-goal-organic-traffic` },
+    update: { name: "Grow organic traffic", description: "Build qualified search visibility through the current website SEO workstream.", metricId: organicMetric?.id, target: new Prisma.Decimal(9000), startDate: new Date("2026-11-01T00:00:00.000Z"), endDate: new Date("2026-12-31T23:59:59.999Z"), status: "ACTIVE", isVisible: true },
+    create: { id: `${client.id}-goal-organic-traffic`, clientId: client.id, createdById: admin.id, name: "Grow organic traffic", description: "Build qualified search visibility through the current website SEO workstream.", metricId: organicMetric?.id, condition: "GREATER_THAN_OR_EQUAL", target: new Prisma.Decimal(9000), startDate: new Date("2026-11-01T00:00:00.000Z"), endDate: new Date("2026-12-31T23:59:59.999Z"), status: "ACTIVE", isVisible: true },
+  });
+  const keywordGoal = await prisma.goal.upsert({
+    where: { id: `${client.id}-goal-top-ten` },
+    update: { name: "Expand top-10 keyword coverage", description: "Increase the number of priority terms reaching the first page of search results.", metricId: keywordMetric?.id, target: new Prisma.Decimal(75), startDate: new Date("2026-11-01T00:00:00.000Z"), endDate: new Date("2026-12-31T23:59:59.999Z"), status: "ACTIVE", isVisible: true },
+    create: { id: `${client.id}-goal-top-ten`, clientId: client.id, createdById: admin.id, name: "Expand top-10 keyword coverage", description: "Increase the number of priority terms reaching the first page of search results.", metricId: keywordMetric?.id, condition: "GREATER_THAN_OR_EQUAL", target: new Prisma.Decimal(75), startDate: new Date("2026-11-01T00:00:00.000Z"), endDate: new Date("2026-12-31T23:59:59.999Z"), status: "ACTIVE", isVisible: true },
+  });
+  await prisma.goalAnnotation.upsert({
+    where: { id: `${client.id}-goal-milestone-pages` },
+    update: { goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published as the next organic growth milestone.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
+    create: { id: `${client.id}-goal-milestone-pages`, goalId: organicGoal.id, createdById: admin.id, title: "Service page optimization milestone", body: "Core service pages were optimized and published as the next organic growth milestone.", happenedAt: new Date("2026-11-04T12:00:00.000Z"), isVisible: true },
+  });
+  await prisma.goalAnnotation.upsert({
+    where: { id: `${client.id}-goal-milestone-keywords` },
+    update: { goalId: keywordGoal.id, createdById: admin.id, title: "Keyword visibility milestone", body: "The program reached 68 top-10 keywords this period, moving closer to the 75-term target.", happenedAt: new Date("2026-11-01T12:00:00.000Z"), isVisible: true },
+    create: { id: `${client.id}-goal-milestone-keywords`, goalId: keywordGoal.id, createdById: admin.id, title: "Keyword visibility milestone", body: "The program reached 68 top-10 keywords this period, moving closer to the 75-term target.", happenedAt: new Date("2026-11-01T12:00:00.000Z"), isVisible: true },
+  });
 
   await prisma.activity.deleteMany({ where: { clientId: client.id } });
   await prisma.activity.createMany({ data: [

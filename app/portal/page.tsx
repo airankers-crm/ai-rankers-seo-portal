@@ -2,6 +2,7 @@ import { PortalDashboard } from "../../components/portal-dashboard";
 import { prisma } from "@ai-rankers/db";
 import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
 import { requirePortalAccess } from "../../lib/auth/access";
+import type { PortalGoal } from "../../components/goal-highlights";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default async function PortalPage() {
       metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
       activities: { orderBy: { createdAt: "desc" }, take: 3 },
       reports: { orderBy: { createdAt: "desc" }, take: 3 },
+      goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } } , annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
     },
   });
 
@@ -31,6 +33,7 @@ export default async function PortalPage() {
   const calls = mapMetric("gbp-calls");
   const activities: DemoActivity[] = client.activities.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress", status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS" }));
   const reports: DemoReport[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel }));
+  const goals: PortalGoal[] = client.goals.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) }));
 
-  return <PortalDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, metrics: { organicTraffic, impressions, topTen, calls }, activities, reports }} />;
+  return <PortalDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, metrics: { organicTraffic, impressions, topTen, calls }, activities, reports, goals }} />;
 }
