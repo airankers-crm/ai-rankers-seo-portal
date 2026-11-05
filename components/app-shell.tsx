@@ -94,7 +94,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent }:
           </div>
           <div className="top-actions">
             <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Demo workspace"}</div>
-            <button className="icon-button" aria-label="Notifications"><Activity size={16} /></button>
+            <div className="icon-button icon-button-muted" role="img" aria-label="Notifications will be available in a future release" title="Notifications will be available in a future release"><Activity size={16} /></div>
             {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}
           </div>
         </header>
