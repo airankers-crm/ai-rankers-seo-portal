@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { SignOutButton } from "./sign-out-button";
 import {
@@ -27,9 +28,9 @@ type AppShellProps = {
 const portalNav = [
   { label: "Overview", href: "/portal", icon: LayoutDashboard },
   { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
-  { label: "GBP performance", href: "/portal#gbp", icon: Building2 },
+  { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
   { label: "Activities", href: "/portal/activities", icon: Activity },
-  { label: "Reports", href: "/portal#reports", icon: FileText },
+  { label: "Reports", href: "/portal/reports", icon: FileText },
 ];
 
 const adminNav = [
@@ -49,11 +50,8 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     <div className="app-shell">
       <aside className={`sidebar${mobileOpen ? " open" : ""}`}>
         <div className="brand">
-          <div className="brand-mark">A</div>
-          <div>
-            <div className="brand-name">AI Rankers</div>
-            <span className="brand-sub">SEO intelligence</span>
-          </div>
+          <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>
+          <span className="brand-sub">SEO intelligence</span>
         </div>
 
         <div className="nav-label">{mode === "admin" ? "Operations" : "Your workspace"}</div>
