@@ -26,7 +26,7 @@ type AppShellProps = {
 
 const portalNav = [
   { label: "Overview", href: "/portal", icon: LayoutDashboard },
-  { label: "Website SEO", href: "/portal#website", icon: BarChart3 },
+  { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
   { label: "GBP performance", href: "/portal#gbp", icon: Building2 },
   { label: "Activities", href: "/portal/activities", icon: Activity },
   { label: "Reports", href: "/portal#reports", icon: FileText },
@@ -94,7 +94,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
             <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu size={17} />
             </button>
-            <div className="breadcrumb">{mode === "admin" ? "AI Rankers / " : "Client portal / "}<strong>{mode === "admin" ? activeNav ?? "Workspace overview" : activeNav === "Activities" ? "Activity log" : "Overview"}</strong></div>
+            <div className="breadcrumb">{mode === "admin" ? "AI Rankers / " : "Client portal / "}<strong>{mode === "admin" ? activeNav ?? "Workspace overview" : activeNav ?? "Overview"}</strong></div>
           </div>
           <div className="top-actions">
             <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Demo workspace"}</div>
