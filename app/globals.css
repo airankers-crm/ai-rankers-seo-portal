@@ -214,6 +214,28 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(60,110,232,.28);
 .service-option strong { color: var(--ink); font-size: 11px; }
 .service-option small { color: var(--muted); font-size: 10px; line-height: 1.45; }
 .save-status { margin-right: auto; color: var(--teal); font-size: 11px; font-weight: 700; }
+.loading-content { animation: rise-in .25s var(--ease-standard) both; }
+.loading-heading { display: grid; gap: 10px; margin-bottom: 27px; }
+.skeleton { display: block; border-radius: 8px; background: linear-gradient(100deg, #edf0f4 25%, #f8f9fb 37%, #edf0f4 63%); background-size: 400% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skeleton-eyebrow { width: 150px; height: 10px; }
+.skeleton-title { width: min(520px, 70%); height: 39px; border-radius: 10px; }
+.skeleton-copy { width: min(660px, 86%); height: 14px; }
+.skeleton-hero { display: grid; gap: 12px; min-height: 230px; margin-bottom: 14px; padding: 29px; }
+.skeleton-label { width: 170px; height: 12px; }
+.skeleton-hero-title { width: min(650px, 82%); height: 34px; border-radius: 10px; }
+.skeleton-hero-copy { width: min(580px, 75%); height: 42px; }
+.skeleton-card { min-height: 143px; display: grid; align-content: space-between; padding: 17px; }
+.skeleton-small { width: 90px; height: 12px; }
+.skeleton-number { width: 115px; height: 30px; border-radius: 9px; }
+.skeleton-foot { width: 145px; height: 10px; }
+.skeleton-panel { min-height: 315px; }
+.error-content { display: grid; place-items: center; min-height: calc(100vh - 72px); }
+.error-state { width: min(100%, 540px); padding: 34px; text-align: center; }
+.error-icon { width: 44px; height: 44px; display: grid; place-items: center; margin: 0 auto 17px; border-radius: 13px; color: #a23d27; background: #fff0eb; }
+.error-state h1 { margin: 0; color: var(--navy); font-family: "Manrope", sans-serif; font-size: 26px; letter-spacing: -.04em; }
+.error-state > p:not(.eyebrow) { max-width: 390px; margin: 10px auto 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 
