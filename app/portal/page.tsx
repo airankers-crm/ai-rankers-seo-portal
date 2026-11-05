@@ -32,5 +32,5 @@ export default async function PortalPage() {
   const activities: DemoActivity[] = client.activities.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress", status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS" }));
   const reports: DemoReport[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel }));
 
-  return <PortalDashboard databaseData={{ businessName: client.businessName, metrics: { organicTraffic, impressions, topTen, calls }, activities, reports }} />;
+  return <PortalDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, metrics: { organicTraffic, impressions, topTen, calls }, activities, reports }} />;
 }

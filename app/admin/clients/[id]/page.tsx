@@ -43,7 +43,7 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
         <div className="dashboard-grid">
           <section className="card panel">
             <div className="panel-heading"><div><h2>SEO project configuration</h2><p>Choose the services and reporting details for this client.</p></div><Building2 size={18} color="#f26b38" /></div>
-            <ClientSettingsForm client={{ id: client.id, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
+            <ClientSettingsForm client={{ id: client.id, brandMark: client.brandMark, brandAccent: client.brandAccent, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
           </section>
         </div>
 

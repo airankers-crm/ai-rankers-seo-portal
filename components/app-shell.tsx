@@ -18,6 +18,8 @@ type AppShellProps = {
   children: React.ReactNode;
   mode: "portal" | "admin";
   clientName?: string;
+  brandMark?: string;
+  brandAccent?: string;
 };
 
 const portalNav = [
@@ -35,7 +37,7 @@ const adminNav = [
   { label: "Audit activity", href: "/admin#audit", icon: Activity },
 ];
 
-export function AppShell({ children, mode, clientName }: AppShellProps) {
+export function AppShell({ children, mode, clientName, brandMark, brandAccent }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = mode === "admin" ? adminNav : portalNav;
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
@@ -73,7 +75,7 @@ export function AppShell({ children, mode, clientName }: AppShellProps) {
             </div>
           </div>
           <div className="profile">
-            <div className="avatar">{mode === "admin" ? "JM" : clientInitials}</div>
+            <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
             <div>
               <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "SEO client"}</div>

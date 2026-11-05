@@ -16,10 +16,12 @@ const periods = [
 async function main() {
   const client = await prisma.client.upsert({
     where: { slug: "riverstone-dental" },
-    update: { businessName: "Riverstone Dental", status: "ACTIVE", hasWebsiteSeo: true, hasGbpSeo: true },
+    update: { businessName: "Riverstone Dental", status: "ACTIVE", brandMark: "RD", brandAccent: "#16847A", hasWebsiteSeo: true, hasGbpSeo: true },
     create: {
       businessName: "Riverstone Dental",
       slug: "riverstone-dental",
+      brandMark: "RD",
+      brandAccent: "#16847A",
       websiteUrl: "https://riverstonedental.com",
       contactEmail: "hello@riverstonedental.com",
       hasWebsiteSeo: true,

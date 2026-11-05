@@ -14,7 +14,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await prisma.client.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Client workspace not found." }, { status: 404 });
 
-  const body = await request.json().catch(() => null) as { websiteUrl?: string; contactEmail?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
+  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
     try {
@@ -29,11 +29,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Contact email must be valid." }, { status: 400 });
   }
 
+  const brandMark = body?.brandMark?.trim().slice(0, 3).toUpperCase() || null;
+  const brandAccent = body?.brandAccent?.trim() || existing.brandAccent;
+  if (!/^#[0-9A-Fa-f]{6}$/.test(brandAccent)) {
+    return NextResponse.json({ error: "Accent color must be a six-digit hex color." }, { status: 400 });
+  }
+
   const updated = await prisma.client.update({
     where: { id },
     data: {
       websiteUrl,
       contactEmail,
+      brandMark,
+      brandAccent,
       timezone: body?.timezone?.trim() || existing.timezone,
       hasWebsiteSeo: body?.hasWebsiteSeo ?? existing.hasWebsiteSeo,
       hasGbpSeo: body?.hasGbpSeo ?? existing.hasGbpSeo,
@@ -47,7 +55,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       action: "CLIENT_SETTINGS_UPDATED",
       entityType: "Client",
       entityId: updated.id,
-      after: { websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo },
+      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo },
     },
   });
 

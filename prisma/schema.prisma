@@ -85,6 +85,8 @@ model Client {
   id           String        @id @default(cuid())
   businessName String
   slug         String        @unique
+  brandMark    String?
+  brandAccent  String        @default("#F26B38")
   websiteUrl   String?
   contactEmail String?
   timezone     String        @default("America/New_York")

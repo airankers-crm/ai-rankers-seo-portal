@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   CheckCircle2,
   Clock3,
   Download,
@@ -18,11 +16,14 @@ import { demoClient, demoMetrics, demoReports, demoActivities, formatMetricTrend
 import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
 import { AppShell } from "./app-shell";
 import { TrendChart } from "./trend-chart";
+import { EmptyState, MetricCard, SectionHeader } from "./ui/primitives";
 
 const ranges = ["Last 30 days", "Last 90 days", "This year"];
 
 type PortalDatabaseData = {
   businessName: string;
+  brandMark?: string | null;
+  brandAccent?: string;
   metrics: {
     organicTraffic?: DemoMetric;
     impressions?: DemoMetric;
@@ -51,9 +52,11 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   }, [metrics.organicTraffic.history, range]);
   const trafficTrend = getMetricTrend(metrics.organicTraffic);
   const keywordTrend = getMetricTrend(metrics.topTen);
+  const brandMark = databaseData?.brandMark ?? clientName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const brandAccent = databaseData?.brandAccent ?? "#F26B38";
 
   return (
-    <AppShell mode="portal" clientName={clientName}>
+    <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent}>
       <div className="content">
         <div className="page-heading">
           <div>
@@ -68,7 +71,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
 
         <section className="card executive-hero" aria-labelledby="executive-summary-title">
           <div className="executive-copy">
-            <div className="executive-label"><span className="signal-dot" /> Executive summary <span>·</span> November 2026</div>
+            <div className="executive-label"><span className="client-brand-mark" style={{ backgroundColor: brandAccent }}>{brandMark}</span> Executive summary <span>·</span> November 2026</div>
             <h2 id="executive-summary-title">Momentum is building across search and local visibility.</h2>
             <p>Organic traffic and search visibility are both trending up this period. The next focus is turning that visibility into more consistent local engagement and qualified demand.</p>
             <div className="executive-points">
@@ -106,17 +109,11 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
 
         <div className="dashboard-grid">
           <section className="card panel" id="website">
-            <div className="panel-heading">
-              <div><h2>Organic traffic trend</h2><p>Sessions from organic search · {range.toLowerCase()}</p></div>
-              <div className="legend"><span className="legend-line" /> Organic sessions</div>
-            </div>
+            <SectionHeader title="Organic traffic trend" description={`Sessions from organic search · ${range.toLowerCase()}`} action={<div className="legend"><span className="legend-line" /> Organic sessions</div>} />
             <TrendChart data={chartData} />
           </section>
           <section className="card panel" id="gbp">
-            <div className="panel-heading">
-              <div><h2>Program progress</h2><p>Current optimization focus</p></div>
-              <Sparkles size={17} color="#f26b38" />
-            </div>
+            <SectionHeader title="Program progress" description="Current optimization focus" action={<Sparkles size={17} color="#f26b38" />} />
             <div className="progress-row"><span>Profile optimization</span><strong>76%</strong></div>
             <div className="progress-track"><div className="progress-fill" style={{ width: "76%" }} /></div>
             <p className="progress-note">Your team has completed the core profile cleanup. Review responses and local content are the next focus areas.</p>
@@ -127,13 +124,13 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
 
         <div className="bottom-grid">
           <section className="card panel" id="activities">
-            <div className="panel-heading"><div><h2>Latest activity</h2><p>Recent work completed by your SEO team</p></div><a className="panel-link" href="#activities">View all</a></div>
+            <SectionHeader title="Latest activity" description="Recent work completed by your SEO team" action={<a className="panel-link" href="#activities">View all</a>} />
             <div className="mini-list">
               {activities.length > 0 ? activities.map((activity) => <div className="list-row" key={activity.id}><div className="list-icon">{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</div><div className="list-body"><div className="list-title">{activity.title}</div><div className="list-meta">{activity.category} · {activity.date}</div></div><div className={`status ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</div></div>) : <EmptyState message="Your SEO team’s latest activity will appear here." />}
             </div>
           </section>
           <section className="card panel" id="reports">
-            <div className="panel-heading"><div><h2>Recent reports</h2><p>Performance summaries from your team</p></div><a className="panel-link" href="#reports">View all</a></div>
+            <SectionHeader title="Recent reports" description="Performance summaries from your team" action={<a className="panel-link" href="#reports">View all</a>} />
             <div className="mini-list">
               {reports.length > 0 ? reports.map((report) => <button type="button" className="report-row report-button" key={report.id} onClick={() => setSelectedReport(report)} aria-label={`Preview ${report.title}`}><div className="file-icon"><FileText size={16} /></div><div><div className="report-name">{report.title}</div><div className="report-meta">{report.type} · {report.period}</div></div><Download className="download" size={15} /></button>) : <EmptyState message="Published reports will appear here once your team shares them." />}
             </div>
@@ -144,11 +141,6 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
     </AppShell>
   );
 }
-
-function EmptyState({ message }: { message: string }) {
-  return <div className="empty-state"><div className="empty-state-mark"><Sparkles size={15} /></div><p>{message}</p></div>;
-}
-
 function ReportPreview({ report, onClose }: { report: DemoReport; onClose: () => void }) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
@@ -162,6 +154,3 @@ function ReportPreview({ report, onClose }: { report: DemoReport; onClose: () =>
   );
 }
 
-function MetricCard({ label, value, trend, icon, tone, positive }: { label: string; value: string; trend: string; icon: React.ReactNode; tone?: string; positive?: boolean }) {
-  return <article className="card metric-card"><div className="metric-top"><span className="metric-label">{label}</span><span className={`metric-icon ${tone ?? ""}`}>{icon}</span></div><div className="metric-value">{value}</div><div className="metric-foot"><span className={positive ? "trend-up" : "trend-down"}>{positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {trend}</span><span className="metric-period">vs previous period</span></div></article>;
-}

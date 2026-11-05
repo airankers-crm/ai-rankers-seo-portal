@@ -4,6 +4,8 @@ import { useState } from "react";
 
 type ClientSettings = {
   id: string;
+  brandMark: string | null;
+  brandAccent: string;
   websiteUrl: string | null;
   contactEmail: string | null;
   timezone: string;
@@ -14,6 +16,8 @@ type ClientSettings = {
 export function ClientSettingsForm({ client }: { client: ClientSettings }) {
   const [websiteUrl, setWebsiteUrl] = useState(client.websiteUrl ?? "");
   const [contactEmail, setContactEmail] = useState(client.contactEmail ?? "");
+  const [brandMark, setBrandMark] = useState(client.brandMark ?? "");
+  const [brandAccent, setBrandAccent] = useState(client.brandAccent);
   const [timezone, setTimezone] = useState(client.timezone);
   const [hasWebsiteSeo, setHasWebsiteSeo] = useState(client.hasWebsiteSeo);
   const [hasGbpSeo, setHasGbpSeo] = useState(client.hasGbpSeo);
@@ -28,7 +32,7 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
     const response = await fetch(`/api/admin/clients/${client.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ websiteUrl, contactEmail, timezone, hasWebsiteSeo, hasGbpSeo }),
+      body: JSON.stringify({ websiteUrl, contactEmail, brandMark, brandAccent, timezone, hasWebsiteSeo, hasGbpSeo }),
     });
 
     if (!response.ok) {
@@ -45,6 +49,8 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
   return (
     <div className="settings-form">
       <div className="settings-grid">
+        <label>Brand mark <span className="label-hint">1–3 letters</span><input value={brandMark} onChange={(event) => setBrandMark(event.target.value.slice(0, 3).toUpperCase())} placeholder="RD" maxLength={3} /></label>
+        <label>Accent color <span className="label-hint">used in the client identity</span><span className="color-input"><input type="color" value={brandAccent} onChange={(event) => setBrandAccent(event.target.value)} /><input value={brandAccent} onChange={(event) => setBrandAccent(event.target.value)} pattern="^#[0-9A-Fa-f]{6}$" /></span></label>
         <label>Website URL<input type="url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" /></label>
         <label>Contact email<input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} placeholder="client@example.com" /></label>
         <label>Reporting timezone<select value={timezone} onChange={(event) => setTimezone(event.target.value)}><option>America/New_York</option><option>America/Chicago</option><option>America/Denver</option><option>America/Los_Angeles</option><option>Europe/London</option><option>Asia/Singapore</option></select></label>
