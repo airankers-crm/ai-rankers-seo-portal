@@ -12,6 +12,7 @@ import {
   MapPin,
   Sparkles,
   TrendingUp,
+  X,
 } from "lucide-react";
 import { demoClient, demoMetrics, demoReports, demoActivities, formatMetricTrend, getMetricTrend } from "@ai-rankers/core";
 import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
@@ -34,6 +35,7 @@ type PortalDatabaseData = {
 
 export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabaseData }) {
   const [range, setRange] = useState(ranges[0]);
+  const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null);
   const metrics = {
     organicTraffic: databaseData?.metrics.organicTraffic ?? demoMetrics.organicTraffic,
     impressions: databaseData?.metrics.impressions ?? demoMetrics.impressions,
@@ -79,7 +81,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
 
         <div className="range-bar">
           <div className="range-tabs" aria-label="Date range">
-            {ranges.map((item) => <button key={item} className={`range-tab${range === item ? " active" : ""}`} onClick={() => setRange(item)}>{item}</button>)}
+            {ranges.map((item) => <button key={item} type="button" className={`range-tab${range === item ? " active" : ""}`} aria-pressed={range === item} onClick={() => setRange(item)}>{item}</button>)}
           </div>
           <div className="sync-note"><span className="dot" /> Last synced Nov 3, 2026 · Google data has a 2–3 day delay</div>
         </div>
@@ -127,18 +129,36 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
           <section className="card panel" id="activities">
             <div className="panel-heading"><div><h2>Latest activity</h2><p>Recent work completed by your SEO team</p></div><a className="panel-link" href="#activities">View all</a></div>
             <div className="mini-list">
-              {activities.map((activity) => <div className="list-row" key={activity.id}><div className="list-icon">{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</div><div className="list-body"><div className="list-title">{activity.title}</div><div className="list-meta">{activity.category} · {activity.date}</div></div><div className={`status ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</div></div>)}
+              {activities.length > 0 ? activities.map((activity) => <div className="list-row" key={activity.id}><div className="list-icon">{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</div><div className="list-body"><div className="list-title">{activity.title}</div><div className="list-meta">{activity.category} · {activity.date}</div></div><div className={`status ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</div></div>) : <EmptyState message="Your SEO team’s latest activity will appear here." />}
             </div>
           </section>
           <section className="card panel" id="reports">
             <div className="panel-heading"><div><h2>Recent reports</h2><p>Performance summaries from your team</p></div><a className="panel-link" href="#reports">View all</a></div>
             <div className="mini-list">
-              {reports.map((report) => <div className="report-row" key={report.id}><div className="file-icon"><FileText size={16} /></div><div><div className="report-name">{report.title}</div><div className="report-meta">{report.type} · {report.period}</div></div><Download className="download" size={15} /></div>)}
+              {reports.length > 0 ? reports.map((report) => <button type="button" className="report-row report-button" key={report.id} onClick={() => setSelectedReport(report)} aria-label={`Preview ${report.title}`}><div className="file-icon"><FileText size={16} /></div><div><div className="report-name">{report.title}</div><div className="report-meta">{report.type} · {report.period}</div></div><Download className="download" size={15} /></button>) : <EmptyState message="Published reports will appear here once your team shares them." />}
             </div>
           </section>
         </div>
       </div>
+      {selectedReport && <ReportPreview report={selectedReport} onClose={() => setSelectedReport(null)} />}
     </AppShell>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return <div className="empty-state"><div className="empty-state-mark"><Sparkles size={15} /></div><p>{message}</p></div>;
+}
+
+function ReportPreview({ report, onClose }: { report: DemoReport; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section className="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-preview-title" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-heading"><div><p className="eyebrow">Client report</p><h2 id="report-preview-title">{report.title}</h2><p>{report.type} · {report.period}</p></div><button type="button" className="icon-button" aria-label="Close report preview" onClick={onClose}><X size={16} /></button></div>
+        <div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>Prepared for your review</strong><p>This report summarizes the latest work and performance signals from your SEO program.</p></div></div>
+        <div className="report-preview-grid"><div><span>Report type</span><strong>{report.type}</strong></div><div><span>Reporting period</span><strong>{report.period}</strong></div><div><span>Workspace</span><strong>Client presentation</strong></div></div>
+        <div className="modal-actions"><button type="button" className="button" onClick={onClose}>Close</button><button type="button" className="button primary" onClick={() => window.print()}><Download size={14} /> Print report</button></div>
+      </section>
+    </div>
   );
 }
 

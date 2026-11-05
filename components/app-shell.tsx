@@ -38,6 +38,7 @@ const adminNav = [
 export function AppShell({ children, mode, clientName }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = mode === "admin" ? adminNav : portalNav;
+  const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
 
   return (
     <div className="app-shell">
@@ -72,7 +73,7 @@ export function AppShell({ children, mode, clientName }: AppShellProps) {
             </div>
           </div>
           <div className="profile">
-            <div className="avatar">JM</div>
+            <div className="avatar">{mode === "admin" ? "JM" : clientInitials}</div>
             <div>
               <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "SEO client"}</div>
