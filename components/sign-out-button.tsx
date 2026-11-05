@@ -6,7 +6,7 @@ import { createAuthClient } from "@neon/auth/next";
 
 const authClient = createAuthClient();
 
-export function SignOutButton() {
+export function SignOutButton({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
 
   async function signOut() {
@@ -15,5 +15,5 @@ export function SignOutButton() {
     router.refresh();
   }
 
-  return <button type="button" className="profile-signout" onClick={signOut}><LogOut size={13} /> Sign out</button>;
+  return <button type="button" className={`profile-signout${compact ? " compact" : ""}`} aria-label="Sign out" title="Sign out" onClick={signOut}><LogOut size={13} /> {!compact && "Sign out"}</button>;
 }

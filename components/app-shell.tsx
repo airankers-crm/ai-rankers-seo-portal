@@ -11,6 +11,8 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings2,
   UsersRound,
   X,
@@ -43,14 +45,15 @@ const adminNav = [
 
 export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const nav = mode === "admin" ? adminNav : portalNav;
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar${mobileOpen ? " open" : ""}`}>
+      <aside className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
-          <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>
+          {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/logo-mark-orange.png" alt="The AI Rankers" width={31} height={31} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
           <span className="brand-sub">SEO intelligence</span>
         </div>
 
@@ -59,9 +62,9 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           {nav.map((item) => {
             const Icon = item.icon;
             return (
-              <Link key={item.label} className={`nav-item${item.label === (activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview")) ? " active" : ""}`} href={item.href} onClick={() => setMobileOpen(false)}>
+              <Link key={item.label} className={`nav-item${item.label === (activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview")) ? " active" : ""}`} href={item.href} aria-label={item.label} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)}>
                 <Icon size={16} strokeWidth={1.8} />
-                {item.label}
+                <span className="nav-item-label">{item.label}</span>
               </Link>
             );
           })}
@@ -77,11 +80,11 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
           <div className="profile">
             <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
-            <div>
+            <div className="profile-copy">
               <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "AI Rankers admin" : "SEO client"}</div>
             </div>
-            <SignOutButton />
+            <SignOutButton compact={collapsed} />
           </div>
         </div>
       </aside>
@@ -89,6 +92,9 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
       <main className="main">
         <header className="topbar">
           <div style={{ display: "flex", alignItems: "center" }}>
+            <button className="icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((current) => !current)}>
+              {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            </button>
             <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu size={17} />
             </button>
