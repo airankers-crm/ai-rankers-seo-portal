@@ -46,10 +46,16 @@ The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neo
 | `lib/` | Server-side access control, tasks, reporting, and application helpers |
 | `packages/core/` | Typed demo domain data and metric helpers |
 | `packages/db/` | Prisma client and Neon PostgreSQL adapter |
+| `packages/integrations/` | Reserved provider adapter boundary |
+| `packages/ui/` | Reserved shared UI package boundary |
+| `apps/web/` | Reserved future web app boundary; not the current Vercel root |
+| `apps/worker/` | Reserved future sync/report worker boundary |
 | `prisma/` | Schema, migrations, and seed support |
 | `public/branding/` | Safe-to-serve AI Rankers brand assets |
 | `tests/` | Unit and product verification tests |
 | `VERCEL-ENVIRONMENT-VARIABLES.md` | Vercel environment-variable contract |
+
+The current runnable Next.js application intentionally lives at the repository root in `app/`, `components/`, and `lib/`. This keeps the Vercel Root Directory as `./`. The `apps/` and reserved package boundaries are documented scaffolds; do not move the application into `apps/web` unless the Vercel configuration, package scripts, imports, and workspace build pipeline are migrated together.
 
 ## Requirements
 
