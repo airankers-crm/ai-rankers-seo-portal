@@ -92,6 +92,10 @@ function replaceMetric(metrics: ResultMetric[], next: ResultMetric) {
   return metrics.map((metric) => metric.id === next.id ? next : metric);
 }
 
+function draftsMatch(left: MetricDraft, right: MetricDraft) {
+  return left.name === right.name && left.description === right.description && left.value === right.value && left.periodStart === right.periodStart && left.periodEnd === right.periodEnd && left.note === right.note && left.publish === right.publish && left.isVisible === right.isVisible;
+}
+
 export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[] }) {
   const [metrics, setMetrics] = useState(initialMetrics);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -105,6 +109,8 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   const gbpSection = sections.find((section) => section.kind === "GBP");
   const availableTemplates = useMemo(() => GBP_METRIC_TEMPLATES.filter((template) => !metrics.some((metric) => metric.key === template.key)), [metrics]);
+  const activeMetric = editingId ? metrics.find((metric) => metric.id === editingId) ?? null : null;
+  const isDirty = Boolean(activeMetric && draft && !draftsMatch(draft, draftFor(activeMetric)));
 
   function beginEdit(metric: ResultMetric) {
     setEditingId(metric.id);
@@ -205,18 +211,14 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
         {metrics.length === 0 && <div className="result-empty"><Flag size={16} /><div><strong>No client results yet</strong><p>Add a result metric to begin the presentation.</p></div></div>}
       </div>
 
-      {editingId && draft && <aside className="result-edit-panel" aria-label="Edit client result">
-        <div className="result-edit-panel-head"><div><p className="eyebrow">Edit result</p><h3>{draft.name}</h3><p>All changes are recorded in the admin audit log.</p></div><button className="icon-button" type="button" onClick={closeEditor} aria-label="Close result editor"><X size={14} /></button></div>
-        <div className="result-edit-form">
-          <label>Client-facing name<input value={draft.name} onChange={(event) => setDraft((current) => current ? { ...current, name: event.target.value } : current)} /></label>
-          <label>Definition<textarea value={draft.description} onChange={(event) => setDraft((current) => current ? { ...current, description: event.target.value } : current)} rows={3} placeholder="Explain what this result measures." /></label>
-          <div className="result-edit-grid"><label>Result value<input type="number" value={draft.value} onChange={(event) => setDraft((current) => current ? { ...current, value: event.target.value } : current)} step="any" required /></label><label>Source<span className="result-readonly">{metrics.find((metric) => metric.id === editingId)?.source ?? "—"} · recorded value</span></label></div>
-          <div className="result-edit-grid"><label>Period start<input type="date" value={draft.periodStart} onChange={(event) => setDraft((current) => current ? { ...current, periodStart: event.target.value } : current)} required /></label><label>Period end<input type="date" value={draft.periodEnd} onChange={(event) => setDraft((current) => current ? { ...current, periodEnd: event.target.value } : current)} required /></label></div>
-          <label>Client-facing note<textarea value={draft.note} onChange={(event) => setDraft((current) => current ? { ...current, note: event.target.value } : current)} rows={2} placeholder="Optional context for the reporting period." /></label>
-          <label className="result-check"><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => current ? { ...current, isVisible: event.target.checked } : current)} /> Show this result in the client portal</label>
-          <label className="result-publish-toggle"><input type="checkbox" checked={draft.publish} onChange={(event) => setDraft((current) => current ? { ...current, publish: event.target.checked } : current)} /><span><strong>{draft.publish ? "Publish to client" : "Keep as draft"}</strong><small>{draft.publish ? "The approved result will be visible in the client dashboard." : "The result stays in admin until it is approved."}</small></span></label>
-          <div className="result-edit-actions"><button className="button" type="button" onClick={closeEditor}>Cancel</button><button className="button primary" type="button" onClick={saveMetric} disabled={pending}><Save size={13} /> {pending ? "Saving…" : draft.publish ? "Save & publish" : "Save draft"}</button></div>
-        </div>
+      {editingId && draft && activeMetric && <aside className="result-edit-panel" aria-label="Edit client result">
+        <div className="result-edit-panel-head"><div><p className="eyebrow">Property editor</p><h3>{draft.name}</h3><p>{isDirty ? "Unsaved changes" : "All changes are saved"} · recorded in the admin audit log.</p></div><button className="icon-button" type="button" onClick={closeEditor} aria-label="Close result editor"><X size={14} /></button></div>
+        <form className="result-edit-form" onSubmit={(event) => { event.preventDefault(); void saveMetric(); }}>
+          <div className="result-edit-section"><div className="result-edit-section-heading"><span>01</span><div><strong>Presentation identity</strong><small>How this result appears in the client report.</small></div></div><label>Client-facing name<input value={draft.name} onChange={(event) => setDraft((current) => current ? { ...current, name: event.target.value } : current)} maxLength={80} required /></label><label>Definition<textarea value={draft.description} onChange={(event) => setDraft((current) => current ? { ...current, description: event.target.value } : current)} rows={3} placeholder="Explain what this result measures." /></label></div>
+          <div className="result-edit-section"><div className="result-edit-section-heading"><span>02</span><div><strong>Reporting value</strong><small>Set the approved value and reporting period.</small></div></div><div className="result-edit-grid"><label>Result value<input type="number" value={draft.value} onChange={(event) => setDraft((current) => current ? { ...current, value: event.target.value } : current)} step="any" required /></label><label>Source<span className="result-readonly">{activeMetric.source} · recorded value</span></label></div><div className="result-edit-grid"><label>Period start<input type="date" value={draft.periodStart} onChange={(event) => setDraft((current) => current ? { ...current, periodStart: event.target.value } : current)} required /></label><label>Period end<input type="date" value={draft.periodEnd} onChange={(event) => setDraft((current) => current ? { ...current, periodEnd: event.target.value } : current)} required /></label></div><label>Client-facing note<textarea value={draft.note} onChange={(event) => setDraft((current) => current ? { ...current, note: event.target.value } : current)} rows={2} placeholder="Optional context for the reporting period." /></label></div>
+          <div className="result-edit-section"><div className="result-edit-section-heading"><span>03</span><div><strong>Publishing controls</strong><small>Control what the client can see.</small></div></div><label className="result-check"><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => current ? { ...current, isVisible: event.target.checked } : current)} /> Show this result in the client portal</label><label className="result-publish-toggle"><input type="checkbox" checked={draft.publish} onChange={(event) => setDraft((current) => current ? { ...current, publish: event.target.checked } : current)} /><span><strong>{draft.publish ? "Publish to client" : "Keep as draft"}</strong><small>{draft.publish ? "The approved result will be visible in the client dashboard." : "The result stays in admin until it is approved."}</small></span></label></div>
+          <div className="result-edit-actions"><button className="button" type="button" onClick={closeEditor}>Cancel</button><button className="button primary" type="submit" disabled={pending || !isDirty}><Save size={13} /> {pending ? "Saving…" : draft.publish ? "Save & publish" : "Save draft"}</button></div>
+        </form>
       </aside>}
     </div>
     <div className="results-editor-note"><Sparkles size={14} /><span>Use this workspace to prepare the client-facing presentation. Provider integrations can replace these recorded values later without changing the client report layout.</span></div>

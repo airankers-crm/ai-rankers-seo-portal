@@ -98,6 +98,19 @@ enum GoalStatus {
   ARCHIVED
 }
 
+enum FeedbackCategory {
+  ISSUE
+  QUESTION
+  REQUEST
+  PRAISE
+}
+
+enum FeedbackStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+}
+
 model User {
   id              String             @id @default(cuid())
   authUserId      String?            @unique
@@ -118,6 +131,7 @@ model User {
   auditLogs       AuditLog[]
   assignedTasks   Task[]             @relation("TaskAssignee")
   requestedTasks  Task[]             @relation("TaskRequester")
+  feedbackSubmissions Feedback[]
 }
 
 model Client {
@@ -143,6 +157,7 @@ model Client {
   goals         Goal[]
   auditLogs     AuditLog[]
   tasks         Task[]
+  feedback      Feedback[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
@@ -322,6 +337,25 @@ model Task {
 
   @@index([clientId, status, dueDate])
   @@index([assigneeId, status])
+}
+
+model Feedback {
+  id        String           @id @default(cuid())
+  clientId  String
+  userId    String
+  category  FeedbackCategory
+  message   String
+  pagePath  String
+  pageLabel String
+  context   Json?
+  status    FeedbackStatus    @default(OPEN)
+  client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([clientId, status, createdAt])
+  @@index([userId, createdAt])
 }
 
 model Report {

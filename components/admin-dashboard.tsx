@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, FileCheck2, Layers3, Plus, ShieldCheck, TriangleAlert, UsersRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { demoClient, demoClients } from "@ai-rankers/core";
 import type { DemoClient } from "@ai-rankers/core";
 import { AppShell } from "./app-shell";
@@ -13,8 +13,23 @@ function PulseSparkline({ points, tone, label }: { points: number[]; tone: "oran
   const min = Math.min(...points);
   const max = Math.max(...points);
   const spread = max - min || 1;
-  const coordinates = points.map((point, index) => `${(index / (points.length - 1)) * 100},${38 - ((point - min) / spread) * 28}`).join(" ");
-  return <svg className={`agency-pulse-sparkline ${tone}`} viewBox="0 0 100 42" role="img" aria-label={`${label} trend`} preserveAspectRatio="none"><polyline points={`${coordinates} 100,42 0,42`} className="agency-pulse-area" /><polyline points={coordinates} className="agency-pulse-line" /></svg>;
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const coordinates = points.map((point, index) => ({ x: (index / (points.length - 1)) * 100, y: 38 - ((point - min) / spread) * 28, value: point }));
+  const linePoints = coordinates.map(({ x, y }) => `${x},${y}`).join(" ");
+  const activePoint = hoveredIndex === null ? null : coordinates[hoveredIndex];
+  const handleMouseMove = (event: MouseEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const position = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+    setHoveredIndex(Math.round(position * (points.length - 1)));
+  };
+  return <div className="agency-pulse-sparkline-wrap">
+    <svg className={`agency-pulse-sparkline ${tone}`} viewBox="0 0 100 42" role="img" aria-label={`${label} trend`} preserveAspectRatio="none" onMouseMove={handleMouseMove} onMouseLeave={() => setHoveredIndex(null)}>
+      <polyline points={`${linePoints} 100,42 0,42`} className="agency-pulse-area" />
+      <polyline points={linePoints} className="agency-pulse-line" />
+      {activePoint && <><line x1={activePoint.x} x2={activePoint.x} y1="3" y2="40" className="agency-pulse-guide" /><circle cx={activePoint.x} cy={activePoint.y} r="2.5" className="agency-pulse-point" /></>}
+    </svg>
+    {activePoint && <div className="agency-pulse-tooltip" style={{ left: `${Math.min(86, Math.max(14, activePoint.x))}%` }}><strong>{activePoint.value.toLocaleString()}</strong><span>Day {(hoveredIndex ?? 0) + 1} of {points.length}</span></div>}
+  </div>;
 }
 
 function AgencyPulse({ clients }: { clients: DemoClient[] }) {

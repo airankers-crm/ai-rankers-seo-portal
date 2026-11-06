@@ -9,21 +9,15 @@ import {
   Activity,
   BarChart3,
   Building2,
-  CalendarDays,
-  ContactRound,
   FileText,
-  GitBranch,
   Layers3,
   LayoutDashboard,
   MessageCircle,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  PhoneCall,
-  RefreshCcw,
   Settings2,
   ShieldCheck,
-  Target,
   UsersRound,
   X,
 } from "lucide-react";
@@ -49,19 +43,12 @@ const portalNav = [
 const adminNav = [
   { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin/clients", icon: UsersRound },
-  { label: "Contacts", href: "/admin/contacts", icon: ContactRound },
-  { label: "Leads", href: "/admin/leads", icon: UsersRound },
-  { label: "Pipeline", href: "/admin/pipeline", icon: GitBranch },
-  { label: "Calls & conversations", href: "/admin/calls", icon: PhoneCall },
-  { label: "Appointments", href: "/admin/appointments", icon: CalendarDays },
   { label: "Activities", href: "/admin/activities", icon: Activity },
-  { label: "Goals & targets", href: "/admin/goals", icon: Target },
+  { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Reports", href: "/admin/reports", icon: FileText },
   { label: "Templates", href: "/admin/templates", icon: Layers3 },
   { label: "Integrations", href: "/admin/integrations", icon: Settings2 },
-  { label: "Sync health", href: "/admin/sync-health", icon: RefreshCcw },
-  { label: "Audit activity", href: "/admin/audit", icon: Activity },
   { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
 ];
 
@@ -70,7 +57,9 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const nav = mode === "admin" ? adminNav : portalNav;
-  const activeItem = nav.find((item) => item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href));
+  const activeItem = nav
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((first, second) => second.href.length - first.href.length)[0];
   const activeLabel = activeItem?.label ?? activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview");
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
 
@@ -96,13 +85,13 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="mode-card">
+          {mode === "admin" ? <div className="mode-card">
             <p>View as</p>
             <div className="mode-toggle">
-              <Link className={mode === "portal" ? "active" : ""} href="/portal">Client</Link>
-              <Link className={mode === "admin" ? "active" : ""} href="/admin">Admin</Link>
+              <Link className="active" href="/admin">Admin</Link>
+              <Link href="/portal">Client</Link>
             </div>
-          </div>
+          </div> : null}
           <div className="profile">
             <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
             <div className="profile-copy">
@@ -127,6 +116,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
           <div className="top-actions">
             <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Agency workspace"}</div>
+            {mode === "portal" ? <SignOutButton variant="topbar" /> : null}
             <div className="icon-button icon-button-muted" role="img" aria-label="Notifications will be available in a future release" title="Notifications will be available in a future release"><Activity size={16} /></div>
             {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}
           </div>

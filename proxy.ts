@@ -23,6 +23,12 @@ function isPublicPath(pathname: string) {
 export default function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Public branding and static files must load before auth middleware runs.
+  // Otherwise Next/Image receives the login redirect instead of the asset.
+  if (!pathname.startsWith("/api/") && /\.[^/]+$/.test(pathname)) {
+    return NextResponse.next();
+  }
+
   if (requiresProductionAuth() && !isAuthConfigured() && !isPublicPath(pathname)) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Authentication is not configured." }, { status: 503 });

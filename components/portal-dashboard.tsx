@@ -6,6 +6,7 @@ import {
   Clock3,
   Download,
   FileText,
+  Filter,
   Globe2,
   MapPin,
   Sparkles,
@@ -19,9 +20,11 @@ import { TrendChart } from "./trend-chart";
 import { EmptyState, MetricCard, SectionHeader } from "./ui/primitives";
 import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
 import { GoalHighlights, type PortalGoal } from "./goal-highlights";
-import { DashboardControls } from "./dashboard-controls";
+import { DashboardControls, defaultDashboardFilters, type DashboardFilterState } from "./dashboard-controls";
 import { DecisionIntelligence } from "./decision-intelligence";
 import { ClientMessaging } from "./client-messaging";
+import { RankedVisibilityList, type VisibilityMetric } from "./ranked-visibility-list";
+import { PortalFeedback } from "./portal-feedback";
 
 type PortalDatabaseData = {
   businessName: string;
@@ -61,6 +64,35 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const brandMark = databaseData?.brandMark ?? clientName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const brandAccent = databaseData?.brandAccent ?? "#F26B38";
   const [selectedView, setSelectedView] = useState("Executive overview");
+  const [dashboardFilters, setDashboardFilters] = useState<DashboardFilterState>(defaultDashboardFilters);
+  const rankedMetrics: VisibilityMetric[] = databaseData ? [
+    databaseData.metrics.topTen && { ...databaseData.metrics.topTen, displayLabel: "Top-10 keyword coverage", detail: "Rank source coverage", format: "integer", priority: 1 },
+    databaseData.metrics.organicTraffic && { ...databaseData.metrics.organicTraffic, displayLabel: "Organic search sessions", detail: "Acquisition signal", format: "integer", priority: 2 },
+    databaseData.metrics.impressions && { ...databaseData.metrics.impressions, displayLabel: "Search visibility", detail: "Search Console reach", format: "compact", priority: 3 },
+    databaseData.metrics.calls && { ...databaseData.metrics.calls, displayLabel: "Local inquiry activity", detail: "GBP call signal", format: "integer", priority: 4 },
+  ].filter((metric): metric is VisibilityMetric => Boolean(metric)) : [
+    { ...metrics.topTen, displayLabel: "Top-10 keyword coverage", detail: "Rank source coverage", format: "integer", priority: 1 },
+    { ...metrics.organicTraffic, displayLabel: "Organic search sessions", detail: "Acquisition signal", format: "integer", priority: 2 },
+    { ...metrics.impressions, displayLabel: "Search visibility", detail: "Search Console reach", format: "compact", priority: 3 },
+    { ...metrics.calls, displayLabel: "Local inquiry activity", detail: "GBP call signal", format: "integer", priority: 4 },
+  ];
+  const metricDefinitions = [
+    { key: "organicTraffic", metric: metrics.organicTraffic, channel: "Organic search", focus: "Traffic" },
+    { key: "impressions", metric: metrics.impressions, channel: "Organic search", focus: "Visibility" },
+    { key: "topTen", metric: metrics.topTen, channel: "Organic search", focus: "Visibility" },
+    { key: "calls", metric: metrics.calls, channel: "Local / GBP", focus: "Demand" },
+  ] as const;
+  function matchesFilters(definition: (typeof metricDefinitions)[number], filters: DashboardFilterState) {
+    const channelMatches = filters.channel === "All channels" || definition.channel === filters.channel;
+    const focusMatches = filters.metric === "All KPIs" || definition.focus === filters.metric;
+    const sourceMatches = filters.source === "All sources" || definition.metric.source === filters.source;
+    return channelMatches && focusMatches && sourceMatches;
+  }
+  function getFilterResultCount(filters: DashboardFilterState) {
+    return metricDefinitions.filter((definition) => matchesFilters(definition, filters)).length;
+  }
+  const visibleMetricKeys = new Set(metricDefinitions.filter((definition) => matchesFilters(definition, dashboardFilters)).map((definition) => definition.key));
+  const visibleRankedMetrics = rankedMetrics.filter((metric) => metric.id === metrics.organicTraffic.id && visibleMetricKeys.has("organicTraffic") || metric.id === metrics.impressions.id && visibleMetricKeys.has("impressions") || metric.id === metrics.topTen.id && visibleMetricKeys.has("topTen") || metric.id === metrics.calls.id && visibleMetricKeys.has("calls"));
 
   return (
     <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Overview">
@@ -76,7 +108,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
           </div>
         </div>
 
-        <section className="card executive-hero" aria-labelledby="executive-summary-title">
+        <section className="card executive-hero" id="summary" aria-labelledby="executive-summary-title">
           <div className="executive-copy">
             <div className="executive-label"><span className="client-brand-mark" style={{ backgroundColor: brandAccent }}>{brandMark}</span> Performance summary <span>·</span> November 2026</div>
             <h2 id="executive-summary-title">Period comparison</h2>
@@ -94,37 +126,51 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
           <div className="sync-note"><span className="dot" /> Last synced Nov 3, 2026 · Google data has a 2–3 day delay</div>
         </div>
 
-        <DashboardControls onViewChange={setSelectedView} />
+        <nav className="portal-section-nav" aria-label="Overview sections">
+          <a href="#summary">Summary</a>
+          <a href="#performance">Performance</a>
+          <a href="#goals">Goals</a>
+          <a href="#website">Website SEO</a>
+          <a href="#gbp">Local SEO</a>
+          <a href="#activities">Activities</a>
+          <a href="#reports">Reports</a>
+          <a href="#communication">Communication</a>
+        </nav>
+
+        <DashboardControls onViewChange={setSelectedView} onFiltersChange={setDashboardFilters} getResultCount={getFilterResultCount} />
 
         {selectedView === "Client tasks" ? <section className="card task-focus-note"><Clock3 size={17} /><div><strong>Task workspace</strong><p>Create a request, set a priority and due date, then review task status in Activities.</p></div><a className="button primary" href="/portal/activities">Open tasks</a></section> : null}
 
-        <div className="metrics-grid">
-          <MetricCard label="Organic traffic" value={metrics.organicTraffic.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.organicTraffic))} icon={<Globe2 size={15} />} tone="orange" positive />
-          <MetricCard label="Search impressions" value={`${(metrics.impressions.value / 1000).toFixed(1)}K`} trend={formatMetricTrend(getMetricTrend(metrics.impressions))} icon={<TrendingUp size={15} />} positive />
-          <MetricCard label="Keywords in top 10" value={metrics.topTen.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.topTen))} icon={<Sparkles size={15} />} tone="teal" positive />
-          <MetricCard label="GBP calls generated" value={metrics.calls.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.calls))} icon={<MapPin size={15} />} tone="teal" positive />
+        <div className="metrics-grid" id="performance">
+          {visibleMetricKeys.has("organicTraffic") ? <MetricCard label="Organic traffic" value={metrics.organicTraffic.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.organicTraffic))} icon={<Globe2 size={15} />} tone="orange" positive /> : null}
+          {visibleMetricKeys.has("impressions") ? <MetricCard label="Search impressions" value={`${(metrics.impressions.value / 1000).toFixed(1)}K`} trend={formatMetricTrend(getMetricTrend(metrics.impressions))} icon={<TrendingUp size={15} />} positive /> : null}
+          {visibleMetricKeys.has("topTen") ? <MetricCard label="Keywords in top 10" value={metrics.topTen.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.topTen))} icon={<Sparkles size={15} />} tone="teal" positive /> : null}
+          {visibleMetricKeys.has("calls") ? <MetricCard label="GBP calls generated" value={metrics.calls.value.toLocaleString()} trend={formatMetricTrend(getMetricTrend(metrics.calls))} icon={<MapPin size={15} />} tone="teal" positive /> : null}
+          {visibleMetricKeys.size === 0 ? <div className="dashboard-filter-empty"><Filter size={16} /><div><strong>No KPI signals match these filters</strong><p>Clear a filter or choose a broader channel and metric focus.</p></div></div> : null}
         </div>
+
+        <RankedVisibilityList metrics={visibleRankedMetrics} />
 
         <div className="insight-grid">
-          <section className="card insight-card insight-orange">
+          {visibleMetricKeys.has("impressions") || visibleMetricKeys.has("topTen") ? <section className="card insight-card insight-orange">
             <div className="insight-icon"><TrendingUp size={16} /></div>
             <div><p className="insight-label">Period change</p><h2>Organic search metrics</h2><p>Search impressions: {(metrics.impressions.value / 1000).toFixed(1)}K. Keywords in the top 10: {metrics.topTen.value}. Review the period table for the full comparison.</p></div>
-          </section>
-          <section className="card insight-card insight-teal">
+          </section> : null}
+          {visibleMetricKeys.has("calls") ? <section className="card insight-card insight-teal">
             <div className="insight-icon"><Sparkles size={16} /></div>
             <div><p className="insight-label">Open work</p><h2>Local SEO review</h2><p>Review GBP connection status, profile work, and service-page changes before the next reporting period.</p></div>
-          </section>
+          </section> : null}
         </div>
 
-        <DecisionIntelligence traffic={metrics.organicTraffic} impressions={metrics.impressions} topTen={metrics.topTen} />
+        {visibleMetricKeys.has("organicTraffic") || visibleMetricKeys.has("impressions") || visibleMetricKeys.has("topTen") ? <DecisionIntelligence traffic={metrics.organicTraffic} impressions={metrics.impressions} topTen={metrics.topTen} /> : null}
 
         <GoalHighlights goals={goals} />
 
         <div className="dashboard-grid">
-          <section className="card panel" id="website">
+          {visibleMetricKeys.has("organicTraffic") ? <section className="card panel" id="website">
             <SectionHeader title="Organic traffic trend" description={`Sessions from organic search · ${dateRange.label.toLowerCase()}`} action={<div className="legend"><span className="legend-line" /> Organic sessions</div>} />
             <TrendChart data={chartData} />
-          </section>
+          </section> : null}
           <section className="card panel" id="gbp">
             <SectionHeader title="Delivery status" description="Configured SEO activities" action={<Sparkles size={17} color="#f26b38" />} />
             <div className="progress-row"><span>Profile optimization</span><strong>76%</strong></div>
@@ -151,6 +197,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
         </div>
 
         <ClientMessaging />
+        <PortalFeedback pagePath="/portal" pageLabel="Portal overview" context={{ view: selectedView, dateRange: dateRange.label }} />
       </div>
       {selectedReport && <ReportPreview report={selectedReport} onClose={() => { setSelectedReport(null); reportTriggerRef.current?.focus(); }} />}
     </AppShell>

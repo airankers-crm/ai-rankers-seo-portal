@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
 import { createAuthClient } from "@neon/auth/next";
 import { BinaryOrbitsBackground } from "./binary-orbits-background";
 
@@ -58,6 +58,7 @@ export function AuthForm({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [rippleKey, setRippleKey] = useState(0);
 
   const isSignIn = mode === "sign-in";
   const content = audienceContent[audience];
@@ -79,6 +80,7 @@ export function AuthForm({
     event.preventDefault();
     setPending(true);
     setError("");
+    setRippleKey((current) => current + 1);
 
     try {
       const result = isSignIn
@@ -156,8 +158,6 @@ export function AuthForm({
             </Link>
           )}
 
-          <p className="auth-trust-note"><LockKeyhole size={13} /> Access is scoped to your approved workspace.</p>
-
           {audience === "client" && (
             <p className="auth-switch">
               {isSignIn ? "Need a client portal account?" : "Already have an account?"}{" "}
@@ -175,7 +175,7 @@ export function AuthForm({
         </section>
 
         <aside className="auth-context" aria-label={`${content.eyebrow} information`}>
-          <BinaryOrbitsBackground />
+          <BinaryOrbitsBackground rippleKey={rippleKey} />
           <div className="auth-context-top"><AudienceIcon size={18} /><span>{content.eyebrow}</span></div>
           <div className="auth-context-copy">
             <h2>{content.contextTitle}</h2>

@@ -51,7 +51,7 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
             <Link className="back-link" href="/admin"><ArrowLeft size={13} /> Back to workspace overview</Link>
             <p className="eyebrow">Client workspace</p>
             <h1>{client.businessName}</h1>
-            <p>Manage this client’s dashboard foundation, users, and reporting surface from one place.</p>
+            <p>Edit this client’s presentation results, workspace settings, users, goals, and reporting surface from one place.</p>
           </div>
           <span className="status complete">{client.status}</span>
         </div>

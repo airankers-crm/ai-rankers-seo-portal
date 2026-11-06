@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Info, Search, Table2, TrendingUp } from "lucide-react";
 import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
 import { AppShell } from "./app-shell";
+import { PortalFeedback } from "./portal-feedback";
 
 export type WebsiteSeoMetric = {
   key: string;
@@ -71,6 +72,7 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
   const [dateRange, setDateRange] = useState<DateRangeSelection>(initialRange);
   const [query, setQuery] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -95,7 +97,24 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
     return result;
   }, { stops: [], offset: 0 }).stops.join(", ");
   const activeChannel = acquisitionChannels.find((channel) => channel.key === selectedChannel) ?? topChannel;
+  const focusedChannel = acquisitionChannels.find((channel) => channel.key === hoveredChannel) ?? (selectedChannel ? activeChannel : null);
+  const focusedShare = focusedChannel ? (focusedChannel.value / acquisitionTotal) * 100 : null;
   const channelIsPreview = !channels?.length;
+  const handleDonutMove = (event: MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const center = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+    const dx = event.clientX - center.x;
+    const dy = event.clientY - center.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < bounds.width * 0.27) return;
+    const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+    let offset = 0;
+    const channel = acquisitionChannels.find((item) => {
+      offset += (item.value / acquisitionTotal) * 360;
+      return angle <= offset;
+    });
+    setHoveredChannel(channel?.key ?? null);
+  };
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO">
     <div className="content">
@@ -129,16 +148,16 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
         </div>
         <div className="seo-acquisition-layout">
           <div className="seo-donut-wrap">
-            <div className="seo-donut" style={{ background: `conic-gradient(${donutStops})` }} role="img" aria-label={`${acquisitionTotal.toLocaleString()} sessions by acquisition channel`}>
-              <div className="seo-donut-center"><strong>{acquisitionTotal.toLocaleString()}</strong><span>Sessions</span></div>
+            <div className="seo-donut" style={{ background: `conic-gradient(${donutStops})` }} role="img" aria-label={`${acquisitionTotal.toLocaleString()} sessions by acquisition channel`} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)}>
+              <div className="seo-donut-center"><strong>{focusedChannel ? focusedChannel.value.toLocaleString() : acquisitionTotal.toLocaleString()}</strong><span>{focusedShare === null ? "Sessions" : `${focusedShare.toFixed(1)}% of sessions`}</span></div>
             </div>
             <div className="seo-donut-summary"><span>Top channel</span><strong>{topChannel.label}</strong><small>{((topChannel.value / acquisitionTotal) * 100).toFixed(1)}% of sessions</small></div>
           </div>
           <div className="seo-channel-list" aria-label="Acquisition channels">
             {acquisitionChannels.map((channel) => {
               const share = (channel.value / acquisitionTotal) * 100;
-              const active = activeChannel.key === channel.key;
-              return <button type="button" className={`seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} aria-pressed={active}>
+              const active = (hoveredChannel ?? selectedChannel ?? activeChannel.key) === channel.key;
+              return <button type="button" className={`seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} onMouseEnter={() => setHoveredChannel(channel.key)} onMouseLeave={() => setHoveredChannel(null)} aria-pressed={active}>
                 <span className="seo-channel-swatch" style={{ backgroundColor: channel.color }} />
                 <span className="seo-channel-copy"><strong>{channel.label}</strong><small>{active ? "Selected channel" : "View channel detail"}</small></span>
                 <span className="seo-channel-value"><strong>{channel.value.toLocaleString()}</strong><small>{share.toFixed(1)}%</small></span>
@@ -157,6 +176,7 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
       </section>
 
       <div className="seo-bottom-grid"><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Review items</p><h2>SEO delivery checks</h2><p>Use these checks when setting the next delivery task.</p></div></div><div className="seo-next-list"><div><CheckCircle2 size={15} /><span>Review pages with increasing organic sessions.</span></div><div><CheckCircle2 size={15} /><span>Confirm source freshness before publishing a report.</span></div><div><CheckCircle2 size={15} /><span>Compare keyword movement with completed activities.</span></div></div></section><section className="card panel"><div className="panel-heading"><div><p className="eyebrow">Metric definitions</p><h2>Definitions and sources</h2><p>Each metric includes its source and reporting definition.</p></div></div><div className="definition-list">{metrics.map((metric) => <div key={metric.key}><strong>{metric.label}</strong><span>{metric.description}</span></div>)}</div></section></div>
+      <PortalFeedback pagePath="/portal/website-seo" pageLabel="Website SEO" context={{ dateRange: dateRange.label, selectedChannel: activeChannel?.label ?? null, search: query || null }} />
     </div>
   </AppShell>;
 }

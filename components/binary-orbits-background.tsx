@@ -6,6 +6,7 @@ type BinaryOrbitsBackgroundProps = {
   className?: string;
   colors?: readonly [string, string];
   backgroundColor?: string;
+  rippleKey?: number;
   children?: ReactNode;
 };
 
@@ -53,10 +54,20 @@ export function BinaryOrbitsBackground({
   className = "",
   colors = DEFAULT_COLORS,
   backgroundColor = DEFAULT_BACKGROUND,
+  rippleKey,
   children,
 }: BinaryOrbitsBackgroundProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rippleStartRef = useRef<number | null>(null);
+  const previousRippleRef = useRef(rippleKey);
+
+  useEffect(() => {
+    if (rippleKey === undefined || previousRippleRef.current === rippleKey) return;
+
+    previousRippleRef.current = rippleKey;
+    rippleStartRef.current = performance.now();
+  }, [rippleKey]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -103,15 +114,18 @@ export function BinaryOrbitsBackground({
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     };
 
-    const draw = (elapsed: number) => {
+    const draw = (timestamp: number) => {
       if (!width || !height) return;
 
+      const elapsed = Math.max(0, timestamp - startTime);
       const centerX = width * 0.66;
       const centerY = height * 0.66;
       const galaxyRadius = Math.min(width, height) * 0.5;
       const roll = -0.14;
       const tilt = 0.48;
       const seconds = elapsed / 1000;
+      const rippleAge = rippleStartRef.current === null ? -1 : timestamp - rippleStartRef.current;
+      const rippleProgress = rippleAge >= 0 && rippleAge < 1600 ? rippleAge / 1600 : -1;
 
       context.clearRect(0, 0, width, height);
       context.fillStyle = backgroundColor;
@@ -135,8 +149,10 @@ export function BinaryOrbitsBackground({
         const y = centerY + rawX * Math.sin(roll) + rawY * Math.cos(roll);
         const twinkle = reducedMotion ? 1 : 0.82 + Math.sin(seconds * 2.3 + star.phase) * 0.18;
         const color = mixColor(outerColor, coreColor, Math.max(0, 1 - star.radius * 1.25));
-        const alpha = Math.min(0.95, star.brightness * twinkle * (0.58 + (1 - star.depth) * 0.42));
-        const size = star.size * (0.76 + (1 - star.radius) * 0.48);
+        const rippleDistance = Math.hypot(rawX, rawY / tilt) / galaxyRadius;
+        const rippleBoost = rippleProgress < 0 ? 0 : Math.max(0, 1 - Math.abs(rippleDistance - rippleProgress * 1.18) / 0.065);
+        const alpha = Math.min(0.98, star.brightness * twinkle * (0.58 + (1 - star.depth) * 0.42) * (1 + rippleBoost * 0.85));
+        const size = star.size * (0.76 + (1 - star.radius) * 0.48) * (1 + rippleBoost * 0.72);
 
         context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
         context.beginPath();
@@ -152,14 +168,29 @@ export function BinaryOrbitsBackground({
       context.fillStyle = core;
       context.fillRect(centerX - galaxyRadius * 0.21, centerY - galaxyRadius * 0.21, galaxyRadius * 0.42, galaxyRadius * 0.42);
 
-      if (!reducedMotion) animationFrame = window.requestAnimationFrame((time) => draw(time - startTime));
+      if (rippleProgress >= 0) {
+        context.save();
+        context.translate(centerX, centerY);
+        context.rotate(roll);
+        context.scale(1, tilt);
+        context.beginPath();
+        context.arc(0, 0, galaxyRadius * rippleProgress * 1.18, 0, Math.PI * 2);
+        context.strokeStyle = `rgba(255, 194, 238, ${0.28 * (1 - rippleProgress)})`;
+        context.lineWidth = 1.6;
+        context.shadowColor = "rgba(255, 194, 238, .75)";
+        context.shadowBlur = 16;
+        context.stroke();
+        context.restore();
+      }
+
+      if (!reducedMotion) animationFrame = window.requestAnimationFrame(draw);
     };
 
     const observer = new ResizeObserver(resize);
     observer.observe(root);
     resize();
     startTime = performance.now();
-    draw(0);
+    draw(startTime);
 
     return () => {
       observer.disconnect();
