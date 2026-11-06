@@ -31,9 +31,9 @@ const audienceContent = {
   admin: {
     eyebrow: "Agency workspace",
     title: "Administrator sign in",
-    description: "Use your approved The AI Rankers team account to manage clients, reporting operations, and portal access.",
+    description: "Use your authorized agency account to manage clients, reporting operations, and portal access.",
     contextTitle: "Operate every client workspace securely.",
-    contextCopy: "Manage client access, reports, goals, and service activity from the internal The AI Rankers workspace.",
+    contextCopy: "Manage client access, reports, goals, and service activity from the internal agency workspace.",
     alternateLabel: "Looking for your client portal?",
     alternateHref: "/client/login",
     alternateAction: "Client sign in",
@@ -93,7 +93,7 @@ export function AuthForm({
 
       if (audience === "admin" && !access.isAdmin) {
         await authClient.signOut();
-        setError("This account does not have AI Rankers administrator access. Use the client portal sign-in instead.");
+        setError("This account does not have administrator access. Use the client portal sign-in instead.");
         return;
       }
 

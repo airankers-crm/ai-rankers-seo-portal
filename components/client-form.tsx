@@ -39,7 +39,7 @@ export function ClientForm() {
     <div className="content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">AI Rankers / Operations</p>
+          <p className="eyebrow">The AI Rankers / Operations</p>
           <h1>Add a client workspace</h1>
           <p>Create the workspace first. You can connect data sources, invite users, and publish dashboard sections as the client setup progresses.</p>
         </div>

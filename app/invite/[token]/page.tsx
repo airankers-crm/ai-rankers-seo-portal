@@ -24,11 +24,11 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
           <p className="auth-copy">You’ve been invited to view the client presentation dashboard and SEO reporting workspace.</p>
           <div className="invite-summary"><span>Invited email</span><strong>{invitation.email}</strong><span>Invitation expires</span><strong>{invitation.expiresAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong></div>
           {session ? <InvitationAcceptButton token={token} /> : <Link className="button primary auth-submit" href={`/auth/sign-in?redirectTo=${encodeURIComponent(`/invite/${token}`)}`}>Sign in to continue</Link>}
-          {!session && <p className="auth-switch">New to AI Rankers? <Link href={`/auth/sign-up?redirectTo=${encodeURIComponent(`/invite/${token}`)}`}>Create your account</Link></p>}
+          {!session && <p className="auth-switch">New to The AI Rankers? <Link href={`/auth/sign-up?redirectTo=${encodeURIComponent(`/invite/${token}`)}`}>Create your account</Link></p>}
         </> : <>
           <p className="eyebrow">Invitation unavailable</p>
           <h1>This link is no longer active.</h1>
-          <p className="auth-copy">Ask your AI Rankers administrator to send a new invitation link.</p>
+          <p className="auth-copy">Ask your agency administrator to send a new invitation link.</p>
           <Link className="button auth-submit" href="/auth/sign-in">Go to sign in</Link>
         </>}
       </section>
