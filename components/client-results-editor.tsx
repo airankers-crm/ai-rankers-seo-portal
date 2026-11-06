@@ -43,12 +43,27 @@ type MetricDraft = {
   isVisible: boolean;
 };
 
+const WEBSITE_METRIC_TEMPLATES = [
+  { key: "ga4-organic-sessions", name: "Organic traffic", description: "Sessions attributed to organic search in the selected reporting window.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "gsc-impressions", name: "Search impressions", description: "Search results impressions recorded by Google Search Console.", valueFormat: "INTEGER", source: "GSC" },
+  { key: "kw-top10", name: "Keywords in top 10", description: "Tracked keywords currently appearing within the first ten organic results.", valueFormat: "RANK", source: "DATAFORSEO" },
+] as const;
+
 const GBP_METRIC_TEMPLATES = [
+  { key: "gbp-calls", name: "GBP calls", description: "Calls attributed to the connected Google Business Profile source.", valueFormat: "INTEGER", source: "GBP" },
   { key: "gbp-views", name: "Profile views", description: "Search and Maps profile views recorded by Google Business Profile.", valueFormat: "INTEGER", source: "GBP" },
   { key: "gbp-website-clicks", name: "Website clicks", description: "Website actions attributed to the Google Business Profile listing.", valueFormat: "INTEGER", source: "GBP" },
   { key: "gbp-directions", name: "Direction requests", description: "Requests for directions from the profile listing.", valueFormat: "INTEGER", source: "GBP" },
   { key: "gbp-reviews", name: "Reviews received", description: "New reviews received during the selected reporting window.", valueFormat: "INTEGER", source: "GBP" },
 ] as const;
+
+type EditorView = "website" | "gbp" | "all";
+
+function metricView(metric: ResultMetric): Exclude<EditorView, "all"> | "other" {
+  if (metric.key.startsWith("gbp-") || metric.sectionKind === "GBP") return "gbp";
+  if (metric.key === "ga4-organic-sessions" || metric.key === "gsc-impressions" || metric.key === "kw-top10" || metric.key.startsWith("ga4-channel-") || metric.sectionKind === "WEBSITE") return "website";
+  return "other";
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -98,6 +113,7 @@ function draftsMatch(left: MetricDraft, right: MetricDraft) {
 
 export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[] }) {
   const [metrics, setMetrics] = useState(initialMetrics);
+  const [activeView, setActiveView] = useState<EditorView>(initialMetrics.some((metric) => metricView(metric) === "website") ? "website" : "gbp");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<MetricDraft | null>(null);
   const [message, setMessage] = useState("");
@@ -107,8 +123,18 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
   const [newTemplateKey, setNewTemplateKey] = useState("");
   const [newPublish, setNewPublish] = useState(true);
 
+  const websiteSection = sections.find((section) => section.kind === "WEBSITE");
   const gbpSection = sections.find((section) => section.kind === "GBP");
-  const availableTemplates = useMemo(() => GBP_METRIC_TEMPLATES.filter((template) => !metrics.some((metric) => metric.key === template.key)), [metrics]);
+  const websiteMetrics = metrics.filter((metric) => metricView(metric) === "website");
+  const gbpMetrics = metrics.filter((metric) => metricView(metric) === "gbp");
+  const filteredMetrics = activeView === "all" ? metrics : metrics.filter((metric) => metricView(metric) === activeView);
+  const availableTemplates = useMemo(() => {
+    const templates = activeView === "website" ? WEBSITE_METRIC_TEMPLATES : activeView === "gbp" ? GBP_METRIC_TEMPLATES : [];
+    return templates.filter((template) => !metrics.some((metric) => metric.key === template.key));
+  }, [activeView, metrics]);
+  const addSection = activeView === "website" ? websiteSection : activeView === "gbp" ? gbpSection : null;
+  const activeViewLabel = activeView === "website" ? "Website SEO" : activeView === "gbp" ? "GBP performance" : "All results";
+  const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo` : `/admin/clients/${clientId}/preview/gbp`;
   const activeMetric = editingId ? metrics.find((metric) => metric.id === editingId) ?? null : null;
   const isDirty = Boolean(activeMetric && draft && !draftsMatch(draft, draftFor(activeMetric)));
 
@@ -153,7 +179,7 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   async function addMetric() {
     const template = availableTemplates.find((item) => item.key === newTemplateKey) ?? availableTemplates[0];
-    if (!template || !gbpSection) return;
+    if (!template || !addSection) return;
     setPending(true);
     setMessage("");
     setError("");
@@ -161,14 +187,14 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
       const response = await fetch(`/api/admin/clients/${clientId}/metrics`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ key: template.key, name: template.name, description: template.description, sectionId: gbpSection.id, displayType: "NUMBER_CARD", valueFormat: template.valueFormat, source: template.source, publish: newPublish }),
+        body: JSON.stringify({ key: template.key, name: template.name, description: template.description, sectionId: addSection.id, displayType: "NUMBER_CARD", valueFormat: template.valueFormat, source: template.source, publish: newPublish }),
       });
       const body = await response.json().catch(() => null) as { error?: string; metric?: ResultMetric } | null;
       if (!response.ok || !body?.metric) {
         setError(body?.error ?? "The result metric could not be added.");
         return;
       }
-      setMetrics((current) => [...current, { ...body.metric!, sectionKind: gbpSection.kind, sectionName: gbpSection.name }]);
+      setMetrics((current) => [...current, { ...body.metric!, sectionKind: addSection.kind, sectionName: addSection.name }]);
       setNewTemplateKey("");
       setAdding(false);
       setMessage(newPublish ? "Metric added. Enter its first result before publishing the report." : "Metric added as a draft.");
@@ -181,25 +207,30 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   return <section className="card panel client-results-editor" aria-labelledby="client-results-title">
     <div className="panel-heading">
-      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Client results editor</h2><p>Edit the values and context the client sees, then publish only when the report is approved.</p></div>
+      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website SEO and GBP performance results separately, then publish only when each report is approved.</p></div>
       <div className="results-heading-icon"><Gauge size={18} /></div>
     </div>
+    <div className="results-editor-tabs" role="tablist" aria-label="Client performance editors">
+      <button className={activeView === "website" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "website"} onClick={() => { setActiveView("website"); setAdding(false); setEditingId(null); setDraft(null); }}>Website SEO <span>{websiteMetrics.length}</span></button>
+      <button className={activeView === "gbp" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "gbp"} onClick={() => { setActiveView("gbp"); setAdding(false); setEditingId(null); setDraft(null); }}>GBP performance <span>{gbpMetrics.length}</span></button>
+      <button className={activeView === "all" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "all"} onClick={() => { setActiveView("all"); setAdding(false); setEditingId(null); setDraft(null); }}>All results <span>{metrics.length}</span></button>
+    </div>
     <div className="results-editor-toolbar">
-      <div className="results-editor-summary"><strong>{metrics.filter((metric) => !metric.isDraft && metric.isVisible).length}</strong><span>published results</span><i /> <strong>{metrics.filter((metric) => metric.isDraft).length}</strong><span>draft results</span></div>
-      <div className="results-editor-actions"><a className="button" href={`/admin/clients/${clientId}/preview/gbp`}><Eye size={14} /> Preview client view</a>{availableTemplates.length > 0 && gbpSection ? <button className="button" type="button" onClick={() => { setAdding((current) => !current); setEditingId(null); setDraft(null); setError(""); }}><Plus size={14} /> Add local KPI</button> : null}</div>
+      <div className="results-editor-summary"><strong>{filteredMetrics.filter((metric) => !metric.isDraft && metric.isVisible).length}</strong><span>published in {activeViewLabel}</span><i /> <strong>{filteredMetrics.filter((metric) => metric.isDraft).length}</strong><span>draft results</span></div>
+      <div className="results-editor-actions"><a className="button" href={activePreview}><Eye size={14} /> Preview {activeViewLabel}</a>{availableTemplates.length > 0 && addSection ? <button className="button" type="button" onClick={() => { setAdding((current) => !current); setEditingId(null); setDraft(null); setError(""); }}><Plus size={14} /> Add {activeViewLabel} metric</button> : null}</div>
     </div>
 
     {message && <p className="save-status results-feedback" role="status"><CheckCircle2 size={14} /> {message}</p>}
     {error && <p className="auth-error results-feedback" role="alert">{error}</p>}
 
     {adding && <div className="result-add-panel">
-      <div><strong>Add a client-facing local KPI</strong><p>Use this for a verified GBP result you want to include in the local performance report.</p></div>
+      <div><strong>Add a client-facing {activeViewLabel} metric</strong><p>Use this for a verified result you want to include in the {activeViewLabel} client report.</p></div>
       <div className="result-add-controls"><label>Metric<select value={newTemplateKey || availableTemplates[0]?.key} onChange={(event) => setNewTemplateKey(event.target.value)}>{availableTemplates.map((template) => <option key={template.key} value={template.key}>{template.name}</option>)}</select></label><label className="result-check"><input type="checkbox" checked={newPublish} onChange={(event) => setNewPublish(event.target.checked)} /> Publish metric shell</label><button className="button primary" type="button" onClick={addMetric} disabled={pending}><Plus size={13} /> Add KPI</button><button className="icon-button" type="button" onClick={() => setAdding(false)} aria-label="Close add metric form"><X size={14} /></button></div>
     </div>}
 
     <div className="results-editor-layout">
       <div className="results-metric-list">
-        {metrics.map((metric) => {
+        {filteredMetrics.map((metric) => {
           const latest = metric.values[0];
           return <article className={`result-metric-card${editingId === metric.id ? " active" : ""}`} key={metric.id}>
             <div className="result-metric-card-top"><span className="result-section-tag">{metric.sectionName}</span><span className={`status ${metric.isDraft ? "progress" : "complete"}`}>{metric.isDraft ? "Draft" : "Published"}</span></div>
@@ -208,7 +239,7 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
             <div className="result-metric-card-foot"><span>{metric.isVisible ? <><Eye size={12} /> Visible to client</> : <><Eye size={12} /> Hidden from client</>}</span><button className="table-action" type="button" onClick={() => beginEdit(metric)}><Edit3 size={13} /> Edit result</button></div>
           </article>;
         })}
-        {metrics.length === 0 && <div className="result-empty"><Flag size={16} /><div><strong>No client results yet</strong><p>Add a result metric to begin the presentation.</p></div></div>}
+        {filteredMetrics.length === 0 && <div className="result-empty"><Flag size={16} /><div><strong>No {activeViewLabel} results yet</strong><p>{availableTemplates.length > 0 && addSection ? `Add a ${activeViewLabel} metric to begin this presentation.` : "Add a result metric to begin the presentation."}</p></div></div>}
       </div>
 
       {editingId && draft && activeMetric && <aside className="result-edit-panel" aria-label="Edit client result">

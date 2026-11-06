@@ -1,4 +1,4 @@
-import { AdminOperationsPage } from "../../../components/admin-operations";
+import { AdminReportTemplate } from "../../../components/admin-report-template";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
-export default async function AdminTemplatesPage() { await requireAdminAccess(); return <AdminOperationsPage config={{ activeNav: "Reports", title: "Report templates", description: "Define consistent, client-safe report structures before live provider data replaces presentation examples.", sourceLabel: "Template foundation", sourceDescription: "Templates are not yet persisted as a separate domain model. This surface reserves the operational boundary without pretending templates are live.", columns: [{ key: "template", label: "Template" }, { key: "scope", label: "Scope" }, { key: "status", label: "Status" }, { key: "owner", label: "Owner" }], filters: [{ key: "status", label: "Status", options: ["Draft", "Published", "Archived"] }], emptyTitle: "No report templates yet", emptyDescription: "The first reusable template should be versioned before publishing it to a client workspace.", primaryAction: { label: "Open report center", href: "/portal/reports" } }} />; }
+export default async function AdminTemplatesPage() { await requireAdminAccess(); return <AdminReportTemplate />; }
