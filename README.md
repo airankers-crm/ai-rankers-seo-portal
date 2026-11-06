@@ -1,51 +1,139 @@
-# AI Rankers Dashboard Codebase
+# AI Rankers SEO Portal
 
-This folder is the application-code root for the AI Rankers SEO Client Portal.
+AI Rankers is a Next.js client portal and agency operations workspace for SEO reporting, local visibility, client communication, goals, and delivery operations.
 
-## Current structure
+The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neon Auth integration.
+
+## Product surfaces
+
+### Client portal
+
+- `/portal` — client overview and performance summary
+- `/portal/website-seo` — organic visibility reporting
+- `/portal/gbp` — Google Business Profile presentation
+- `/portal/activities` — client-safe work history and tasks
+- `/portal/reports` — report library and report detail
+- `/portal/messages` — client communication surface
+
+### Agency/admin workspace
+
+- `/admin` — workspace overview and client list
+- `/admin/clients` — client management
+- `/admin/clients/[id]` — client workspace settings, goals, members, and invitations
+- `/admin/users` — role and access management
+- `/admin/activities` — agency activity operations
+- `/admin/goals` — goal operations
+- `/admin/reports` — report operations
+- `/admin/integrations` — provider readiness boundary
+- `/admin/sync-health` — synchronization readiness boundary
+- `/admin/audit` — audit activity
+
+### Authentication
+
+- `/client/login` — client sign-in
+- `/admin/login` — agency/admin sign-in
+- `/auth/sign-up` — client account creation
+- `/auth/reset-password` — password recovery/reset surface
+- `/accept-invite` and `/invite/[token]` — client invitation flow
+- `/onboarding` — first-time client workspace setup
+
+## Repository structure
 
 | Path | Responsibility |
 | --- | --- |
-| `app` and `components` | Next.js web application, admin workspace, client portal and shared UI |
-| `apps/worker` | Google/SEO synchronization, report generation, email and scheduled jobs |
-| `packages/db` | Prisma client, schema, migrations and scoped database access |
-| `packages/core` | Client isolation, roles, metrics, publishing, reports and audit contracts |
-| `packages/integrations` | Search Console, GA4, GBP and rank-provider adapters |
-| `packages/ui` | Shared accessible components, cards, charts and report UI |
-| `prisma` | Database schema, seed data and migration support |
-| `public` | Public application assets that are safe to serve |
-| `tests` | Unit, integration, isolation and end-to-end tests |
+| `app/` | Next.js routes, API handlers, layouts, portal, admin, and auth screens |
+| `components/` | Shared UI, report, dashboard, auth, activity, goal, and admin components |
+| `lib/` | Server-side access control, tasks, reporting, and application helpers |
+| `packages/core/` | Typed demo domain data and metric helpers |
+| `packages/db/` | Prisma client and Neon PostgreSQL adapter |
+| `prisma/` | Schema, migrations, and seed support |
+| `public/branding/` | Safe-to-serve AI Rankers brand assets |
+| `tests/` | Unit and product verification tests |
+| `VERCEL-ENVIRONMENT-VARIABLES.md` | Vercel environment-variable contract |
 
-## Batch 1 implementation
+## Requirements
 
-The first runnable vertical slice is now available:
+- Node.js 24.x
+- pnpm 11.x
+- Neon PostgreSQL for runtime data
+- Neon Auth for production authentication
 
-- `/portal` — responsive Riverstone Dental client portal preview
-- `/admin` — AI Rankers workspace overview and client list
-- `packages/core` — typed demo domain data and metric trend helpers
-- `prisma/schema.prisma` — initial PostgreSQL data model
-- `tests/metrics.test.ts` — first metric calculation tests
+The repository declares the Node version in both `package.json` and `.nvmrc`.
 
-Run locally from this folder:
+## Local setup
 
 ```bash
 pnpm install
+pnpm db:generate
 pnpm dev
 ```
 
-Verification commands:
+Copy `.env.example` to `.env.local` and provide local development values. Never commit `.env.local` or production secrets.
+
+## Environment variables
+
+Required application variables:
+
+```env
+DATABASE_URL=
+DIRECT_URL=
+NEON_AUTH_BASE_URL=
+NEON_AUTH_COOKIE_SECRET=
+```
+
+See [VERCEL-ENVIRONMENT-VARIABLES.md](VERCEL-ENVIRONMENT-VARIABLES.md) for the Vercel setup, runtime/migration distinction, and security rules.
+
+## Database workflow
+
+Validate the schema:
 
 ```bash
-pnpm lint
+pnpm db:validate
+```
+
+Apply committed migrations from a trusted environment:
+
+```bash
+pnpm db:deploy
+```
+
+Use `DIRECT_URL` for Prisma migration commands and `DATABASE_URL` for the application runtime. Do not run `prisma migrate dev` as part of a Vercel production build.
+
+## Verification
+
+```bash
+pnpm db:validate
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm build
 ```
 
-The current screens use typed demo data. Authentication, database persistence, live provider adapters, background sync, and private report storage remain subsequent modules in the Batch 1 plan.
+## Vercel deployment
 
-## Implementation rule
+Use the repository root as the Vercel Root Directory:
 
-Keep tenant-aware business logic in `packages/core` and database access in `packages/db`. The web and worker applications should call these shared packages rather than duplicating authorization or metric logic.
+```text
+Framework: Next.js
+Root Directory: ./
+Install Command: pnpm install --frozen-lockfile
+Build Command: pnpm build
+Output Directory: Next.js default
+Node.js: 24.x
+```
 
-The architecture baseline is documented in `../docs/AI-Rankers-SEO-Portal-Architecture.md` and the final support validation report is in `../docs/AI-Rankers-Support-Team-Requirements-Report.docx`.
+Deploy a Preview first, verify authentication, database access, authorization, portal routes, and admin routes, then promote the tested build to Production.
+
+## Current implementation boundary
+
+The current release contains the client portal foundation, admin operations surfaces, authentication entry points, goals, activities, reporting presentation, Prisma persistence, and Neon connection boundaries.
+
+Some provider integrations and advanced CRM capabilities remain explicit implementation boundaries. Presentation/demo data is labeled in the UI and must not be represented as live provider data.
+
+Production rules:
+
+- Client scope is resolved server-side.
+- Client users can only access their published client-safe workspace.
+- Agency-only content must not appear in the client portal.
+- Authentication must fail closed when production auth variables are missing.
+- Provider values must retain source and freshness context.
