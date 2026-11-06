@@ -3,7 +3,11 @@ import { createNeonAuth } from "@neon/auth/next/server";
 let cachedAuth: ReturnType<typeof createNeonAuth> | null = null;
 
 export function isAuthConfigured() {
-  return Boolean(process.env.NEON_AUTH_BASE_URL && process.env.NEON_AUTH_COOKIE_SECRET);
+  return Boolean(process.env.NEON_AUTH_BASE_URL?.trim() && process.env.NEON_AUTH_COOKIE_SECRET?.trim());
+}
+
+export function requiresProductionAuth() {
+  return process.env.NODE_ENV === "production" || process.env.REQUIRE_AUTH === "true";
 }
 
 export function getAuth() {

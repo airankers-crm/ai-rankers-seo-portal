@@ -23,6 +23,21 @@ export type WebsiteSeoRow = {
   topTen: number | null;
 };
 
+export type WebsiteSeoChannel = {
+  key: string;
+  label: string;
+  value: number;
+  color: string;
+};
+
+const presentationChannels: WebsiteSeoChannel[] = [
+  { key: "organic", label: "Organic search", value: 8426, color: "#F26B38" },
+  { key: "direct", label: "Direct", value: 3210, color: "#12243F" },
+  { key: "referral", label: "Referral", value: 1680, color: "#148F83" },
+  { key: "email", label: "Email", value: 1145, color: "#6F3FB5" },
+  { key: "paid-social", label: "Paid social", value: 968, color: "#8E98A8" },
+];
+
 function initialRange(): DateRangeSelection {
   const now = new Date();
   return { ...getDefaultDateRange(), label: "This year", start: new Date(now.getFullYear(), 0, 1) };
@@ -52,9 +67,10 @@ function metricTrend(metric: WebsiteSeoMetric) {
   return ((metric.value - metric.previousValue) / Math.abs(metric.previousValue)) * 100;
 }
 
-export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metrics, rows }: { clientName: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[] }) {
+export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metrics, rows, channels }: { clientName: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[] }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(initialRange);
   const [query, setQuery] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -68,6 +84,18 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
   const organic = metricMap.get("organicTraffic");
   const impressions = metricMap.get("impressions");
   const topTen = metricMap.get("topTen");
+  const acquisitionChannels = channels?.length ? channels : presentationChannels;
+  const acquisitionTotal = acquisitionChannels.reduce((total, channel) => total + channel.value, 0);
+  const topChannel = acquisitionChannels.reduce((top, channel) => channel.value > top.value ? channel : top, acquisitionChannels[0]);
+  const donutStops = acquisitionChannels.reduce<{ stops: string[]; offset: number }>((result, channel) => {
+    const start = result.offset;
+    const end = start + (channel.value / acquisitionTotal) * 100;
+    result.stops.push(`${channel.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`);
+    result.offset = end;
+    return result;
+  }, { stops: [], offset: 0 }).stops.join(", ");
+  const activeChannel = acquisitionChannels.find((channel) => channel.key === selectedChannel) ?? topChannel;
+  const channelIsPreview = !channels?.length;
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO">
     <div className="content">
@@ -93,6 +121,33 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
           return <article className="card seo-metric-card" key={metric.key}><div className="seo-metric-top"><span>{metric.label}</span><span className="source-badge">{metric.source}</span></div><strong>{compactMetric(metric.value, metric.format)}</strong><div className="seo-metric-foot"><span className={trend === null || trend >= 0 ? "trend-up" : "trend-down"}>{trend !== null && (trend >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {formatTrend(trend)}</span><span>vs previous period</span></div><p>{metric.description}</p></article>;
         })}
       </div>
+
+      <section className="card panel seo-acquisition-panel" aria-labelledby="seo-acquisition-title">
+        <div className="panel-heading seo-acquisition-heading">
+          <div><p className="eyebrow">Acquisition mix</p><h2 id="seo-acquisition-title">Traffic by channel</h2><p>See how sessions are distributed across the channels bringing people to the site.</p></div>
+          <span className="source-badge">{channelIsPreview ? "GA4 preview" : "GA4"}</span>
+        </div>
+        <div className="seo-acquisition-layout">
+          <div className="seo-donut-wrap">
+            <div className="seo-donut" style={{ background: `conic-gradient(${donutStops})` }} role="img" aria-label={`${acquisitionTotal.toLocaleString()} sessions by acquisition channel`}>
+              <div className="seo-donut-center"><strong>{acquisitionTotal.toLocaleString()}</strong><span>Sessions</span></div>
+            </div>
+            <div className="seo-donut-summary"><span>Top channel</span><strong>{topChannel.label}</strong><small>{((topChannel.value / acquisitionTotal) * 100).toFixed(1)}% of sessions</small></div>
+          </div>
+          <div className="seo-channel-list" aria-label="Acquisition channels">
+            {acquisitionChannels.map((channel) => {
+              const share = (channel.value / acquisitionTotal) * 100;
+              const active = activeChannel.key === channel.key;
+              return <button type="button" className={`seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} aria-pressed={active}>
+                <span className="seo-channel-swatch" style={{ backgroundColor: channel.color }} />
+                <span className="seo-channel-copy"><strong>{channel.label}</strong><small>{active ? "Selected channel" : "View channel detail"}</small></span>
+                <span className="seo-channel-value"><strong>{channel.value.toLocaleString()}</strong><small>{share.toFixed(1)}%</small></span>
+              </button>;
+            })}
+          </div>
+        </div>
+        <div className="seo-acquisition-foot"><span><Info size={13} /> {channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : `Selected: ${activeChannel.label} · ${activeChannel.value.toLocaleString()} sessions`}</span><span>Higher volume is better</span></div>
+      </section>
 
       <section className="card panel seo-table-panel" aria-labelledby="seo-table-title">
         <div className="panel-heading"><div><p className="eyebrow">Performance detail</p><h2 id="seo-table-title">Organic search by period</h2><p>Compare period values before reviewing page or keyword detail.</p></div><Table2 size={18} color="#148f83" /></div>

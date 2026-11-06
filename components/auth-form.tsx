@@ -4,8 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Activity, Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
 import { createAuthClient } from "@neon/auth/next";
+import { BinaryOrbitsBackground } from "./binary-orbits-background";
 
 const authClient = createAuthClient();
 
@@ -174,18 +175,11 @@ export function AuthForm({
         </section>
 
         <aside className="auth-context" aria-label={`${content.eyebrow} information`}>
+          <BinaryOrbitsBackground />
           <div className="auth-context-top"><AudienceIcon size={18} /><span>{content.eyebrow}</span></div>
           <div className="auth-context-copy">
             <h2>{content.contextTitle}</h2>
             <p>{content.contextCopy}</p>
-          </div>
-          <div className="auth-context-visual" aria-hidden="true">
-            <div className="auth-signal-orbit auth-signal-orbit-one"><span /></div>
-            <div className="auth-signal-orbit auth-signal-orbit-two"><span /></div>
-            <div className="auth-signal-grid" />
-            <div className="auth-signal-core"><Activity size={20} /></div>
-            <div className="auth-signal-chip auth-signal-chip-top"><span>Visibility signal</span><strong>Active</strong></div>
-            <div className="auth-signal-chip auth-signal-chip-bottom"><span>Workspace</span><strong>Ready</strong></div>
           </div>
           <div className="auth-context-points">
             <span>Private client access</span>

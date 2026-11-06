@@ -6,7 +6,7 @@ import { getSession, isAuthConfigured } from "../../lib/auth/server";
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
-  if (!isAuthConfigured()) redirect("/portal");
+  if (!isAuthConfigured()) redirect("/client/login?error=auth_configuration");
   const session = await getSession();
   if (!session?.user) redirect("/auth/sign-in?redirectTo=/onboarding");
 

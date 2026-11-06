@@ -11,6 +11,7 @@ function slugify(value: string) {
 export async function POST(request: Request) {
   const user = await getCurrentAppUser();
   if (!user) return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
+  if (user.status !== "ACTIVE") return NextResponse.json({ error: "Your account is not active." }, { status: 403 });
   if (user.role !== "CLIENT") return NextResponse.json({ error: "Only client accounts need onboarding." }, { status: 400 });
   if (user.clientId) return NextResponse.json({ error: "Your workspace is already set up." }, { status: 409 });
 

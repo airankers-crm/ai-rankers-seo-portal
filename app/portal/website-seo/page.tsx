@@ -1,6 +1,6 @@
 import { prisma } from "@ai-rankers/db";
 import { requirePortalAccess } from "../../../lib/auth/access";
-import { WebsiteSeoDashboard, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
+import { WebsiteSeoDashboard, type WebsiteSeoChannel, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +8,14 @@ const metricConfig = [
   { key: "ga4-organic-sessions", viewKey: "organicTraffic", description: "Sessions attributed to organic search in the selected reporting window." },
   { key: "gsc-impressions", viewKey: "impressions", description: "Search results impressions recorded by Google Search Console." },
   { key: "kw-top10", viewKey: "topTen", description: "Tracked keywords currently appearing within the first ten organic results." },
+] as const;
+
+const channelConfig = [
+  { key: "ga4-channel-organic", label: "Organic search", color: "#F26B38" },
+  { key: "ga4-channel-direct", label: "Direct", color: "#12243F" },
+  { key: "ga4-channel-referral", label: "Referral", color: "#148F83" },
+  { key: "ga4-channel-email", label: "Email", color: "#6F3FB5" },
+  { key: "ga4-channel-paid-social", label: "Paid social", color: "#8E98A8" },
 ] as const;
 
 function formatPeriod(date: Date) {
@@ -44,5 +52,10 @@ export default async function WebsiteSeoPage() {
     }
   }
 
-  return <WebsiteSeoDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />;
+  const latestChannelValues = channelConfig.map((config) => ({ config, metric: metricMap.get(config.key) })).map(({ config, metric }) => ({ config, value: metric?.values.at(-1) ? Number(metric.values.at(-1)!.value) : null }));
+  const channels: WebsiteSeoChannel[] | undefined = latestChannelValues.every(({ value }) => value !== null)
+    ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
+    : undefined;
+
+  return <WebsiteSeoDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />;
 }

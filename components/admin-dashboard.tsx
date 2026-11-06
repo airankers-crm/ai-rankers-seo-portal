@@ -1,10 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2, Layers3, Plus, ShieldCheck, UsersRound } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, FileCheck2, Layers3, Plus, ShieldCheck, TriangleAlert, UsersRound } from "lucide-react";
+import { useMemo, useState } from "react";
 import { demoClient, demoClients } from "@ai-rankers/core";
 import type { DemoClient } from "@ai-rankers/core";
 import { AppShell } from "./app-shell";
+
+type PulseRange = "Week" | "Month" | "Quarter";
+
+function PulseSparkline({ points, tone, label }: { points: number[]; tone: "orange" | "teal" | "purple" | "blue"; label: string }) {
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const spread = max - min || 1;
+  const coordinates = points.map((point, index) => `${(index / (points.length - 1)) * 100},${38 - ((point - min) / spread) * 28}`).join(" ");
+  return <svg className={`agency-pulse-sparkline ${tone}`} viewBox="0 0 100 42" role="img" aria-label={`${label} trend`} preserveAspectRatio="none"><polyline points={`${coordinates} 100,42 0,42`} className="agency-pulse-area" /><polyline points={coordinates} className="agency-pulse-line" /></svg>;
+}
+
+function AgencyPulse({ clients }: { clients: DemoClient[] }) {
+  const [range, setRange] = useState<PulseRange>("Week");
+  const rangeCopy = range === "Week" ? "vs start of week" : range === "Month" ? "vs start of month" : "vs start of quarter";
+  const serviceCount = clients.reduce((total, client) => total + client.services.length, 0);
+  const metrics = useMemo(() => [
+    { label: "Active clients", value: clients.length, change: "+2", direction: "up" as const, icon: UsersRound, tone: "teal" as const, points: [2, 2, 2, 3, 3, clients.length], note: "Client workspaces currently active" },
+    { label: "Published this month", value: 18, change: "+12%", direction: "up" as const, icon: FileCheck2, tone: "orange" as const, points: [10, 12, 11, 14, 16, 18], note: "Reports and client updates" },
+    { label: "Needs attention", value: 3, change: "-1", direction: "down" as const, icon: TriangleAlert, tone: "purple" as const, points: [6, 5, 5, 4, 4, 3], note: "Drafts or delivery blockers" },
+    { label: "SEO services live", value: serviceCount, change: "+1", direction: "up" as const, icon: Clock3, tone: "blue" as const, points: [2, 2, 3, 3, 4, serviceCount], note: "Website SEO and GBP programs" },
+  ], [clients.length, serviceCount]);
+
+  return <section className="card panel agency-pulse" aria-labelledby="agency-pulse-title">
+    <div className="agency-pulse-heading">
+      <div><p className="eyebrow">Operations / Agency pulse</p><h2 id="agency-pulse-title">Workspace pulse</h2><p>Adoption, delivery, and attention signals across every client workspace.</p></div>
+      <div className="agency-pulse-range" role="tablist" aria-label="Agency pulse range">
+        {(["Week", "Month", "Quarter"] as PulseRange[]).map((item) => <button key={item} type="button" role="tab" aria-selected={range === item} className={range === item ? "active" : ""} onClick={() => setRange(item)}>{item}</button>)}
+      </div>
+    </div>
+    <div className="agency-pulse-grid">
+      {metrics.map((metric) => { const Icon = metric.icon; return <article className="agency-pulse-card" key={metric.label}>
+        <div className="agency-pulse-card-top"><span className={`agency-pulse-icon ${metric.tone}`}><Icon size={14} /></span><span className="agency-pulse-label">{metric.label}</span></div>
+        <strong className="agency-pulse-value">{metric.value.toLocaleString()}</strong>
+        <div className="agency-pulse-change"><span className={metric.direction === "up" ? "trend-up" : "trend-down"}>{metric.direction === "up" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />} {metric.change}</span><span>{rangeCopy}</span></div>
+        <PulseSparkline points={metric.points} tone={metric.tone} label={metric.label} />
+        <small>{metric.note}</small>
+      </article>; })}
+    </div>
+    <div className="agency-pulse-foot"><span><span className="dot" /> Presentation data · source connections pending</span><span>Range: {range}</span></div>
+  </section>;
+}
 
 export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClient[] }) {
   const clients = databaseClients ?? demoClients;
@@ -22,11 +64,7 @@ export function AdminDashboard({ databaseClients }: { databaseClients?: DemoClie
           <div className="heading-actions"><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
         </div>
 
-        <div className="admin-stat-grid">
-          <article className="card admin-stat"><div className="admin-stat-label">Active clients</div><div className="admin-stat-value">{clients.length}</div><div className="admin-stat-note">↑ 2 this quarter</div></article>
-          <article className="card admin-stat"><div className="admin-stat-label">Published this month</div><div className="admin-stat-value">18</div><div className="admin-stat-note">↑ 12% vs October</div></article>
-          <article className="card admin-stat"><div className="admin-stat-label">Needs attention</div><div className="admin-stat-value">3</div><div className="admin-stat-note" style={{ color: "#b07623" }}>Drafts waiting to publish</div></article>
-        </div>
+        <AgencyPulse clients={clients} />
 
         <section className="card panel" id="clients">
           <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has an isolated dashboard, activity log, and publishing state.</p></div><Link className="button" href="/admin/users"><UsersRound size={14} /> Manage users</Link></div>

@@ -6,12 +6,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const rows = await prisma.$queryRaw<Array<{ ok: number }>>`SELECT 1 AS ok`;
-    const clients = await prisma.client.count();
 
     return NextResponse.json({
       status: "ok",
       database: rows[0]?.ok === 1 ? "connected" : "unexpected",
-      clients,
     });
   } catch (error) {
     console.error("Database health check failed", error);

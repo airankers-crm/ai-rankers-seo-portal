@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const user = await getCurrentAppUser();
   if (!user) return NextResponse.json({ error: "Sign in is required to accept an invitation." }, { status: 401 });
+  if (user.status === "DISABLED") return NextResponse.json({ error: "This account has been disabled." }, { status: 403 });
 
   const { token } = await params;
   const tokenHash = createHash("sha256").update(token).digest("hex");
