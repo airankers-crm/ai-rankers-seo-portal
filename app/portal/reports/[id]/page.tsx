@@ -34,7 +34,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
     include: {
       reports: { where: { id, isVisible: true } },
-      metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
+      metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
       activities: { orderBy: { createdAt: "desc" }, take: 8 },
       goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
     },

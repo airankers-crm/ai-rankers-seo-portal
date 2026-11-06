@@ -18,7 +18,7 @@ export default async function WebsiteSeoPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: { metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 
   if (!client) return <WebsiteSeoDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;

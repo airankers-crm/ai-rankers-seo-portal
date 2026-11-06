@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 
 export function OnboardingForm({ email }: { email: string }) {
   const router = useRouter();
@@ -34,7 +35,7 @@ export function OnboardingForm({ email }: { email: string }) {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <div className="brand auth-brand"><div className="brand-mark">A</div><div><div className="brand-name">AI Rankers</div><span className="brand-sub">SEO intelligence</span></div></div>
+        <div className="brand auth-brand"><Image className="auth-logo-image" src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={183} height={59} priority /></div>
         <p className="eyebrow">Workspace setup</p>
         <h1>Tell us about your business</h1>
         <p className="auth-copy">Signed in as {email}. Create your client workspace so we can show the right SEO performance data.</p>

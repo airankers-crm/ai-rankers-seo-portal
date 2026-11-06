@@ -20,7 +20,7 @@ export default async function GbpPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: { metrics: { include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 
   if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
@@ -34,9 +34,13 @@ export default async function GbpPage() {
   });
 
   const rowMap = new Map<string, GbpPeriodRow>();
-  for (const value of metricMap.get("gbp-calls")?.values ?? []) {
-    const periodStart = value.periodStart.toISOString();
-    rowMap.set(periodStart, { periodStart, periodLabel: formatPeriod(value.periodStart), calls: Number(value.value) });
+  for (const config of metricConfig) {
+    for (const value of metricMap.get(config.key)?.values ?? []) {
+      const periodStart = value.periodStart.toISOString();
+      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(value.periodStart), calls: null, views: null, clicks: null, directions: null, reviews: null };
+      existing[config.viewKey] = Number(value.value);
+      rowMap.set(periodStart, existing);
+    }
   }
 
   return <GbpPerformanceDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />;

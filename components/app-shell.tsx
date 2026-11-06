@@ -56,7 +56,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     <div className="app-shell">
       <aside className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
-          {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/logo-mark-orange.png" alt="The AI Rankers" width={31} height={31} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
+          {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
           <span className="brand-sub">SEO intelligence</span>
         </div>
 

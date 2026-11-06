@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createHash } from "node:crypto";
 import { prisma } from "@ai-rankers/db";
 import { getSession } from "../../../lib/auth/server";
@@ -16,7 +17,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   return (
     <main className="auth-page">
       <section className="auth-card invite-card">
-        <div className="brand auth-brand"><div className="brand-mark" style={valid ? { backgroundColor: invitation.client.brandAccent } : undefined}>A</div><div><div className="brand-name">AI Rankers</div><span className="brand-sub">SEO intelligence</span></div></div>
+        <div className="brand auth-brand"><Image className="auth-logo-image" src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={183} height={59} priority /></div>
         {valid ? <>
           <p className="eyebrow">Workspace invitation</p>
           <h1>Join {invitation.client.businessName}</h1>

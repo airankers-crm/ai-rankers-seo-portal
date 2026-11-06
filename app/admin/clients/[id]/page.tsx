@@ -6,6 +6,7 @@ import { AppShell } from "../../../../components/app-shell";
 import { ClientSettingsForm } from "../../../../components/client-settings-form";
 import { ClientInvitationForm } from "../../../../components/client-invitation-form";
 import { GoalManagement } from "../../../../components/goal-management";
+import { ClientResultsEditor } from "../../../../components/client-results-editor";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,24 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
     where: { id },
     include: {
       sections: { orderBy: { position: "asc" } },
-      metrics: { select: { id: true, name: true, valueFormat: true }, orderBy: { position: "asc" } },
+      metrics: {
+        select: {
+          id: true,
+          key: true,
+          name: true,
+          description: true,
+          sectionId: true,
+          displayType: true,
+          valueFormat: true,
+          source: true,
+          higherIsBetter: true,
+          isVisible: true,
+          isDraft: true,
+          section: { select: { name: true, kind: true } },
+          values: { orderBy: { periodStart: "desc" }, take: 6 },
+        },
+        orderBy: { position: "asc" },
+      },
       goals: { include: { metric: { select: { name: true } } }, orderBy: { endDate: "asc" } },
       _count: { select: { users: true, metrics: true, reports: true, activities: true } },
     },
@@ -43,6 +61,27 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
           <article className="card admin-stat"><div className="admin-stat-label">Published metrics</div><div className="admin-stat-value">{client._count.metrics}</div><div className="admin-stat-note">Data source connections next</div></article>
           <article className="card admin-stat"><div className="admin-stat-label">Portal users</div><div className="admin-stat-value">{client._count.users}</div><div className="admin-stat-note">Invite client stakeholders</div></article>
         </div>
+
+        <ClientResultsEditor
+          clientId={client.id}
+          sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind }))}
+          metrics={client.metrics.map((metric) => ({
+            id: metric.id,
+            key: metric.key,
+            name: metric.name,
+            description: metric.description,
+            sectionId: metric.sectionId,
+            sectionKind: metric.section.kind,
+            sectionName: metric.section.name,
+            displayType: metric.displayType,
+            valueFormat: metric.valueFormat,
+            source: metric.source,
+            higherIsBetter: metric.higherIsBetter,
+            isVisible: metric.isVisible,
+            isDraft: metric.isDraft,
+            values: metric.values.map((value) => ({ id: value.id, periodStart: value.periodStart.toISOString(), periodEnd: value.periodEnd.toISOString(), value: value.value.toString(), source: value.source, note: value.note, isOverride: value.isOverride })),
+          }))}
+        />
 
         <div className="dashboard-grid">
           <GoalManagement clientId={client.id} metrics={client.metrics} initialGoals={client.goals.map((goal) => ({ id: goal.id, name: goal.name, target: goal.target.toString(), metricName: goal.metric?.name ?? null, status: goal.status }))} />

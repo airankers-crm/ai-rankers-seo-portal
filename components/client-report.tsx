@@ -69,7 +69,7 @@ export function ClientReport({ report }: { report: ReportViewModel }) {
 
     <section className="report-page report-section report-appendix"><ReportSectionHeading eyebrow="10 · Appendix" title="Supporting detail" description="Supporting tables and provider coverage for this report." /><div className="appendix-list">{report.appendix.map((item) => <div key={item.label}><FileText size={15} /><span>{item.label}</span><strong>{item.value}</strong></div>)}</div></section>
 
-    <footer className="report-footer"><Image src="/branding/ai-rankers/logo-mark-navy.png" alt="" width={20} height={20} /><div><strong>The AI Rankers</strong><span>Client performance reporting · {report.client.businessName}</span></div><span>Prepared for client review</span></footer>
+    <footer className="report-footer"><Image className="report-footer-logo" src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={128} height={41} /><div><strong>The AI Rankers</strong><span>Client performance reporting · {report.client.businessName}</span></div><span>Prepared for client review</span></footer>
   </main>;
 }
 

@@ -16,7 +16,7 @@ export default async function PortalPage() {
   if (!client) return <PortalDashboard />;
 
   const [metrics, activityRecords, reportRecords, goalRecords] = await Promise.all([
-    prisma.metric.findMany({ where: { clientId: client.id }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } }),
+    prisma.metric.findMany({ where: { clientId: client.id, isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } }),
     prisma.activity.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" }, take: 3 }),
     prisma.report.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" }, take: 3 }),
     prisma.goal.findMany({
