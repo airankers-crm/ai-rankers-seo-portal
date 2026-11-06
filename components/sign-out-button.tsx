@@ -11,7 +11,8 @@ export function SignOutButton({ compact = false }: { compact?: boolean }) {
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/auth/sign-in");
+    const adminSession = window.location.pathname === "/admin" || window.location.pathname.startsWith("/admin/");
+    router.push(adminSession ? "/admin/login" : "/client/login");
     router.refresh();
   }
 

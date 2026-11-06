@@ -5,9 +5,12 @@ export default function proxy(request: NextRequest) {
   const auth = getAuth();
   if (!auth) return NextResponse.next();
 
+  const pathname = request.nextUrl.pathname;
+  const adminRequest = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/");
+
   return auth.middleware({
-    loginUrl: "/auth/sign-in",
-    publicRoutes: ["/", "/invite"],
+    loginUrl: adminRequest ? "/admin/login" : "/client/login",
+    publicRoutes: ["/", "/invite", "/client/login", "/admin/login", "/login", "/forgot-password", "/accept-invite", "/api/auth/redirect"],
   })(request);
 }
 

@@ -39,7 +39,7 @@ export async function requirePortalAccess() {
   if (!isAuthConfigured()) return { user: null, preview: true };
 
   const user = await getCurrentAppUser();
-  if (!user) redirect("/auth/sign-in?redirectTo=/portal");
+  if (!user) redirect("/client/login?redirectTo=/portal");
   if (!user.clientId) redirect(user.role === "CLIENT" ? "/onboarding" : "/admin");
 
   return { user, preview: false };
@@ -49,7 +49,7 @@ export async function requireAdminAccess() {
   if (!isAuthConfigured()) return { user: null, preview: true };
 
   const user = await getCurrentAppUser();
-  if (!user) redirect("/auth/sign-in?redirectTo=/admin");
+  if (!user) redirect("/admin/login?redirectTo=/admin");
   if (!isAdminRole(user.role)) redirect("/portal");
 
   return { user, preview: false };
