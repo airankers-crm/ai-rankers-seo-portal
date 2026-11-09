@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, Compass, MapPin, MessageSquareText, Phone, RotateCcw, Search, SlidersHorizontal, Star, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, CheckCircle2, Compass, MapPin, MessageSquareText, Phone, RotateCcw, Search, SlidersHorizontal, Star, TrendingUp } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 export type GbpMetric = {
@@ -117,6 +117,10 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   const trendData = visibleRows.filter((row) => row[activeMetricKey] !== null).map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
   const latestAvailableRow = rows.at(-1);
   const hasPublishedData = rows.length > 0;
+  const totalFor = (key: keyof Pick<GbpPeriodRow, "views" | "calls" | "clicks" | "directions" | "reviews">) => {
+    const values = visibleRows.map((row) => row[key]).filter((value): value is number => value !== null);
+    return values.length ? values.reduce((total, value) => total + value, 0) : null;
+  };
   function resetFilters() {
     setQuery("");
     setMetricFilter("all");
@@ -124,7 +128,7 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   }
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="GBP performance" hiddenNav={isSectionPublished ? [] : ["GBP performance"]}>
-    <div className="content">
+    <div className="content gbp-dashboard">
       <div className="page-heading">
         <div>
           <h1>{presentation.pageTitle}</h1>
@@ -148,12 +152,12 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
 
       {hasPublishedData ? <>
       <div className="seo-metric-grid gbp-metric-grid">
-        {visibleMetrics.map((metric) => { const change = trend(metric); const metricInfo = metricPresentation.find((item) => item.key === metric.key); const Icon = metricInfo?.icon ?? MessageSquareText; return <article className="card seo-metric-card" key={metric.key}><div className="seo-metric-top"><span>{metric.label}</span><span className={`source-badge${metric.value === null ? " pending" : ""}`}>{metric.value === null ? "Not connected" : "Reported"}</span></div><div className="gbp-metric-value"><span className="gbp-metric-icon"><Icon size={15} /></span><strong>{formatHeadlineMetric(metric.value)}</strong></div><div className="seo-metric-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {change === null ? "No comparison" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}</span><span>vs previous period</span></div><p>{metric.description}</p></article>; })}
+        {visibleMetrics.map((metric) => { const change = trend(metric); const metricInfo = metricPresentation.find((item) => item.key === metric.key); const Icon = metricInfo?.icon ?? MessageSquareText; return <article className="card seo-metric-card" key={metric.key}><div className="seo-metric-top"><span className="gbp-metric-label"><span className="gbp-metric-icon"><Icon size={15} /></span><span>{metric.label}</span></span><span className={`source-badge${metric.value === null ? " pending" : ""}`}>{metric.value === null ? "Not connected" : "Reported"}</span></div><div className="gbp-metric-value"><strong>{formatHeadlineMetric(metric.value)}</strong></div><div className="seo-metric-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {change === null ? "No comparison" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}</span><span>vs previous period</span></div><p>{metric.description}</p></article>; })}
       </div>
 
       <div className="gbp-analysis-grid">
       <section className="card panel gbp-trend-panel" aria-labelledby="gbp-trend-title">
-        <div className="panel-heading"><div><p className="eyebrow">Performance trend</p><h2 id="gbp-trend-title">{presentation.chartTitle}</h2></div><span className="panel-meta">{trendData.length} periods</span></div>
+        <div className="panel-heading"><div><h2 id="gbp-trend-title">{presentation.chartTitle}</h2></div><span className="panel-meta">{trendData.length} periods</span></div>
         <div className="gbp-trend-tabs" role="tablist" aria-label="GBP trend metrics">{metrics.map((metric) => <button key={metric.key} type="button" role="tab" aria-selected={activeMetricKey === metric.key} className={activeMetricKey === metric.key ? "active" : ""} onClick={() => setActiveMetricKey(metric.key as GbpMetricKey)}>{metric.label}</button>)}</div>
         {trendData.length > 1 ? <div className="gbp-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "Profile"} trend chart`}><svg viewBox="0 0 640 190" preserveAspectRatio="none"><defs><linearGradient id="gbpTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#148f83" stopOpacity=".25" /><stop offset="100%" stopColor="#148f83" stopOpacity=".02" /></linearGradient></defs><line x1="18" x2="622" y1="40" y2="40" className="gbp-chart-grid-line" /><line x1="18" x2="622" y1="95" y2="95" className="gbp-chart-grid-line" /><line x1="18" x2="622" y1="172" y2="172" className="gbp-chart-grid-line" /><path d={`${chartPath(trendData)} L622 172 L18 172 Z`} fill="url(#gbpTrendFill)" /><path d={chartPath(trendData)} className="gbp-chart-line" fill="none" /></svg><div className="gbp-chart-labels"><span>{trendData[0]?.label}</span><strong>{activeMetric?.label ?? "Profile activity"}</strong><span>{trendData.at(-1)?.label}</span></div></div> : <div className="gbp-chart-empty"><BarChart3 size={16} /><div><strong>Trend detail will appear here</strong><p>Publish at least two reporting periods for this metric to show movement over time.</p></div></div>}
       </section>
@@ -162,9 +166,9 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
       </div>
 
       <section className="card panel seo-table-panel" aria-labelledby="gbp-table-title">
-        <div className="panel-heading"><div><p className="eyebrow">Acquisition and actions</p><h2 id="gbp-table-title">Google Business Profile results by period</h2><p>Compare how local visibility translated into customer actions.</p></div><CalendarDays size={18} color="#148f83" /></div>
+        <div className="panel-heading"><div><h2 id="gbp-table-title">Results by month</h2></div></div>
         <div className="seo-table-toolbar"><span className="panel-meta">{visibleRows.length} periods{query ? " · filtered" : ""}</span></div>
-        {visibleRows.length === 0 ? <div className="empty-state"><div className="empty-state-mark"><CalendarDays size={15} /></div><p>No reporting periods match your search.</p></div> : <div className="seo-table-wrap"><table className="seo-table gbp-results-table"><thead><tr><th>Reporting period</th><th><span>Search &amp; Maps impressions</span><small>Discovery</small></th><th><span>Call clicks</span><small>Phone actions</small></th><th><span>Website clicks</span><small>Website actions</small></th><th><span>Directions</span><small>Visit intent</small></th><th><span>Reviews</span><small>Reputation</small></th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={row.periodStart}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest available period" : "Historical period"}</span></td><td>{formatMetric(row.views)}</td><td>{formatMetric(row.calls)}</td><td>{formatMetric(row.clicks)}</td><td>{formatMetric(row.directions)}</td><td>{formatMetric(row.reviews)}</td></tr>)}</tbody></table></div>}
+        {visibleRows.length === 0 ? <div className="empty-state"><p>No reporting periods match your search.</p></div> : <div className="seo-table-wrap"><table className="seo-table gbp-results-table"><thead><tr><th>Month</th><th>Search &amp; Maps impressions</th><th>Call clicks</th><th>Website clicks</th><th>Direction requests</th><th>Reviews received</th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={row.periodStart} className={index === visibleRows.length - 1 ? "is-latest" : undefined}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest available period" : "Historical period"}</span></td><td>{formatMetric(row.views)}</td><td>{formatMetric(row.calls)}</td><td>{formatMetric(row.clicks)}</td><td>{formatMetric(row.directions)}</td><td>{formatMetric(row.reviews)}</td></tr>)}</tbody><tfoot><tr><td><strong>Total ({visibleRows.length} months)</strong></td><td>{formatMetric(totalFor("views"))}</td><td>{formatMetric(totalFor("calls"))}</td><td>{formatMetric(totalFor("clicks"))}</td><td>{formatMetric(totalFor("directions"))}</td><td>{formatMetric(totalFor("reviews"))}</td></tr></tfoot></table></div>}
         <div className="seo-table-foot"><span><TrendingUp size={13} /> Positive movement is based on the selected metric’s previous period.</span><span>— means no published result for that period.</span></div>
       </section>
       </> : <section className="card gbp-empty-state" aria-labelledby="gbp-empty-title"><div className="gbp-empty-icon"><BarChart3 size={20} /></div><div><p className="eyebrow">Data status</p><h2 id="gbp-empty-title">No GBP data published yet.</h2><p>This page will show Google Business Profile performance after the first reporting period is published.</p><div className="gbp-empty-points"><span><MapPin size={13} /> Search and Maps impressions</span><span><Phone size={13} /> Calls, clicks, and directions</span><span><Star size={13} /> Reviews</span></div></div></section>}
