@@ -22,7 +22,7 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const params = await searchParams;
   if (params?.demo === "1") redirect("/portal/gbp");
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
+    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
     include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 

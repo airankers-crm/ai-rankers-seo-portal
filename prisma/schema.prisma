@@ -132,6 +132,8 @@ model User {
   assignedTasks   Task[]             @relation("TaskAssignee")
   requestedTasks  Task[]             @relation("TaskRequester")
   feedbackSubmissions Feedback[]
+  chatGroupsCreated ChatGroup[]         @relation("ChatGroupCreator")
+  chatMessages      ChatMessage[]       @relation("ChatMessageSender")
 }
 
 model Client {
@@ -158,6 +160,7 @@ model Client {
   auditLogs     AuditLog[]
   tasks         Task[]
   feedback      Feedback[]
+  chatGroups    ChatGroup[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
@@ -375,6 +378,40 @@ model Feedback {
 
   @@index([clientId, status, createdAt])
   @@index([userId, createdAt])
+}
+
+model ChatGroup {
+  id          String        @id @default(cuid())
+  clientId    String
+  name        String
+  description String?
+  isArchived  Boolean       @default(false)
+  createdById String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation("ChatGroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  messages    ChatMessage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([clientId, name])
+  @@index([clientId, isArchived, updatedAt])
+}
+
+model ChatMessage {
+  id             String    @id @default(cuid())
+  groupId        String
+  senderId       String
+  body           String
+  attachmentName String?
+  attachmentUrl  String?
+  editedAt       DateTime?
+  group          ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender         User      @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([groupId, createdAt])
+  @@index([senderId, createdAt])
 }
 
 model Report {

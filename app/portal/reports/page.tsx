@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
+    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
     include: { reports: { where: { isVisible: true }, orderBy: { createdAt: "desc" } } },
   });
 

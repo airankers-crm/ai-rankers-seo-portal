@@ -15,15 +15,15 @@ const periods = [
 
 async function main() {
   const client = await prisma.client.upsert({
-    where: { slug: "riverstone-dental" },
-    update: { businessName: "Riverstone Dental", status: "ACTIVE", brandMark: "RD", brandAccent: "#16847A", hasWebsiteSeo: true, hasGbpSeo: true },
+    where: { slug: "tony-roofing" },
+    update: { businessName: "Tony Roofing", status: "ACTIVE", brandMark: "TR", brandAccent: "#F26B38", hasWebsiteSeo: true, hasGbpSeo: true },
     create: {
-      businessName: "Riverstone Dental",
-      slug: "riverstone-dental",
-      brandMark: "RD",
-      brandAccent: "#16847A",
-      websiteUrl: "https://riverstonedental.com",
-      contactEmail: "hello@riverstonedental.com",
+      businessName: "Tony Roofing",
+      slug: "tony-roofing",
+      brandMark: "TR",
+      brandAccent: "#F26B38",
+      websiteUrl: "https://tonyroofing.example.com",
+      contactEmail: "tony.roofing.demo@theairankers.com",
       hasWebsiteSeo: true,
       hasGbpSeo: true,
       status: "ACTIVE",
@@ -32,15 +32,28 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@airankers.local" },
-    update: { name: "Jordan Mitchell", role: "SUPER_ADMIN", status: "ACTIVE" },
-    create: { email: "admin@airankers.local", name: "Jordan Mitchell", role: "SUPER_ADMIN", status: "ACTIVE", allClients: true },
+    update: { name: "John Smith", role: "SUPER_ADMIN", status: "ACTIVE" },
+    create: { email: "admin@airankers.local", name: "John Smith", role: "SUPER_ADMIN", status: "ACTIVE", allClients: true },
   });
 
   await prisma.user.upsert({
-    where: { email: "client@riverstonedental.local" },
-    update: { name: "Riverstone Dental", role: "CLIENT", status: "ACTIVE", clientId: client.id },
-    create: { email: "client@riverstonedental.local", name: "Riverstone Dental", role: "CLIENT", status: "ACTIVE", clientId: client.id },
+    where: { email: "tony.roofing.demo@theairankers.com" },
+    update: { name: "Tony Roofing", role: "CLIENT", status: "ACTIVE", clientId: client.id },
+    create: { email: "tony.roofing.demo@theairankers.com", name: "Tony Roofing", role: "CLIENT", status: "ACTIVE", clientId: client.id },
   });
+
+  const supportGroup = await prisma.chatGroup.upsert({
+    where: { clientId_name: { clientId: client.id, name: "SEO delivery" } },
+    update: { description: "Reports, tasks, approvals, and delivery decisions for the client workspace.", isArchived: false, createdById: admin.id },
+    create: { id: `${client.id}-seo-delivery`, clientId: client.id, name: "SEO delivery", description: "Reports, tasks, approvals, and delivery decisions for the client workspace.", createdById: admin.id },
+  });
+  const existingChatMessages = await prisma.chatMessage.count({ where: { groupId: supportGroup.id } });
+  if (existingChatMessages === 0) {
+    await prisma.chatMessage.createMany({ data: [
+      { groupId: supportGroup.id, senderId: admin.id, body: "Welcome to the SEO delivery group. We will share report decisions, approvals, and next steps here." },
+      { groupId: supportGroup.id, senderId: admin.id, body: "The first presentation dataset is ready for review. Reply here with any requested changes for the support team." },
+    ] });
+  }
 
   const overview = await prisma.section.upsert({
     where: { id: `${client.id}-overview` },
@@ -60,18 +73,24 @@ async function main() {
     create: { id: `${client.id}-gbp`, clientId: client.id, name: "GBP Performance", kind: "GBP", position: 2, isVisible: true, isDraft: false },
   });
 
+  await prisma.gbpPresentation.upsert({
+    where: { sectionId: gbp.id },
+    update: {},
+    create: { sectionId: gbp.id },
+  });
+
   const metrics = [
-    { key: "ga4-organic-sessions", name: "Organic traffic", sectionId: website.id, source: "GA4" as const, values: [5120, 5940, 6380, 7010, 7118, 8426] },
-    { key: "gsc-impressions", name: "Search impressions", sectionId: overview.id, source: "GSC" as const, values: [80000, 90000, 96000, 102000, 100000, 124800] },
-    { key: "kw-top10", name: "Keywords in top 10", sectionId: website.id, source: "DATAFORSEO" as const, values: [42, 46, 51, 56, 60, 68] },
-    { key: "gbp-calls", name: "GBP calls generated", sectionId: gbp.id, source: "GBP" as const, values: [81, 88, 94, 107, 130, 142] },
+    { key: "ga4-organic-sessions", name: "Organic traffic", description: "Sessions attributed to organic search in the selected reporting window.", sectionId: website.id, source: "GA4" as const, values: [5120, 5940, 6380, 7010, 7118, 8426] },
+    { key: "gsc-impressions", name: "Search impressions", description: "Search results impressions recorded by Google Search Console.", sectionId: overview.id, source: "GSC" as const, values: [80000, 90000, 96000, 102000, 100000, 124800] },
+    { key: "kw-top10", name: "Keywords in top 10", description: "Tracked keywords currently appearing within the first ten organic results.", sectionId: website.id, source: "DATAFORSEO" as const, values: [42, 46, 51, 56, 60, 68] },
+    { key: "gbp-calls", name: "GBP calls generated", description: "Calls attributed to the connected Google Business Profile source.", sectionId: gbp.id, source: "GBP" as const, values: [81, 88, 94, 107, 130, 142] },
   ];
 
   for (const [index, definition] of metrics.entries()) {
     const metric = await prisma.metric.upsert({
       where: { clientId_key: { clientId: client.id, key: definition.key } },
-      update: { name: definition.name, sectionId: definition.sectionId, source: definition.source, isVisible: true, isDraft: false, position: index },
-      create: { clientId: client.id, sectionId: definition.sectionId, key: definition.key, name: definition.name, source: definition.source, displayType: definition.key === "ga4-organic-sessions" ? "LINE_CHART" : "NUMBER_CARD", isVisible: true, isDraft: false, position: index },
+      update: { name: definition.name, description: definition.description, sectionId: definition.sectionId, source: definition.source, isVisible: true, isDraft: false, position: index },
+      create: { clientId: client.id, sectionId: definition.sectionId, key: definition.key, name: definition.name, description: definition.description, source: definition.source, displayType: definition.key === "ga4-organic-sessions" ? "LINE_CHART" : "NUMBER_CARD", isVisible: true, isDraft: false, position: index },
     });
 
     for (const [valueIndex, value] of definition.values.entries()) {

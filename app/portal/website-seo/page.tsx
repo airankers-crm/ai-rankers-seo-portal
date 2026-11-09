@@ -25,7 +25,7 @@ function formatPeriod(date: Date) {
 export default async function WebsiteSeoPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
+    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
     include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 

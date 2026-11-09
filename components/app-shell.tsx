@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { SignOutButton } from "./sign-out-button";
+import { PortalLiveSync } from "./portal-live-sync";
 import {
   Activity,
   BarChart3,
@@ -44,6 +45,7 @@ const portalNav = [
 const adminNav = [
   { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin/clients", icon: UsersRound },
+  { label: "Client communication", href: "/admin/messages", icon: MessageCircle },
   { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Reports", href: "/admin/reports", icon: FileText },
@@ -88,7 +90,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           <div className="profile">
             <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
             <div className="profile-copy">
-              <div className="profile-name">{mode === "admin" ? "Jordan Mitchell" : clientName ?? "Client workspace"}</div>
+            <div className="profile-name">{mode === "admin" ? "John Smith" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "The AI Rankers admin" : "SEO client"}</div>
             </div>
             <SignOutButton compact={collapsed} />
@@ -109,6 +111,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
           <div className="top-actions">
             <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Agency workspace"}</div>
+            {mode === "portal" ? <PortalLiveSync /> : null}
             {mode === "portal" ? <SignOutButton variant="topbar" /> : null}
             <div className="icon-button icon-button-muted" role="img" aria-label="Notifications will be available in a future release" title="Notifications will be available in a future release"><Activity size={16} /></div>
             {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}

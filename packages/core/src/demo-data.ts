@@ -1,19 +1,15 @@
 import type { DemoActivity, DemoClient, DemoMetric, DemoReport } from "./types";
 
 export const demoClient: DemoClient = {
-  id: "riverstone-dental",
-  businessName: "Riverstone Dental",
-  initials: "RD",
+  id: "tony-roofing",
+  businessName: "Tony Roofing",
+  initials: "TR",
   services: ["Website SEO", "GBP SEO"],
   status: "Active",
   lastPublished: "Nov 4, 2026",
 };
 
-export const demoClients: DemoClient[] = [
-  demoClient,
-  { id: "northstar-legal", businessName: "Northstar Legal", initials: "NL", services: ["Website SEO"], status: "Active", lastPublished: "Nov 3, 2026" },
-  { id: "harbor-home", businessName: "Harbor Home Co.", initials: "HH", services: ["GBP SEO"], status: "Active", lastPublished: "Nov 1, 2026" },
-];
+export const demoClients: DemoClient[] = [demoClient];
 
 export const demoMetrics: Record<string, DemoMetric> = {
   organicTraffic: {

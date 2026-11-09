@@ -48,7 +48,7 @@ export function ClientForm() {
       <section className="card panel form-panel">
         <div className="panel-heading"><div><h2>Workspace details</h2><p>These details are used in the portal header and client directory.</p></div></div>
         <form className="workspace-form" onSubmit={submit}>
-          <label>Business name<input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Riverstone Dental" required /></label>
+          <label>Business name<input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Tony Roofing" required /></label>
           <label>Website URL <span className="label-hint">optional</span><input type="url" value={websiteUrl} onChange={(event) => setWebsiteUrl(event.target.value)} placeholder="https://example.com" /></label>
           <label>Primary contact email <span className="label-hint">optional</span><input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} placeholder="client@example.com" /></label>
           {error && <p className="auth-error" role="alert">{error}</p>}
