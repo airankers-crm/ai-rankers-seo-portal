@@ -1,7 +1,7 @@
 import { prisma } from "@ai-rankers/db";
 import { redirect } from "next/navigation";
 import { requirePortalAccess } from "../../../lib/auth/access";
-import { GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow } from "../../../components/gbp-performance-dashboard";
+import { defaultGbpPresentation, GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow, type GbpPresentationSettings } from "../../../components/gbp-performance-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -23,20 +23,21 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   if (params?.demo === "1") redirect("/portal/gbp");
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: { sections: { where: { kind: "GBP" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 
   if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" dataUpdatedAt={null} />;
 
   const section = client.sections[0];
   const sectionIsPublished = Boolean(section?.isVisible && !section.isDraft);
+  const presentation: GbpPresentationSettings = section?.presentation ? { ...defaultGbpPresentation, ...section.presentation } : defaultGbpPresentation;
 
   const metricMap = new Map((sectionIsPublished ? client.metrics : []).map((metric) => [metric.key, metric]));
   const metrics: GbpMetric[] = metricConfig.map((config) => {
     const metric = metricMap.get(config.key);
     const current = metric?.values.at(-1);
     const previous = metric?.values.at(-2);
-    return { key: config.viewKey, label: config.label, value: current ? Number(current.value) : null, previousValue: previous ? Number(previous.value) : null, source: metric?.source ?? config.source, description: config.description };
+    return { key: config.viewKey, label: metric?.name ?? config.label, value: current ? Number(current.value) : null, previousValue: previous ? Number(previous.value) : null, source: metric?.source ?? config.source, description: metric?.description ?? config.description };
   });
 
   const rowMap = new Map<string, GbpPeriodRow>();
@@ -53,5 +54,5 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => !latest || value.updatedAt > latest ? value.updatedAt : latest, null);
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
 
-  return <GbpPerformanceDashboard clientName={client.businessName} sectionName={section?.name ?? "GBP performance"} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
+  return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
 }

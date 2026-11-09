@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, Compass, MapPin, MessageSquareText, Phone, RotateCcw, Search, SlidersHorizontal, Star, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, Compass, MapPin, MessageSquareText, Phone, RotateCcw, Search, SlidersHorizontal, Star, TrendingUp } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 export type GbpMetric = {
@@ -21,6 +21,32 @@ export type GbpPeriodRow = {
   clicks: number | null;
   directions: number | null;
   reviews: number | null;
+};
+
+export type GbpPresentationSettings = {
+  pageTitle: string;
+  pageSubtitle: string;
+  filterLabel: string;
+  channelLabel: string;
+  displayLabel: string;
+  chartTitle: string;
+  insightTitle: string;
+  insightOne: string;
+  insightTwo: string;
+  insightSource: string;
+};
+
+export const defaultGbpPresentation: GbpPresentationSettings = {
+  pageTitle: "Google Business Profile",
+  pageSubtitle: "Performance from Google Search and Maps.",
+  filterLabel: "Filter report",
+  channelLabel: "Search + Maps",
+  displayLabel: "Monthly",
+  chartTitle: "Profile views over time",
+  insightTitle: "Key insights",
+  insightOne: "Calls increased {{callsChange}} compared with the previous period.",
+  insightTwo: "Website clicks are {{websiteTrend}}.",
+  insightSource: "Data is sourced from Google Search and Maps.",
 };
 
 type GbpMetricKey = "calls" | "views" | "clicks" | "directions" | "reviews";
@@ -70,51 +96,50 @@ function formatUpdatedAt(value: string | null) {
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function GbpPerformanceDashboard({ clientName, sectionName = "GBP performance", brandMark, brandAccent, metrics, rows, connectionStatus = "not-connected", dataUpdatedAt = null, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
+function renderInsight(template: string, tokens: Record<string, string>) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => tokens[key] ?? "not available");
+}
+
+export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [query, setQuery] = useState("");
-  const [activeMetricKey, setActiveMetricKey] = useState<GbpMetricKey>("calls");
+  const [metricFilter, setMetricFilter] = useState<"all" | GbpMetricKey>("all");
+  const [activeMetricKey, setActiveMetricKey] = useState<GbpMetricKey>("views");
   const visibleRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return rows.filter((row) => !normalized || row.periodLabel.toLowerCase().includes(normalized));
   }, [query, rows]);
 
   const activeMetric = currentMetric(metrics, activeMetricKey);
+  const visibleMetrics = metricFilter === "all" ? metrics : metrics.filter((metric) => metric.key === metricFilter);
+  const callsChange = trend(currentMetric(metrics, "calls") ?? { key: "calls", label: "Calls", value: null, previousValue: null, source: "GBP", description: "" });
+  const clicksChange = trend(currentMetric(metrics, "clicks") ?? { key: "clicks", label: "Website clicks", value: null, previousValue: null, source: "GBP", description: "" });
+  const insightTokens = { callsChange: callsChange === null ? "not available" : `${callsChange >= 0 ? "+" : ""}${callsChange.toFixed(0)}%`, websiteTrend: clicksChange === null ? "not available" : clicksChange >= 0 ? "trending upward" : "trending downward" };
   const trendData = visibleRows.filter((row) => row[activeMetricKey] !== null).map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
-  const latestRow = visibleRows.at(-1);
   const latestAvailableRow = rows.at(-1);
   const hasPublishedData = rows.length > 0;
-  const actionValues = [latestRow?.calls, latestRow?.clicks, latestRow?.directions].filter((value): value is number => value !== null && value !== undefined);
-  const latestActions = actionValues.reduce((sum, value) => sum + value, 0);
-  const latestActionsLabel = actionValues.length === 3 ? "customer actions" : actionValues.length === 1 ? "reported action" : "reported actions";
-  const latestViews = latestRow?.views ?? null;
-  const latestReviews = latestRow?.reviews ?? null;
-
   function resetFilters() {
     setQuery("");
-    setActiveMetricKey("calls");
+    setMetricFilter("all");
+    setActiveMetricKey("views");
   }
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="GBP performance" hiddenNav={isSectionPublished ? [] : ["GBP performance"]}>
     <div className="content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">{sectionName}</p>
-          <h1>Google Business Profile</h1>
-          <p>{clientName} · Performance from Google Search and Maps.</p>
+          <h1>{presentation.pageTitle}</h1>
+          <p>{clientName} · {presentation.pageSubtitle}</p>
           <p className={`gbp-data-status ${connectionStatus === "connected" ? "is-connected" : "is-pending"}`}><span className="gbp-data-dot" /> {connectionStatus === "connected" ? "Connected to Google Business Profile" : "Google Business Profile not connected"}{dataUpdatedAt ? ` · Updated ${formatUpdatedAt(dataUpdatedAt)}` : " · Awaiting first published result"}</p>
         </div>
         <div className="heading-actions">{isDraftPreview ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Draft preview · not client-visible</span> : !isSectionPublished ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Section not published</span> : null}</div>
       </div>
 
-      <section className="card seo-context-card gbp-context-card" aria-labelledby="gbp-context-title">
-        <div className="seo-context-copy"><div className="seo-context-label"><span className="client-brand-mark" style={{ backgroundColor: brandAccent }}>{brandMark}</span> {sectionName}</div><h2 id="gbp-context-title">Profile performance</h2><p>Searches, calls, website clicks, directions, and reviews for the selected period.</p></div>
-        <div className="gbp-report-summary"><div><span>Reporting coverage</span><strong>{rows.length ? `${rows.length} periods` : "Awaiting data"}</strong></div><div><span>Data through</span><strong>{latestAvailableRow?.periodLabel ?? "Awaiting data"}</strong><small>{hasPublishedData ? "Latest published period" : "No published data yet"}</small></div><div><span>Latest customer activity</span><strong>{latestActions ? latestActions.toLocaleString() : "Not available"}</strong><small>{latestActions ? latestActionsLabel : "Will appear after publishing"}</small></div></div>
-      </section>
-
       <section className="gbp-filter-bar" aria-label="Filter Google Business Profile report">
-        <div className="gbp-filter-heading"><span className="gbp-filter-icon"><SlidersHorizontal size={15} /></span><div><strong>Filter report</strong><span>Choose a metric or search reporting periods.</span></div></div>
+        <div className="gbp-filter-heading"><span className="gbp-filter-icon"><SlidersHorizontal size={15} /></span><div><strong>{presentation.filterLabel}</strong><span>Choose a metric or search reporting periods.</span></div></div>
         <div className="gbp-filter-controls">
-          <label className="gbp-filter-control"><span>Metric</span><select aria-label="Metric" value={activeMetricKey} onChange={(event) => setActiveMetricKey(event.target.value as GbpMetricKey)}>{metricPresentation.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+          <label className="gbp-filter-control"><span>Metric</span><select aria-label="Metric" value={metricFilter} onChange={(event) => { const value = event.target.value as "all" | GbpMetricKey; setMetricFilter(value); if (value !== "all") setActiveMetricKey(value); }}>{<option value="all">All metrics</option>}{metrics.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}</select></label>
+          <label className="gbp-filter-control"><span>Channel</span><select aria-label="Channel" value={presentation.channelLabel} disabled><option>{presentation.channelLabel}</option></select></label>
+          <label className="gbp-filter-control"><span>Display</span><select aria-label="Display" value={presentation.displayLabel} disabled><option>{presentation.displayLabel}</option></select></label>
           <label className="gbp-filter-search"><Search size={14} /><span className="sr-only">Search reporting periods</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search months" /></label>
           <button className="button gbp-filter-reset" type="button" onClick={resetFilters}><RotateCcw size={13} /> Reset</button>
         </div>
@@ -123,20 +148,18 @@ export function GbpPerformanceDashboard({ clientName, sectionName = "GBP perform
 
       {hasPublishedData ? <>
       <div className="seo-metric-grid gbp-metric-grid">
-        {metrics.map((metric) => { const change = trend(metric); const presentation = metricPresentation.find((item) => item.key === metric.key); const Icon = presentation?.icon ?? MessageSquareText; return <article className="card seo-metric-card" key={metric.key}><div className="seo-metric-top"><span>{metric.label}</span><span className={`source-badge${metric.value === null ? " pending" : ""}`}>{metric.value === null ? "Not connected" : "Reported"}</span></div><div className="gbp-metric-value"><span className="gbp-metric-icon"><Icon size={15} /></span><strong>{formatHeadlineMetric(metric.value)}</strong></div><div className="seo-metric-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {change === null ? "No comparison" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}</span><span>vs previous period</span></div><p>{metric.description}</p></article>; })}
+        {visibleMetrics.map((metric) => { const change = trend(metric); const metricInfo = metricPresentation.find((item) => item.key === metric.key); const Icon = metricInfo?.icon ?? MessageSquareText; return <article className="card seo-metric-card" key={metric.key}><div className="seo-metric-top"><span>{metric.label}</span><span className={`source-badge${metric.value === null ? " pending" : ""}`}>{metric.value === null ? "Not connected" : "Reported"}</span></div><div className="gbp-metric-value"><span className="gbp-metric-icon"><Icon size={15} /></span><strong>{formatHeadlineMetric(metric.value)}</strong></div><div className="seo-metric-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {change === null ? "No comparison" : `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}</span><span>vs previous period</span></div><p>{metric.description}</p></article>; })}
       </div>
 
-      <div className="gbp-insight-grid">
-        <article className="card gbp-insight-card"><div className="gbp-insight-icon discovery"><MapPin size={16} /></div><div><span>Discovery</span><strong>{formatHeadlineMetric(latestViews)}</strong><p>Search and Maps impressions in the latest available period.</p></div></article>
-        <article className="card gbp-insight-card"><div className="gbp-insight-icon actions"><Phone size={16} /></div><div><span>Customer actions</span><strong>{latestActions ? latestActions.toLocaleString() : "—"}</strong><p>Calls, website clicks, and direction requests reported for the period.</p></div></article>
-        <article className="card gbp-insight-card"><div className="gbp-insight-icon reputation"><Star size={16} /></div><div><span>Reputation activity</span><strong>{formatHeadlineMetric(latestReviews)}</strong><p>New reviews received in the latest available period.</p></div></article>
-      </div>
-
+      <div className="gbp-analysis-grid">
       <section className="card panel gbp-trend-panel" aria-labelledby="gbp-trend-title">
-        <div className="panel-heading"><div><p className="eyebrow">Performance trend</p><h2 id="gbp-trend-title">Profile activity over time</h2><p>Use the view selector to compare the local actions that matter most.</p></div><span className="panel-meta">{trendData.length} periods</span></div>
-        <div className="gbp-trend-tabs" role="tablist" aria-label="GBP trend metrics">{metricPresentation.map((item) => <button key={item.key} type="button" role="tab" aria-selected={activeMetricKey === item.key} className={activeMetricKey === item.key ? "active" : ""} onClick={() => setActiveMetricKey(item.key)}>{item.label}</button>)}</div>
+        <div className="panel-heading"><div><p className="eyebrow">Performance trend</p><h2 id="gbp-trend-title">{presentation.chartTitle}</h2></div><span className="panel-meta">{trendData.length} periods</span></div>
+        <div className="gbp-trend-tabs" role="tablist" aria-label="GBP trend metrics">{metrics.map((metric) => <button key={metric.key} type="button" role="tab" aria-selected={activeMetricKey === metric.key} className={activeMetricKey === metric.key ? "active" : ""} onClick={() => setActiveMetricKey(metric.key as GbpMetricKey)}>{metric.label}</button>)}</div>
         {trendData.length > 1 ? <div className="gbp-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "Profile"} trend chart`}><svg viewBox="0 0 640 190" preserveAspectRatio="none"><defs><linearGradient id="gbpTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#148f83" stopOpacity=".25" /><stop offset="100%" stopColor="#148f83" stopOpacity=".02" /></linearGradient></defs><line x1="18" x2="622" y1="40" y2="40" className="gbp-chart-grid-line" /><line x1="18" x2="622" y1="95" y2="95" className="gbp-chart-grid-line" /><line x1="18" x2="622" y1="172" y2="172" className="gbp-chart-grid-line" /><path d={`${chartPath(trendData)} L622 172 L18 172 Z`} fill="url(#gbpTrendFill)" /><path d={chartPath(trendData)} className="gbp-chart-line" fill="none" /></svg><div className="gbp-chart-labels"><span>{trendData[0]?.label}</span><strong>{activeMetric?.label ?? "Profile activity"}</strong><span>{trendData.at(-1)?.label}</span></div></div> : <div className="gbp-chart-empty"><BarChart3 size={16} /><div><strong>Trend detail will appear here</strong><p>Publish at least two reporting periods for this metric to show movement over time.</p></div></div>}
       </section>
+
+      <aside className="card gbp-key-insights" aria-labelledby="gbp-insights-title"><div className="gbp-key-insights-heading"><span className="gbp-insight-icon"><BarChart3 size={16} /></span><h2 id="gbp-insights-title">{presentation.insightTitle}</h2></div><p className="gbp-key-insight"><CheckCircle2 size={14} /> {renderInsight(presentation.insightOne, insightTokens)}</p><p className="gbp-key-insight"><CheckCircle2 size={14} /> {renderInsight(presentation.insightTwo, insightTokens)}</p><p className="gbp-key-insight-source">{presentation.insightSource}</p></aside>
+      </div>
 
       <section className="card panel seo-table-panel" aria-labelledby="gbp-table-title">
         <div className="panel-heading"><div><p className="eyebrow">Acquisition and actions</p><h2 id="gbp-table-title">Google Business Profile results by period</h2><p>Compare how local visibility translated into customer actions.</p></div><CalendarDays size={18} color="#148f83" /></div>

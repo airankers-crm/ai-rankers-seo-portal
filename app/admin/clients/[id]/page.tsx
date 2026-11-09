@@ -8,6 +8,7 @@ import { ClientInvitationForm } from "../../../../components/client-invitation-f
 import { GoalManagement } from "../../../../components/goal-management";
 import { ClientResultsEditor } from "../../../../components/client-results-editor";
 import { ClientSectionEditor } from "../../../../components/client-section-editor";
+import { ClientPublishControls } from "../../../../components/client-publish-controls";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
   const client = await prisma.client.findUnique({
     where: { id },
     include: {
-      sections: { orderBy: { position: "asc" } },
+      sections: { include: { presentation: true }, orderBy: { position: "asc" } },
       metrics: {
         select: {
           id: true,
@@ -40,6 +41,7 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
         orderBy: { position: "asc" },
       },
       goals: { include: { metric: { select: { name: true } } }, orderBy: { endDate: "asc" } },
+      versions: { orderBy: { version: "desc" }, take: 10, select: { id: true, version: true, label: true, publishedAt: true } },
       _count: { select: { users: true, metrics: true, reports: true, activities: true } },
     },
   });
@@ -72,7 +74,9 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
           <article className="card admin-stat"><div className="admin-stat-label">Portal users</div><div className="admin-stat-value">{client._count.users}</div><div className="admin-stat-note">Invite client stakeholders</div></article>
         </div>
 
-        <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft }))} />
+        <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft, presentation: section.presentation }))} />
+
+        <ClientPublishControls clientId={client.id} versions={client.versions.map((version) => ({ id: version.id, version: version.version, label: version.label, publishedAt: version.publishedAt.toISOString() }))} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} />
 
         <ClientResultsEditor
           clientId={client.id}

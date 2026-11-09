@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@ai-rankers/db";
-import { GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow } from "../../../../../../components/gbp-performance-dashboard";
+import { defaultGbpPresentation, GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow, type GbpPresentationSettings } from "../../../../../../components/gbp-performance-dashboard";
 import { requireAdminAccess } from "../../../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function AdminGbpPreviewPage({ params, searchParams }: { pa
   const isDraftPreview = (await searchParams)?.mode === "draft";
   const client = await prisma.client.findUnique({
     where: { id },
-    include: { sections: { where: { kind: "GBP" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
   if (!client) notFound();
 
@@ -46,9 +46,10 @@ export default async function AdminGbpPreviewPage({ params, searchParams }: { pa
   }
 
   const section = client.sections[0];
+  const presentation: GbpPresentationSettings = section?.presentation ? { ...defaultGbpPresentation, ...section.presentation } : defaultGbpPresentation;
   const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
   const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => !latest || value.updatedAt > latest ? value.updatedAt : latest, null);
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
 
-  return <GbpPerformanceDashboard clientName={client.businessName} sectionName={section?.name ?? "GBP performance"} isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} isDraftPreview={isDraftPreview} />;
+  return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} isDraftPreview={isDraftPreview} />;
 }

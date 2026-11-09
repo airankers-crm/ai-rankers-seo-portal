@@ -201,10 +201,29 @@ model Section {
   isDraft   Boolean     @default(true)
   client    Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   metrics   Metric[]
+  presentation GbpPresentation?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   @@index([clientId, position])
+}
+
+model GbpPresentation {
+  id            String   @id @default(cuid())
+  sectionId     String   @unique
+  pageTitle     String   @default("Google Business Profile")
+  pageSubtitle  String   @default("Performance from Google Search and Maps.")
+  filterLabel   String   @default("Filter report")
+  channelLabel  String   @default("Search + Maps")
+  displayLabel  String   @default("Monthly")
+  chartTitle    String   @default("Profile views over time")
+  insightTitle  String   @default("Key insights")
+  insightOne    String   @default("Calls increased {{callsChange}} compared with the previous period.")
+  insightTwo    String   @default("Website clicks are {{websiteTrend}}.")
+  insightSource String   @default("Data is sourced from Google Search and Maps.")
+  section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Metric {
