@@ -1646,6 +1646,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .user-control select:focus { border-color: var(--orange); }
 .user-row > .status { display: inline-flex; align-items: center; gap: 3px; }
 
+/* The result list should use the full editor width until a property panel is open. */
+.results-editor-layout:not(.has-editor) { grid-template-columns: 1fr; }
+.results-editor-layout.has-editor { grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr); }
+
 @media (max-width: 980px) {
   .user-row { grid-template-columns: minmax(190px, 1fr) repeat(2, minmax(130px, .7fr)); }
   .user-row .user-control:nth-of-type(3), .user-row > .status { grid-column: span 1; }
@@ -1656,6 +1660,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
   .user-row { grid-template-columns: 1fr 1fr; }
   .user-identity { grid-column: 1 / -1; }
   .user-row > .status { justify-self: start; }
+}
+@media (max-width: 980px) {
+  .results-editor-layout.has-editor { grid-template-columns: 1fr; }
 }
 
 /* GBP reference layout: keep the client report compact and close to the approved Figma composition. */

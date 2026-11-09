@@ -79,6 +79,10 @@ function inputDate(value: string | undefined, fallback: string) {
   return value ? new Date(value).toISOString().slice(0, 10) : fallback;
 }
 
+function formatPeriodLabel(value: string) {
+  return new Date(value).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" });
+}
+
 function formatMetricValue(value: string | undefined, format: string) {
   if (value === undefined || value === "") return "No result";
   const number = Number(value);
@@ -242,14 +246,14 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
       <div className="result-add-controls"><label>Metric<select value={newTemplateKey || availableTemplates[0]?.key} onChange={(event) => setNewTemplateKey(event.target.value)}>{availableTemplates.map((template) => <option key={template.key} value={template.key}>{template.name}</option>)}</select></label><label className="result-check"><input type="checkbox" checked={newPublish} onChange={(event) => setNewPublish(event.target.checked)} /> Publish metric shell</label><button className="button primary" type="button" onClick={addMetric} disabled={pending}><Plus size={13} /> Add KPI</button><button className="icon-button" type="button" onClick={() => setAdding(false)} aria-label="Close add metric form"><X size={14} /></button></div>
     </div>}
 
-    <div className="results-editor-layout">
+    <div className={`results-editor-layout${editingId ? " has-editor" : ""}`}>
       <div className="results-metric-list">
         {filteredMetrics.map((metric) => {
           const latest = metric.values[0];
           return <article className={`result-metric-card${editingId === metric.id ? " active" : ""}`} key={metric.id}>
             <div className="result-metric-card-top"><span className="result-section-tag">{metric.sectionName}</span><span className={`status ${metric.isDraft ? "progress" : "complete"}`}>{metric.isDraft ? "Draft" : "Published"}</span></div>
             <div className="result-metric-title-row"><div><h3>{metric.name}</h3><p>{metric.description || "No client-facing definition yet."}</p></div><span className="result-source">{metric.source}</span></div>
-            <div className="result-metric-value-row"><div><span>Latest result</span><strong>{formatMetricValue(latest?.value, metric.valueFormat)}</strong></div><div><span>Reporting period</span><strong>{latest ? new Date(latest.periodStart).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Not entered"}</strong></div></div>
+            <div className="result-metric-value-row"><div><span>Latest result</span><strong>{formatMetricValue(latest?.value, metric.valueFormat)}</strong></div><div><span>Reporting period</span><strong>{latest ? formatPeriodLabel(latest.periodStart) : "Not entered"}</strong></div></div>
             <div className="result-metric-card-foot"><span>{metric.isVisible ? <><Eye size={12} /> Visible to client</> : <><Eye size={12} /> Hidden from client</>}</span><button className="table-action" type="button" onClick={() => beginEdit(metric)}><Edit3 size={13} /> Edit result</button></div>
           </article>;
         })}
@@ -260,7 +264,7 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
         <div className="result-edit-panel-head"><div><p className="eyebrow">Property editor</p><h3>{draft.name}</h3><p>{isDirty ? "Unsaved changes" : "All changes are saved"} · recorded in the admin audit log.</p></div><button className="icon-button" type="button" onClick={closeEditor} aria-label="Close result editor"><X size={14} /></button></div>
         <div className="result-period-picker">
           <div className="result-period-picker-heading"><div><strong>Reporting periods</strong><small>Choose a period to edit its chart and table value.</small></div><button className="table-action" type="button" onClick={() => beginNewPeriod(activeMetric)} disabled={isDirty}><Plus size={12} /> New period</button></div>
-          <div className="result-period-list">{activeMetric.values.map((value) => <button className={draft.valueId === value.id ? "active" : ""} key={value.id} type="button" onClick={() => setDraft(draftFor(activeMetric, value.id))} disabled={isDirty && draft.valueId !== value.id}><span>{new Date(value.periodStart).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span><strong>{formatMetricValue(value.value, activeMetric.valueFormat)}</strong></button>)}{activeMetric.values.length === 0 && <span className="result-period-empty">No reporting periods yet.</span>}</div>
+          <div className="result-period-list">{activeMetric.values.map((value) => <button className={draft.valueId === value.id ? "active" : ""} key={value.id} type="button" onClick={() => setDraft(draftFor(activeMetric, value.id))} disabled={isDirty && draft.valueId !== value.id}><span>{formatPeriodLabel(value.periodStart)}</span><strong>{formatMetricValue(value.value, activeMetric.valueFormat)}</strong></button>)}{activeMetric.values.length === 0 && <span className="result-period-empty">No reporting periods yet.</span>}</div>
         </div>
         <form className="result-edit-form" onSubmit={(event) => { event.preventDefault(); void saveMetric(); }}>
           <div className="result-edit-section"><div className="result-edit-section-heading"><span>01</span><div><strong>Presentation identity</strong><small>How this result appears in the client report.</small></div></div><label>Client-facing name<input value={draft.name} onChange={(event) => setDraft((current) => current ? { ...current, name: event.target.value } : current)} maxLength={80} required /></label><label>Definition<textarea value={draft.description} onChange={(event) => setDraft((current) => current ? { ...current, description: event.target.value } : current)} rows={3} placeholder="Explain what this result measures." /></label></div>

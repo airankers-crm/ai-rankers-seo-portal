@@ -63,8 +63,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const numericValue = Number(valueText);
   if (!valueText || !Number.isFinite(numericValue)) return NextResponse.json({ error: "Enter a valid numeric result value." }, { status: 400 });
 
+  const hasValueSelection = Boolean(body && Object.prototype.hasOwnProperty.call(body, "valueId"));
   const requestedValueId = text(body?.valueId);
-  const selectedValue = requestedValueId ? await prisma.metricValue.findFirst({ where: { id: requestedValueId, metricId } }) : existing.values[0];
+  // The editor sends valueId=null when the admin chooses “New period”. That
+  // must create/upsert a new row; an omitted valueId keeps the legacy
+  // behavior of editing the latest row.
+  const selectedValue = requestedValueId
+    ? await prisma.metricValue.findFirst({ where: { id: requestedValueId, metricId } })
+    : hasValueSelection ? null : existing.values[0];
   if (requestedValueId && !selectedValue) return NextResponse.json({ error: "Reporting period not found for this metric." }, { status: 404 });
   const fallbackStart = selectedValue?.periodStart ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
   const fallbackEnd = selectedValue?.periodEnd ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0, 23, 59, 59, 999));
