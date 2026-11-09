@@ -6,6 +6,7 @@ import { requireAdminAccess } from "../../../../../../../lib/auth/access";
 export const dynamic = "force-dynamic";
 
 type UpdateMetricBody = {
+  valueId?: unknown;
   name?: unknown;
   description?: unknown;
   value?: unknown;
@@ -51,7 +52,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id: clientId, metricId } = await params;
-  const existing = await prisma.metric.findFirst({ where: { id: metricId, clientId }, include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } });
+  const existing = await prisma.metric.findFirst({ where: { id: metricId, clientId }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } } });
   if (!existing) return NextResponse.json({ error: "Result metric not found for this client." }, { status: 404 });
 
   const body = await request.json().catch(() => null) as UpdateMetricBody | null;
@@ -62,8 +63,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const numericValue = Number(valueText);
   if (!valueText || !Number.isFinite(numericValue)) return NextResponse.json({ error: "Enter a valid numeric result value." }, { status: 400 });
 
-  const fallbackStart = existing.values[0]?.periodStart ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
-  const fallbackEnd = existing.values[0]?.periodEnd ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  const requestedValueId = text(body?.valueId);
+  const selectedValue = requestedValueId ? await prisma.metricValue.findFirst({ where: { id: requestedValueId, metricId } }) : existing.values[0];
+  if (requestedValueId && !selectedValue) return NextResponse.json({ error: "Reporting period not found for this metric." }, { status: 404 });
+  const fallbackStart = selectedValue?.periodStart ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+  const fallbackEnd = selectedValue?.periodEnd ?? new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0, 23, 59, 59, 999));
   const periodStart = parseDateOnly(body?.periodStart) ?? fallbackStart;
   const periodEnd = parseDateOnly(body?.periodEnd, true) ?? fallbackEnd;
   if (periodEnd < periodStart) return NextResponse.json({ error: "The reporting end date must be on or after the start date." }, { status: 400 });
@@ -78,11 +82,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         isDraft: body?.publish !== true,
       },
     });
-    await transaction.metricValue.upsert({
-      where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source: existing.source } },
-      create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(valueText), source: existing.source, note: text(body?.note) || null, isOverride: true },
-      update: { value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true },
-    });
+    const savedValue = selectedValue
+      ? await transaction.metricValue.update({ where: { id: selectedValue.id }, data: { periodStart, periodEnd, value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true } })
+      : await transaction.metricValue.upsert({
+          where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source: existing.source } },
+          create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(valueText), source: existing.source, note: text(body?.note) || null, isOverride: true },
+          update: { value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true },
+        });
     await transaction.auditLog.create({
       data: {
         clientId,
@@ -90,12 +96,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         action: "METRIC_RESULT_UPDATED",
         entityType: "Metric",
         entityId: metric.id,
-        before: { name: existing.name, isVisible: existing.isVisible, isDraft: existing.isDraft, latestValue: existing.values[0]?.value.toString() ?? null },
-        after: { name: metric.name, isVisible: metric.isVisible, isDraft: metric.isDraft, latestValue: valueText, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() },
+        before: { name: existing.name, isVisible: existing.isVisible, isDraft: existing.isDraft, valueId: selectedValue?.id ?? null, previousValue: selectedValue?.value.toString() ?? null },
+        after: { name: metric.name, isVisible: metric.isVisible, isDraft: metric.isDraft, valueId: savedValue.id, value: valueText, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() },
       },
     });
-    return transaction.metric.findUniqueOrThrow({ where: { id: metric.id }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } } });
+    return { metric: await transaction.metric.findUniqueOrThrow({ where: { id: metric.id }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } } }), savedValueId: savedValue.id };
   });
 
-  return NextResponse.json({ metric: serializeMetric(updated) });
+  return NextResponse.json({ metric: serializeMetric(updated.metric), savedValueId: updated.savedValueId });
 }

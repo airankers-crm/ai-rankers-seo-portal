@@ -1,12 +1,13 @@
 import { prisma } from "@ai-rankers/db";
+import { redirect } from "next/navigation";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow } from "../../../components/gbp-performance-dashboard";
 
 export const dynamic = "force-dynamic";
 
 const metricConfig = [
-  { key: "gbp-calls", viewKey: "calls", label: "GBP calls", source: "GBP", description: "Calls attributed to the connected Google Business Profile source." },
-  { key: "gbp-views", viewKey: "views", label: "Profile views", source: "GBP", description: "Search and Maps profile views recorded by Google Business Profile." },
+  { key: "gbp-calls", viewKey: "calls", label: "Call clicks", source: "GBP", description: "Calls attributed to the connected Google Business Profile source." },
+  { key: "gbp-views", viewKey: "views", label: "Search & Maps impressions", source: "GBP", description: "Search and Maps impressions recorded by Google Business Profile." },
   { key: "gbp-website-clicks", viewKey: "clicks", label: "Website clicks", source: "GBP", description: "Website actions attributed to the Google Business Profile listing." },
   { key: "gbp-directions", viewKey: "directions", label: "Direction requests", source: "GBP", description: "Requests for directions from the profile listing." },
   { key: "gbp-reviews", viewKey: "reviews", label: "Reviews received", source: "GBP", description: "New reviews received during the selected reporting window." },
@@ -16,16 +17,21 @@ function formatPeriod(date: Date) {
   return date.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" });
 }
 
-export default async function GbpPage() {
+export default async function GbpPage({ searchParams }: { searchParams?: Promise<{ demo?: string }> }) {
   const access = await requirePortalAccess();
+  const params = await searchParams;
+  if (params?.demo === "1") redirect("/portal/gbp");
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: { metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { sections: { where: { kind: "GBP" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 
-  if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
+  if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" dataUpdatedAt={null} />;
 
-  const metricMap = new Map(client.metrics.map((metric) => [metric.key, metric]));
+  const section = client.sections[0];
+  const sectionIsPublished = Boolean(section?.isVisible && !section.isDraft);
+
+  const metricMap = new Map((sectionIsPublished ? client.metrics : []).map((metric) => [metric.key, metric]));
   const metrics: GbpMetric[] = metricConfig.map((config) => {
     const metric = metricMap.get(config.key);
     const current = metric?.values.at(-1);
@@ -43,5 +49,9 @@ export default async function GbpPage() {
     }
   }
 
-  return <GbpPerformanceDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />;
+  const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
+  const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => !latest || value.updatedAt > latest ? value.updatedAt : latest, null);
+  const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
+
+  return <GbpPerformanceDashboard clientName={client.businessName} sectionName={section?.name ?? "GBP performance"} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
 }

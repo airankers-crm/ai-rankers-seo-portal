@@ -7,13 +7,16 @@ import { ClientSettingsForm } from "../../../../components/client-settings-form"
 import { ClientInvitationForm } from "../../../../components/client-invitation-form";
 import { GoalManagement } from "../../../../components/goal-management";
 import { ClientResultsEditor } from "../../../../components/client-results-editor";
+import { ClientSectionEditor } from "../../../../components/client-section-editor";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ section?: string }> }) {
   await requireAdminAccess();
   const { id } = await params;
+  const selectedSection = (await searchParams)?.section;
+  const initialView = selectedSection === "website" || selectedSection === "gbp" ? selectedSection : "all";
   const client = await prisma.client.findUnique({
     where: { id },
     include: {
@@ -51,10 +54,17 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
             <Link className="back-link" href="/admin"><ArrowLeft size={13} /> Back to workspace overview</Link>
             <p className="eyebrow">Client workspace</p>
             <h1>{client.businessName}</h1>
-            <p>Edit this client’s presentation results, workspace settings, users, goals, and reporting surface from one place.</p>
+            <p>Manage the client-facing Website SEO and GBP presentation, then preview and publish approved changes.</p>
           </div>
           <span className="status complete">{client.status}</span>
         </div>
+
+        <nav className="client-portal-tabs" aria-label="Client portal management">
+          <a className={!selectedSection ? "active" : ""} href={`/admin/clients/${client.id}`}>Portal overview</a>
+          <a className={selectedSection === "website" ? "active" : ""} href={`/admin/clients/${client.id}?section=website#client-results-title`}>Website SEO</a>
+          <a className={selectedSection === "gbp" ? "active" : ""} href={`/admin/clients/${client.id}?section=gbp#client-results-title`}>GBP performance</a>
+          <a href={`/admin/clients/${client.id}#client-settings`}>Settings &amp; access</a>
+        </nav>
 
         <div className="admin-stat-grid">
           <article className="card admin-stat"><div className="admin-stat-label">Dashboard sections</div><div className="admin-stat-value">{client.sections.length}</div><div className="admin-stat-note">Ready for configuration</div></article>
@@ -62,8 +72,11 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
           <article className="card admin-stat"><div className="admin-stat-label">Portal users</div><div className="admin-stat-value">{client._count.users}</div><div className="admin-stat-note">Invite client stakeholders</div></article>
         </div>
 
+        <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft }))} />
+
         <ClientResultsEditor
           clientId={client.id}
+          initialView={initialView}
           sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind }))}
           metrics={client.metrics.map((metric) => ({
             id: metric.id,
@@ -88,7 +101,7 @@ export default async function ClientWorkspacePage({ params }: { params: Promise<
         </div>
 
         <div className="dashboard-grid">
-          <section className="card panel">
+          <section id="client-settings" className="card panel">
             <div className="panel-heading"><div><h2>SEO project configuration</h2><p>Choose the services and reporting details for this client.</p></div><Building2 size={18} color="#f26b38" /></div>
             <ClientSettingsForm client={{ id: client.id, brandMark: client.brandMark, brandAccent: client.brandAccent, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
           </section>

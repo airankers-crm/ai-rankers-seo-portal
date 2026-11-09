@@ -29,6 +29,7 @@ type AppShellProps = {
   brandMark?: string;
   brandAccent?: string;
   activeNav?: string;
+  hiddenNav?: string[];
 };
 
 const portalNav = [
@@ -43,7 +44,6 @@ const portalNav = [
 const adminNav = [
   { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin/clients", icon: UsersRound },
-  { label: "Activities", href: "/admin/activities", icon: Activity },
   { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Reports", href: "/admin/reports", icon: FileText },
@@ -52,11 +52,11 @@ const adminNav = [
   { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
 ];
 
-export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav }: AppShellProps) {
+export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [] }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const nav = mode === "admin" ? adminNav : portalNav;
+  const nav = (mode === "admin" ? adminNav : portalNav).filter((item) => !hiddenNav.includes(item.label));
   const activeItem = nav
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((first, second) => second.href.length - first.href.length)[0];
@@ -85,13 +85,6 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
         </nav>
 
         <div className="sidebar-bottom">
-          {mode === "admin" ? <div className="mode-card">
-            <p>View as</p>
-            <div className="mode-toggle">
-              <Link className="active" href="/admin">Admin</Link>
-              <Link href="/portal">Client</Link>
-            </div>
-          </div> : null}
           <div className="profile">
             <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
             <div className="profile-copy">

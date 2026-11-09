@@ -68,7 +68,7 @@ function metricTrend(metric: WebsiteSeoMetric) {
   return ((metric.value - metric.previousValue) / Math.abs(metric.previousValue)) * 100;
 }
 
-export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metrics, rows, channels }: { clientName: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[] }) {
+export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", brandMark, brandAccent, metrics, rows, channels, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[]; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(initialRange);
   const [query, setQuery] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
@@ -86,12 +86,12 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
   const organic = metricMap.get("organicTraffic");
   const impressions = metricMap.get("impressions");
   const topTen = metricMap.get("topTen");
-  const acquisitionChannels = channels?.length ? channels : presentationChannels;
+  const acquisitionChannels = isSectionPublished ? (channels?.length ? channels : presentationChannels) : [];
   const acquisitionTotal = acquisitionChannels.reduce((total, channel) => total + channel.value, 0);
   const topChannel = acquisitionChannels.reduce((top, channel) => channel.value > top.value ? channel : top, acquisitionChannels[0]);
   const donutStops = acquisitionChannels.reduce<{ stops: string[]; offset: number }>((result, channel) => {
     const start = result.offset;
-    const end = start + (channel.value / acquisitionTotal) * 100;
+    const end = acquisitionTotal ? start + (channel.value / acquisitionTotal) * 100 : start;
     result.stops.push(`${channel.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`);
     result.offset = end;
     return result;
@@ -106,7 +106,7 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
     const dx = event.clientX - center.x;
     const dy = event.clientY - center.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance < bounds.width * 0.27) return;
+    if (!acquisitionTotal || distance < bounds.width * 0.27) return;
     const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
     let offset = 0;
     const channel = acquisitionChannels.find((item) => {
@@ -116,15 +116,15 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
     setHoveredChannel(channel?.key ?? null);
   };
 
-  return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO">
+  return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO" hiddenNav={isSectionPublished ? [] : ["Website SEO"]}>
     <div className="content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Website SEO / Reporting</p>
+          <p className="eyebrow">{sectionName} / Reporting</p>
           <h1>Website SEO performance</h1>
           <p>{clientName} · Organic sessions, search impressions, and keyword coverage by reporting period.</p>
         </div>
-        <div className="heading-actions"><span className="data-confidence"><CheckCircle2 size={13} /> Presentation data</span></div>
+        <div className="heading-actions"><span className={`data-confidence${isDraftPreview ? " data-confidence-preview" : ""}`}><CheckCircle2 size={13} /> {isDraftPreview ? "Draft preview · not client-visible" : "Presentation data"}</span></div>
       </div>
 
       <section className="card seo-context-card" aria-labelledby="seo-context-title">
@@ -148,10 +148,10 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
         </div>
         <div className="seo-acquisition-layout">
           <div className="seo-donut-wrap">
-            <div className="seo-donut" style={{ background: `conic-gradient(${donutStops})` }} role="img" aria-label={`${acquisitionTotal.toLocaleString()} sessions by acquisition channel`} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)}>
-              <div className="seo-donut-center"><strong>{focusedChannel ? focusedChannel.value.toLocaleString() : acquisitionTotal.toLocaleString()}</strong><span>{focusedShare === null ? "Sessions" : `${focusedShare.toFixed(1)}% of sessions`}</span></div>
+            <div className={`seo-donut${!acquisitionTotal ? " is-empty" : ""}`} style={{ background: `conic-gradient(${donutStops || "#dfe5ee 0% 100%"})` }} role="img" aria-label={acquisitionTotal ? `${acquisitionTotal.toLocaleString()} sessions by acquisition channel` : "Acquisition mix is not published"} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)}>
+              <div className="seo-donut-center"><strong>{focusedChannel ? focusedChannel.value.toLocaleString() : acquisitionTotal ? acquisitionTotal.toLocaleString() : "—"}</strong><span>{focusedShare === null ? acquisitionTotal ? "Sessions" : "Not published" : `${focusedShare.toFixed(1)}% of sessions`}</span></div>
             </div>
-            <div className="seo-donut-summary"><span>Top channel</span><strong>{topChannel.label}</strong><small>{((topChannel.value / acquisitionTotal) * 100).toFixed(1)}% of sessions</small></div>
+            <div className="seo-donut-summary"><span>Top channel</span><strong>{topChannel?.label ?? "Not published"}</strong><small>{topChannel && acquisitionTotal ? `${((topChannel.value / acquisitionTotal) * 100).toFixed(1)}% of sessions` : "Available after approval"}</small></div>
           </div>
           <div className="seo-channel-list" aria-label="Acquisition channels">
             {acquisitionChannels.map((channel) => {
@@ -165,7 +165,7 @@ export function WebsiteSeoDashboard({ clientName, brandMark, brandAccent, metric
             })}
           </div>
         </div>
-        <div className="seo-acquisition-foot"><span><Info size={13} /> {channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : `Selected: ${activeChannel.label} · ${activeChannel.value.toLocaleString()} sessions`}</span><span>Higher volume is better</span></div>
+        <div className="seo-acquisition-foot"><span><Info size={13} /> {!isSectionPublished ? "This section is not published to the client yet." : channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : activeChannel ? `Selected: ${activeChannel.label} · ${activeChannel.value.toLocaleString()} sessions` : "No channel data is available."}</span><span>Higher volume is better</span></div>
       </section>
 
       <section className="card panel seo-table-panel" aria-labelledby="seo-table-title">

@@ -23,12 +23,13 @@ function formatPeriod(date: Date) {
   return date.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" });
 }
 
-export default async function AdminWebsiteSeoPreviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminWebsiteSeoPreviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ mode?: string }> }) {
   await requireAdminAccess();
   const { id } = await params;
+  const isDraftPreview = (await searchParams)?.mode === "draft";
   const client = await prisma.client.findUnique({
     where: { id },
-    include: { metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
   if (!client) notFound();
 
@@ -57,5 +58,6 @@ export default async function AdminWebsiteSeoPreviewPage({ params }: { params: P
     ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
     : undefined;
 
-  return <WebsiteSeoDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />;
+  const section = client.sections[0];
+  return <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} isDraftPreview={isDraftPreview} />;
 }

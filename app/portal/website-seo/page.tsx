@@ -26,12 +26,15 @@ export default async function WebsiteSeoPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "riverstone-dental" },
-    include: { metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
   });
 
   if (!client) return <WebsiteSeoDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 
-  const metricMap = new Map(client.metrics.map((metric) => [metric.key, metric]));
+  const section = client.sections[0];
+  const sectionIsPublished = Boolean(section?.isVisible && !section.isDraft);
+
+  const metricMap = new Map((sectionIsPublished ? client.metrics : []).map((metric) => [metric.key, metric]));
   const metrics: WebsiteSeoMetric[] = metricConfig.flatMap((config) => {
     const metric = metricMap.get(config.key);
     if (!metric) return [];
@@ -57,5 +60,5 @@ export default async function WebsiteSeoPage() {
     ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
     : undefined;
 
-  return <WebsiteSeoDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />;
+  return <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={sectionIsPublished} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />;
 }
