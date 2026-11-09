@@ -50,6 +50,8 @@ export const defaultGbpPresentation: GbpPresentationSettings = {
 };
 
 type GbpMetricKey = "calls" | "views" | "clicks" | "directions" | "reviews";
+type GbpChannelKey = "search-maps" | "search" | "maps";
+type GbpDisplayKey = "monthly" | "quarterly";
 
 const metricPresentation: Array<{ key: GbpMetricKey; label: string; icon: typeof Phone }> = [
   { key: "views", label: "Search & Maps impressions", icon: MapPin },
@@ -100,14 +102,45 @@ function renderInsight(template: string, tokens: Record<string, string>) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => tokens[key] ?? "not available");
 }
 
+function sumPeriodValues(left: number | null, right: number | null) {
+  if (left === null && right === null) return null;
+  return (left ?? 0) + (right ?? 0);
+}
+
+function rowsForDisplay(rows: GbpPeriodRow[], display: GbpDisplayKey) {
+  if (display === "monthly") return rows;
+
+  const grouped = new Map<string, GbpPeriodRow>();
+  for (const row of rows) {
+    const date = new Date(row.periodStart);
+    const year = date.getUTCFullYear();
+    const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
+    const key = `${year}-Q${quarter}`;
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, { periodStart: row.periodStart, periodLabel: `Q${quarter} ${year}`, calls: row.calls, views: row.views, clicks: row.clicks, directions: row.directions, reviews: row.reviews });
+      continue;
+    }
+    existing.calls = sumPeriodValues(existing.calls, row.calls);
+    existing.views = sumPeriodValues(existing.views, row.views);
+    existing.clicks = sumPeriodValues(existing.clicks, row.clicks);
+    existing.directions = sumPeriodValues(existing.directions, row.directions);
+    existing.reviews = sumPeriodValues(existing.reviews, row.reviews);
+  }
+  return [...grouped.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
+}
+
 export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [query, setQuery] = useState("");
   const [metricFilter, setMetricFilter] = useState<"all" | GbpMetricKey>("all");
   const [activeMetricKey, setActiveMetricKey] = useState<GbpMetricKey>("views");
+  const [channelFilter, setChannelFilter] = useState<GbpChannelKey>(presentation.channelLabel.toLowerCase().includes("search") && presentation.channelLabel.toLowerCase().includes("maps") ? "search-maps" : presentation.channelLabel.toLowerCase().includes("maps") ? "maps" : "search");
+  const [displayFilter, setDisplayFilter] = useState<GbpDisplayKey>(presentation.displayLabel.toLowerCase().includes("quarter") ? "quarterly" : "monthly");
+  const displayRows = useMemo(() => rowsForDisplay(rows, displayFilter), [displayFilter, rows]);
   const visibleRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return rows.filter((row) => !normalized || row.periodLabel.toLowerCase().includes(normalized));
-  }, [query, rows]);
+    return displayRows.filter((row) => !normalized || row.periodLabel.toLowerCase().includes(normalized));
+  }, [displayRows, query]);
 
   const activeMetric = currentMetric(metrics, activeMetricKey);
   const visibleMetrics = metricFilter === "all" ? metrics : metrics.filter((metric) => metric.key === metricFilter);
@@ -115,8 +148,8 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   const clicksChange = trend(currentMetric(metrics, "clicks") ?? { key: "clicks", label: "Website clicks", value: null, previousValue: null, source: "GBP", description: "" });
   const insightTokens = { callsChange: callsChange === null ? "not available" : `${callsChange >= 0 ? "+" : ""}${callsChange.toFixed(0)}%`, websiteTrend: clicksChange === null ? "not available" : clicksChange >= 0 ? "trending upward" : "trending downward" };
   const trendData = visibleRows.filter((row) => row[activeMetricKey] !== null).map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
-  const latestAvailableRow = rows.at(-1);
-  const hasPublishedData = rows.length > 0;
+  const latestAvailableRow = displayRows.at(-1);
+  const hasPublishedData = displayRows.length > 0;
   const totalFor = (key: keyof Pick<GbpPeriodRow, "views" | "calls" | "clicks" | "directions" | "reviews">) => {
     const values = visibleRows.map((row) => row[key]).filter((value): value is number => value !== null);
     return values.length ? values.reduce((total, value) => total + value, 0) : null;
@@ -125,6 +158,8 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
     setQuery("");
     setMetricFilter("all");
     setActiveMetricKey("views");
+    setChannelFilter("search-maps");
+    setDisplayFilter("monthly");
   }
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="GBP performance" hiddenNav={isSectionPublished ? [] : ["GBP performance"]}>
@@ -142,12 +177,13 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
         <div className="gbp-filter-heading"><span className="gbp-filter-icon"><SlidersHorizontal size={15} /></span><div><strong>{presentation.filterLabel}</strong><span>Choose a metric or search reporting periods.</span></div></div>
         <div className="gbp-filter-controls">
           <label className="gbp-filter-control"><span>Metric</span><select aria-label="Metric" value={metricFilter} onChange={(event) => { const value = event.target.value as "all" | GbpMetricKey; setMetricFilter(value); if (value !== "all") setActiveMetricKey(value); }}>{<option value="all">All metrics</option>}{metrics.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}</select></label>
-          <label className="gbp-filter-control"><span>Channel</span><select aria-label="Channel" value={presentation.channelLabel} disabled><option>{presentation.channelLabel}</option></select></label>
-          <label className="gbp-filter-control"><span>Display</span><select aria-label="Display" value={presentation.displayLabel} disabled><option>{presentation.displayLabel}</option></select></label>
+          <label className="gbp-filter-control"><span>Channel</span><select aria-label="Channel" value={channelFilter} onChange={(event) => setChannelFilter(event.target.value as GbpChannelKey)}><option value="search-maps">{presentation.channelLabel}</option><option value="search">Google Search</option><option value="maps">Google Maps</option></select></label>
+          <label className="gbp-filter-control"><span>Display</span><select aria-label="Display" value={displayFilter} onChange={(event) => setDisplayFilter(event.target.value as GbpDisplayKey)}><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option></select></label>
           <label className="gbp-filter-search"><Search size={14} /><span className="sr-only">Search reporting periods</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search months" /></label>
           <button className="button gbp-filter-reset" type="button" onClick={resetFilters}><RotateCcw size={13} /> Reset</button>
         </div>
         <div className={`freshness-summary${hasPublishedData ? " is-ready" : " is-pending"}`}><span className="freshness-dot" /> {hasPublishedData ? `Published GBP data through ${latestAvailableRow?.periodLabel}` : "No published GBP data"}</div>
+        {channelFilter !== "search-maps" && <p className="gbp-filter-note">The connected GBP feed currently reports Search + Maps together, so this channel selection is shown as an aggregate until channel-level data is connected.</p>}
       </section>
 
       {hasPublishedData ? <>

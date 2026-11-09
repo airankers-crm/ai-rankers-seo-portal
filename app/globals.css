@@ -907,6 +907,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .gbp-filter-search input { width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; font: inherit; font-size: 10px; }
 .gbp-filter-reset { min-height: 34px; padding: 0 9px; font-size: 9px; }
 .gbp-filter-bar > .freshness-summary { grid-column: 2; justify-self: end; }
+.gbp-filter-note { grid-column: 2; margin: -3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .seo-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
 .seo-metric-card { min-height: 158px; padding: 16px; }
 .seo-metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
@@ -1731,6 +1732,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 
 @media (max-width: 480px) {
   .gbp-dashboard .gbp-filter-bar { align-items: stretch; flex-direction: column; }
+  .gbp-dashboard .gbp-filter-note { grid-column: auto; margin-top: 0; }
   .gbp-dashboard .gbp-filter-heading { padding: 0 0 6px; border-right: 0; border-bottom: 1px solid var(--line); }
   .gbp-dashboard .gbp-filter-controls { flex-wrap: wrap; }
   .gbp-dashboard .gbp-filter-control { min-width: calc(50% - 4px); }
