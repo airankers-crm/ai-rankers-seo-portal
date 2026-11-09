@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, CheckCircle2, Info, Search, SlidersHorizontal, Table2, TrendingUp } from "lucide-react";
-import { DateRangePicker, type ComparisonOption, type DateRangeSelection } from "./date-range-picker";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, CheckCircle2, ChevronDown, Info, Search, SlidersHorizontal, Table2, TrendingUp } from "lucide-react";
+import { comparisonOptions, DateRangePicker, type ComparisonOption, type DateRangeSelection } from "./date-range-picker";
 import { AppShell } from "./app-shell";
 import { PortalFeedback } from "./portal-feedback";
 
@@ -47,6 +47,32 @@ const metricDefinitions: Array<{ key: WebsiteMetricKey; label: string; icon: typ
   { key: "topTen", label: "Keywords in top 10", icon: BarChart3 },
 ];
 
+function FilterDropdown({ label, value, displayValue = value, options, onChange }: { label: string; value: string; displayValue?: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: globalThis.MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return <div className="website-seo-filter-dropdown" ref={dropdownRef}>
+    <button type="button" className="website-seo-filter-select" aria-label={label} aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)}><span>{displayValue}</span><ChevronDown size={11} /></button>
+    {open ? <div className="website-seo-filter-menu" role="listbox" aria-label={label}>{options.map((option) => <button type="button" role="option" aria-selected={option.value === value} key={option.value} className={option.value === value ? "active" : ""} onClick={() => { onChange(option.value); setOpen(false); }}>{option.label}</button>)}</div> : null}
+  </div>;
+}
+
 function initialRange(): DateRangeSelection {
   const now = new Date();
   return { label: "Last 6 months", start: new Date(now.getFullYear(), now.getMonth() - 5, 1), end: new Date(now.getFullYear(), now.getMonth(), now.getDate()), compare: "Previous period" };
@@ -71,11 +97,6 @@ function metricChange(current: number | null, previous: number | null) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
-function formatUpdatedAt(value: string | null) {
-  if (!value) return "Awaiting first published result";
-  return `Updated ${new Date(value).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })}`;
-}
-
 function chartPath(data: Array<{ value: number }>) {
   if (data.length < 2) return "";
   const width = 700;
@@ -96,7 +117,7 @@ function renderChange(change: number | null) {
   return `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
 }
 
-export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", brandMark, brandAccent, metrics, rows, channels, dataUpdatedAt = null, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[]; dataUpdatedAt?: string | null; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
+export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", brandMark, brandAccent, metrics, rows, channels, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[]; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(initialRange);
   const [query, setQuery] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
@@ -128,7 +149,6 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
   const chartData = chartRows.map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
   const activeMetric = metricDefinitions.find((metric) => metric.key === activeMetricKey);
   const sourceLabels = [...new Set(metrics.map((metric) => metric.source))].join(", ");
-  const statusText = channelIsPreview ? "Metric sources synced · GA4 channel attribution pending" : `Metric sources synced · ${formatUpdatedAt(dataUpdatedAt)}`;
   const comparisonLabel = dateRange.compare === "None" ? "No comparison" : "vs previous month";
   const comparisonPeriodLabel = previousRow?.periodLabel ?? "the previous period";
   const insightPeriod = dateRange.compare === "None" ? "without a comparison" : `vs ${comparisonPeriodLabel}`;
@@ -164,7 +184,6 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
         <div>
           <h1>Website SEO performance</h1>
           <p>{clientName} · Organic sessions, search visibility, and keyword growth.</p>
-          <p className={`website-seo-status${hasPublishedData ? " is-ready" : " is-pending"}`}><CheckCircle2 size={14} /> {hasPublishedData ? statusText : "No published SEO data"}</p>
         </div>
         <div className="heading-actions"><span className={`data-confidence${isDraftPreview ? " data-confidence-preview" : ""}`}><CheckCircle2 size={13} /> {isDraftPreview ? "Draft preview · not client-visible" : "Client presentation"}</span></div>
       </div>
@@ -173,8 +192,8 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
         <div className="website-seo-filter-title"><span><SlidersHorizontal size={15} /></span><strong>Filter report</strong></div>
         <div className="website-seo-filter-controls">
           <label><span>Date range</span><DateRangePicker value={dateRange} onApply={setDateRange} /></label>
-          <label><span>Compare</span><select aria-label="Compare" value={dateRange.compare} onChange={(event) => setDateRange((current) => ({ ...current, compare: event.target.value as ComparisonOption }))}><option>Previous period</option><option>None</option><option>Previous year</option></select></label>
-          <label><span>Acquisition channel</span><select aria-label="Acquisition channel" value={selectedChannel ?? topChannel?.key ?? ""} onChange={(event) => setSelectedChannel(event.target.value)}>{acquisitionChannels.map((channel) => <option key={channel.key} value={channel.key}>{channel.label}</option>)}</select></label>
+          <label><span>Compare</span><FilterDropdown label="Compare" value={dateRange.compare} options={comparisonOptions.map((option) => ({ value: option, label: option }))} onChange={(value) => setDateRange((current) => ({ ...current, compare: value as ComparisonOption }))} /></label>
+          <label><span>Acquisition channel</span><FilterDropdown label="Acquisition channel" value={selectedChannel ?? topChannel?.key ?? ""} displayValue={activeChannel?.label ?? "No channel"} options={acquisitionChannels.map((channel) => ({ value: channel.key, label: channel.label }))} onChange={setSelectedChannel} /></label>
           <label className="website-seo-search"><span className="sr-only">Search reporting periods</span><Search size={14} /><input aria-label="Search reporting periods" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reporting periods" /></label>
           <button className="button website-seo-reset" type="button" onClick={resetFilters}>Reset</button>
         </div>

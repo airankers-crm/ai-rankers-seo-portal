@@ -59,6 +59,5 @@ export default async function AdminWebsiteSeoPreviewPage({ params, searchParams 
     : undefined;
 
   const section = client.sections[0];
-  const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => !latest || value.updatedAt > latest ? value.updatedAt : latest, null);
-  return <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} isDraftPreview={isDraftPreview} />;
+  return <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} isDraftPreview={isDraftPreview} />;
 }
