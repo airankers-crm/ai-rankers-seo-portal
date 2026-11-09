@@ -3,7 +3,7 @@
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export const dateRangePresets = ["Last 7 days", "Last 30 days", "Last 90 days", "This year", "Custom"] as const;
+export const dateRangePresets = ["Last 7 days", "Last 30 days", "Last 90 days", "Last 6 months", "This year", "Custom"] as const;
 export const comparisonOptions = ["None", "Previous period", "Previous year"] as const;
 export type DateRangePreset = (typeof dateRangePresets)[number];
 export type ComparisonOption = (typeof comparisonOptions)[number];
@@ -79,6 +79,7 @@ function isBetween(date: Date, start: Date, end: Date) {
 function getPresetRange(preset: Exclude<DateRangePreset, "Custom">, anchor: Date) {
   const end = startOfDay(anchor);
   if (preset === "This year") return { start: new Date(end.getFullYear(), 0, 1), end };
+  if (preset === "Last 6 months") return { start: new Date(end.getFullYear(), end.getMonth() - 5, 1), end };
   const days = preset === "Last 7 days" ? 7 : preset === "Last 30 days" ? 30 : 90;
   return { start: addDays(end, -(days - 1)), end };
 }
