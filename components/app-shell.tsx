@@ -31,6 +31,7 @@ type AppShellProps = {
   brandAccent?: string;
   activeNav?: string;
   hiddenNav?: string[];
+  presentationMode?: boolean;
 };
 
 const portalNav = [
@@ -54,7 +55,7 @@ const adminNav = [
   { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
 ];
 
-export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [] }: AppShellProps) {
+export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], presentationMode = false }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
@@ -66,7 +67,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${presentationMode ? " presentation-shell" : ""}`}>
       <aside className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
           {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
