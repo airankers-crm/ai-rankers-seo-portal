@@ -36,18 +36,34 @@ type AppShellProps = {
   presentationMode?: boolean;
 };
 
-const portalNav = [
-  { label: "Overview", href: "/portal", icon: LayoutDashboard },
-  { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
-  { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
-  { label: "Activities", href: "/portal/activities", icon: Activity },
-  { label: "Team communication", href: "/portal/messages", icon: MessageCircle },
-  { label: "Reports", href: "/portal/reports", icon: FileText },
-  { label: "Settings", href: "/portal/settings", icon: Settings2 },
-];
-
 type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
 type NavGroup = { label: string; items: NavItem[] };
+
+const portalNavGroups: NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      { label: "Overview", href: "/portal", icon: LayoutDashboard },
+      { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
+      { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { label: "Activities", href: "/portal/activities", icon: Activity },
+      { label: "Team communication", href: "/portal/messages", icon: MessageCircle },
+    ],
+  },
+  {
+    label: "Reporting",
+    items: [{ label: "Reports", href: "/portal/reports", icon: FileText }],
+  },
+  {
+    label: "Account",
+    items: [{ label: "Settings", href: "/portal/settings", icon: Settings2 }],
+  },
+];
 
 const adminNavGroups: NavGroup[] = [
   {
@@ -86,9 +102,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [collapsed, setCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const pathname = usePathname();
-  const navGroups: NavGroup[] = mode === "admin"
-    ? adminNavGroups
-    : [{ label: "", items: portalNav }];
+  const navGroups: NavGroup[] = mode === "admin" ? adminNavGroups : portalNavGroups;
   const visibleNavGroups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label)) }))
     .filter((group) => group.items.length > 0);
@@ -109,7 +123,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           <span className="brand-sub">SEO intelligence</span>
         </div>
 
-        <div className="nav-label">{mode === "admin" ? "CRM workspace" : "Your workspace"}</div>
+        <div className="nav-label">{mode === "admin" ? "CRM workspace" : "Client workspace"}</div>
         <nav className="nav-list" aria-label="Primary navigation">
           {visibleNavGroups.map((group) => (
             <div className="nav-group" key={group.label || "primary"}>
