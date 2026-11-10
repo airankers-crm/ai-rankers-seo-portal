@@ -19,7 +19,7 @@ export function AdminReportTemplate() {
   return <AppShell mode="admin">
     <div className="content admin-template-page">
       <div className="page-heading">
-        <div><p className="eyebrow">The AI Rankers / Templates</p><h1>Client report template</h1><p>Reusable structure for polished, client-safe SEO performance reports.</p></div>
+        <div><h1>Client report template</h1></div>
         <div className="heading-actions"><Link className="button" href="/admin/reports">Open report operations <ArrowUpRight size={14} /></Link></div>
       </div>
 

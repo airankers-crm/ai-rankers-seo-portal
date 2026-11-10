@@ -37,9 +37,8 @@ export function AdminOperationsPage({ config }: { config: AdminOperationConfig }
       <div className="content">
         <div className="page-heading">
           <div>
-            <p className="eyebrow">The AI Rankers / Operations</p>
             <h1>{config.title}</h1>
-            <p>{config.description}</p>
+            {config.description ? <p>{config.description}</p> : null}
           </div>
           {config.primaryAction ? <div className="heading-actions"><a className="button primary" href={config.primaryAction.href}>{config.primaryAction.label} <ArrowUpRight size={14} /></a></div> : null}
         </div>

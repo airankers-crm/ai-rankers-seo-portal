@@ -61,9 +61,7 @@ export function AdminDashboard({ databaseClients, summary }: { databaseClients?:
       <div className="content">
         <div className="page-heading">
           <div>
-            <p className="eyebrow">The AI Rankers / Operations</p>
             <h1>Workspace overview</h1>
-            <p>Manage client workspaces, report status, and delivery operations.</p>
           </div>
           <div className="heading-actions"><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
         </div>
