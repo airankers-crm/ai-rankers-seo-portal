@@ -360,6 +360,7 @@ model Task {
 
   @@index([clientId, status, dueDate])
   @@index([assigneeId, status])
+  @@index([requesterId, createdAt])
 }
 
 model Feedback {
@@ -396,6 +397,7 @@ model ChatGroup {
 
   @@unique([clientId, name])
   @@index([clientId, isArchived, updatedAt])
+  @@index([createdById, createdAt])
 }
 
 model ChatMessage {

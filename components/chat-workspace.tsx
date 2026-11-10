@@ -5,7 +5,6 @@ import {
   Archive,
   ArrowUpRight,
   Info,
-  LockKeyhole,
   Check,
   Link2,
   MessageCircle,
@@ -223,8 +222,6 @@ export function ChatWorkspace({ mode, groups: startingGroups, initialMessages, c
   return (
     <AppShell mode={mode === "admin" ? "admin" : "portal"} clientName={mode === "admin" ? "AI Rankers" : activeClientName} brandMark={shellMark} brandAccent={accent} activeNav={mode === "admin" ? "Client communication" : "Team communication"}>
       <div className="content team-communication-page chat-page">
-        <header className="chat-topbar"><div className="chat-topbar-title"><MessageCircle size={17} /><div><p className="eyebrow">{mode === "admin" ? "Client communication" : "Team communication"}</p><h1>Messages</h1></div></div><span className="chat-topbar-note"><LockKeyhole size={12} /> Client-scoped</span></header>
-
         {error ? <div className="chat-alert error" role="alert"><X size={15} /> <span>{error}</span><button type="button" onClick={() => setError(null)} aria-label="Dismiss error"><X size={14} /></button></div> : null}
         {notice ? <div className="chat-alert success" role="status"><Check size={15} /> {notice}</div> : null}
 

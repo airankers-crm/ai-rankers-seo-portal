@@ -130,7 +130,7 @@ function rowsForDisplay(rows: GbpPeriodRow[], display: GbpDisplayKey) {
   return [...grouped.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
 }
 
-export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
+export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, showDataUpdatedAt = false, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; showDataUpdatedAt?: boolean; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [query, setQuery] = useState("");
   const [metricFilter, setMetricFilter] = useState<"all" | GbpMetricKey>("all");
   const [activeMetricKey, setActiveMetricKey] = useState<GbpMetricKey>("views");
@@ -169,7 +169,7 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
         <div>
           <h1>{presentation.pageTitle}</h1>
           <p>{clientName} · {presentation.pageSubtitle}</p>
-          <p className={`gbp-data-status ${connectionStatus === "connected" ? "is-connected" : "is-pending"}`}><span className="gbp-data-dot" /> {connectionStatus === "connected" ? "Connected to Google Business Profile" : "Google Business Profile not connected"}{dataUpdatedAt ? ` · Updated ${formatUpdatedAt(dataUpdatedAt)}` : " · Awaiting first published result"}</p>
+          <p className={`gbp-data-status ${connectionStatus === "connected" ? "is-connected" : "is-pending"}`}><span className="gbp-data-dot" /> {connectionStatus === "connected" ? "Connected to Google Business Profile" : "Google Business Profile not connected"}{showDataUpdatedAt ? dataUpdatedAt ? ` · Updated ${formatUpdatedAt(dataUpdatedAt)}` : " · Awaiting first published result" : ""}</p>
         </div>
         <div className="heading-actions">{isDraftPreview ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Draft preview · not client-visible</span> : !isSectionPublished ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Section not published</span> : null}</div>
       </div>

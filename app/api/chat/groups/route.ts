@@ -12,6 +12,7 @@ export async function GET() {
   const groups = await prisma.chatGroup.findMany({
     where: { isArchived: false, ...(isAdminRole(actor.role) ? {} : { clientId: actor.clientId ?? "__no_client__" }) },
     orderBy: { updatedAt: "desc" },
+    take: 100,
     include: {
       client: { select: { businessName: true } },
       messages: { orderBy: { createdAt: "desc" }, take: 1, include: { sender: { select: { name: true, role: true } } } },

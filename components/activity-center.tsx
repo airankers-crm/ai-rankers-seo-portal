@@ -27,6 +27,10 @@ type ActivityCenterProps = {
 
 type ActivityStatusFilter = "All statuses" | "Planned" | "Completed" | "In progress";
 
+function activityStatusLabel(status: DemoActivity["status"]) {
+  return status === "COMPLETED" ? "Completed" : status === "PLANNED" ? "Planned" : "In progress";
+}
+
 export function ActivityCenter({ businessName, brandMark, brandAccent, activities = demoActivities, tasks = [] }: ActivityCenterProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All workstreams");
@@ -53,7 +57,7 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
   function exportCsv() {
     const rows = [
       ["Activity", "Workstream", "Date", "Status"],
-      ...filteredActivities.map((activity) => [activity.title, activity.category, activity.date, activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress"]),
+      ...filteredActivities.map((activity) => [activity.title, activity.category, activity.date, activityStatusLabel(activity.status)]),
     ];
     const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -101,7 +105,7 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
         </div>
 
         <section className="card activity-panel" aria-labelledby="activity-log-title">
-          <div className="activity-panel-heading"><div><p className="eyebrow">Activity records</p><h2 id="activity-log-title">SEO work</h2><p>Completed and in-progress work by service.</p></div><span className="panel-meta">{activities.length} total</span></div>
+          <div className="activity-panel-heading"><div><p className="eyebrow">Activity records</p><h2 id="activity-log-title">SEO work</h2><p>Published completed, in-progress, and planned work by service.</p></div><span className="panel-meta">{activities.length} total</span></div>
           {filteredActivities.length === 0 ? <EmptyState message="No activities match these filters. Try a broader search or clear the current view." /> : <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Workstream</th><th>Date</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredActivities.map((activity) => <tr key={activity.id}><td><div className="activity-name"><span className={`activity-status-icon ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</span><strong>{activity.title}</strong></div></td><td><span className="workstream-tag">{activity.category}</span></td><td className="activity-date">{activity.date}</td><td><span className={`status ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress"}</span></td><td className="activity-detail-cell"><button className="table-action" type="button" onClick={() => setSelectedActivity(activity)}>View details</button></td></tr>)}</tbody></table></div>}
         </section>
 
@@ -113,5 +117,7 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
 }
 
 function ActivityDetail({ activity, onClose }: { activity: DemoActivity; onClose: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onClick={onClose}><section className="report-modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-detail-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><p className="eyebrow">Activity detail</p><h2 id="activity-detail-title">{activity.title}</h2><p>{activity.category} · {activity.date}</p></div><button className="icon-button" type="button" aria-label="Close activity details" onClick={onClose}><X size={16} /></button></div><div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</strong><p>{activity.status === "COMPLETED" ? "This activity is published in the client workspace." : "The agency team has not marked this activity complete."}</p></div></div><div className="report-preview-grid"><div><span>Workstream</span><strong>{activity.category}</strong></div><div><span>Timing</span><strong>{activity.date}</strong></div><div><span>Owner</span><strong>SEO team</strong></div></div><div className="modal-actions"><button className="button" type="button" onClick={onClose}>Close</button></div></section></div>;
+  const statusLabel = activityStatusLabel(activity.status);
+  const statusDescription = activity.status === "COMPLETED" ? "This activity is published in the client workspace." : activity.status === "PLANNED" ? "This activity is published as planned work for the current reporting plan." : "The agency team is currently working on this activity.";
+  return <div className="modal-backdrop" role="presentation" onClick={onClose}><section className="report-modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-detail-title" onClick={(event) => event.stopPropagation()}><div className="modal-heading"><div><p className="eyebrow">Activity detail</p><h2 id="activity-detail-title">{activity.title}</h2><p>{activity.category} · {activity.date}</p></div><button className="icon-button" type="button" aria-label="Close activity details" onClick={onClose}><X size={16} /></button></div><div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>{statusLabel}</strong><p>{statusDescription}</p></div></div><div className="report-preview-grid"><div><span>Workstream</span><strong>{activity.category}</strong></div><div><span>Timing</span><strong>{activity.date}</strong></div><div><span>Owner</span><strong>SEO team</strong></div></div><div className="modal-actions"><button className="button" type="button" onClick={onClose}>Close</button></div></section></div>;
 }

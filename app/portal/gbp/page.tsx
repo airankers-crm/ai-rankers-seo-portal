@@ -32,7 +32,7 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
   const client = clientId ? await getCachedGbpClient(clientId) : null;
 
-  if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" dataUpdatedAt={null} />;
+  if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" />;
 
   const section = client.sections[0];
   const sectionIsPublished = Boolean(section?.isVisible && !section.isDraft);
@@ -58,8 +58,7 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   }
 
   const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
-  const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => { const updatedAt = new Date(value.updatedAt); return !latest || updatedAt > latest ? updatedAt : latest; }, null);
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
 
-  return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
+  return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
 }

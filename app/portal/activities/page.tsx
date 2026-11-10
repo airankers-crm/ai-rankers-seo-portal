@@ -21,7 +21,7 @@ export default async function ActivitiesPage() {
     id: activity.id,
     title: activity.title,
     category: activity.category,
-    date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress",
+    date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? (activity.status === "PLANNED" ? "Planned" : "In progress"),
     status: activity.status,
   }));
 
