@@ -1,5 +1,5 @@
 export type MetricSource = "MANUAL" | "GSC" | "GA4" | "GBP" | "DATAFORSEO";
-export type ActivityStatus = "COMPLETED" | "IN_PROGRESS";
+export type ActivityStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED";
 
 export type MetricHistoryPoint = {
   label: string;

@@ -12,7 +12,7 @@ export default async function ActivitiesPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
-    include: { activities: { orderBy: { createdAt: "desc" }, take: 100 } },
+    include: { activities: { where: { clientVisible: true }, orderBy: { createdAt: "desc" }, take: 100 } },
   });
 
   if (!client) return <ActivityCenter businessName={demoClient.businessName} activities={demoActivities} />;
@@ -22,7 +22,7 @@ export default async function ActivitiesPage() {
     title: activity.title,
     category: activity.category,
     date: activity.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) ?? "In progress",
-    status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS",
+    status: activity.status,
   }));
 
   const tasks: ClientTask[] = (await listClientTasks(client.id)).map((task) => ({ id: task.id, title: task.title, description: task.description, category: task.category, status: task.status, priority: task.priority, dueDate: task.dueDate?.toISOString() ?? null, assignee: task.assigneeName ? { name: task.assigneeName } : null }));

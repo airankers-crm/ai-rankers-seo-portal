@@ -25,7 +25,7 @@ type ActivityCenterProps = {
   tasks?: ClientTask[];
 };
 
-type ActivityStatusFilter = "All statuses" | "Completed" | "In progress";
+type ActivityStatusFilter = "All statuses" | "Planned" | "Completed" | "In progress";
 
 export function ActivityCenter({ businessName, brandMark, brandAccent, activities = demoActivities, tasks = [] }: ActivityCenterProps) {
   const [query, setQuery] = useState("");
@@ -42,17 +42,18 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
     return activities.filter((activity) => {
       const matchesQuery = !normalizedQuery || `${activity.title} ${activity.category} ${activity.date}`.toLowerCase().includes(normalizedQuery);
       const matchesCategory = category === "All workstreams" || activity.category === category;
-      const matchesStatus = status === "All statuses" || (status === "Completed" ? activity.status === "COMPLETED" : activity.status === "IN_PROGRESS");
+      const matchesStatus = status === "All statuses" || (status === "Planned" ? activity.status === "PLANNED" : status === "Completed" ? activity.status === "COMPLETED" : activity.status === "IN_PROGRESS");
       return matchesQuery && matchesCategory && matchesStatus;
     });
   }, [activities, category, query, status]);
   const completedCount = activities.filter((activity) => activity.status === "COMPLETED").length;
-  const inProgressCount = activities.length - completedCount;
+  const plannedCount = activities.filter((activity) => activity.status === "PLANNED").length;
+  const inProgressCount = activities.filter((activity) => activity.status === "IN_PROGRESS").length;
 
   function exportCsv() {
     const rows = [
       ["Activity", "Workstream", "Date", "Status"],
-      ...filteredActivities.map((activity) => [activity.title, activity.category, activity.date, activity.status === "COMPLETED" ? "Completed" : "In progress"]),
+      ...filteredActivities.map((activity) => [activity.title, activity.category, activity.date, activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress"]),
     ];
     const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -87,20 +88,21 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
           <div className="activity-toolbar-title"><Filter size={15} /><span>Filter activity</span></div>
           <label className="activity-search"><Search size={15} /><span className="sr-only">Search activity</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search activity, workstream…" /></label>
           <select aria-label="Filter by workstream" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select>
-          <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value as ActivityStatusFilter)}><option>All statuses</option><option>Completed</option><option>In progress</option></select>
+          <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value as ActivityStatusFilter)}><option>All statuses</option><option>Planned</option><option>In progress</option><option>Completed</option></select>
           {(query || category !== "All workstreams" || status !== "All statuses") && <button className="clear-filters" type="button" onClick={() => { setQuery(""); setCategory("All workstreams"); setStatus("All statuses"); }}><X size={13} /> Clear</button>}
         </section>
 
-        <div className="activity-summary" aria-label="Activity summary">
+          <div className="activity-summary" aria-label="Activity summary">
           <div><strong>{filteredActivities.length}</strong><span>visible activities</span></div>
           <div><strong>{completedCount}</strong><span>completed</span></div>
           <div><strong>{inProgressCount}</strong><span>in progress</span></div>
+          <div><strong>{plannedCount}</strong><span>planned</span></div>
           <div className="activity-summary-note"><Sparkles size={15} /><span>Activity records are visible after agency publication.</span></div>
         </div>
 
         <section className="card activity-panel" aria-labelledby="activity-log-title">
           <div className="activity-panel-heading"><div><p className="eyebrow">Activity records</p><h2 id="activity-log-title">SEO work</h2><p>Completed and in-progress work by service.</p></div><span className="panel-meta">{activities.length} total</span></div>
-          {filteredActivities.length === 0 ? <EmptyState message="No activities match these filters. Try a broader search or clear the current view." /> : <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Workstream</th><th>Date</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredActivities.map((activity) => <tr key={activity.id}><td><div className="activity-name"><span className={`activity-status-icon ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</span><strong>{activity.title}</strong></div></td><td><span className="workstream-tag">{activity.category}</span></td><td className="activity-date">{activity.date}</td><td><span className={`status ${activity.status === "COMPLETED" ? "complete" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : "In progress"}</span></td><td className="activity-detail-cell"><button className="table-action" type="button" onClick={() => setSelectedActivity(activity)}>View details</button></td></tr>)}</tbody></table></div>}
+          {filteredActivities.length === 0 ? <EmptyState message="No activities match these filters. Try a broader search or clear the current view." /> : <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Workstream</th><th>Date</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredActivities.map((activity) => <tr key={activity.id}><td><div className="activity-name"><span className={`activity-status-icon ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</span><strong>{activity.title}</strong></div></td><td><span className="workstream-tag">{activity.category}</span></td><td className="activity-date">{activity.date}</td><td><span className={`status ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress"}</span></td><td className="activity-detail-cell"><button className="table-action" type="button" onClick={() => setSelectedActivity(activity)}>View details</button></td></tr>)}</tbody></table></div>}
         </section>
 
         <ClientTaskCenter initialTasks={tasks} />

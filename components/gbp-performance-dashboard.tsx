@@ -143,6 +143,7 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   }, [displayRows, query]);
 
   const activeMetric = currentMetric(metrics, activeMetricKey);
+  const hasChannelBreakdown = metrics.some((metric) => /(^|-)search($|-)|(^|-)maps($|-)/i.test(metric.key));
   const visibleMetrics = metricFilter === "all" ? metrics : metrics.filter((metric) => metric.key === metricFilter);
   const callsChange = trend(currentMetric(metrics, "calls") ?? { key: "calls", label: "Calls", value: null, previousValue: null, source: "GBP", description: "" });
   const clicksChange = trend(currentMetric(metrics, "clicks") ?? { key: "clicks", label: "Website clicks", value: null, previousValue: null, source: "GBP", description: "" });
@@ -177,13 +178,13 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
         <div className="gbp-filter-heading"><span className="gbp-filter-icon"><SlidersHorizontal size={15} /></span><div><strong>{presentation.filterLabel}</strong><span>Choose a metric or search reporting periods.</span></div></div>
         <div className="gbp-filter-controls">
           <label className="gbp-filter-control"><span>Metric</span><select aria-label="Metric" value={metricFilter} onChange={(event) => { const value = event.target.value as "all" | GbpMetricKey; setMetricFilter(value); if (value !== "all") setActiveMetricKey(value); }}>{<option value="all">All metrics</option>}{metrics.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}</select></label>
-          <label className="gbp-filter-control"><span>Channel</span><select aria-label="Channel" value={channelFilter} onChange={(event) => setChannelFilter(event.target.value as GbpChannelKey)}><option value="search-maps">{presentation.channelLabel}</option><option value="search">Google Search</option><option value="maps">Google Maps</option></select></label>
+          <label className="gbp-filter-control"><span>Channel</span><select aria-label="Channel" value={hasChannelBreakdown ? channelFilter : "search-maps"} disabled={!hasChannelBreakdown} onChange={(event) => setChannelFilter(event.target.value as GbpChannelKey)}><option value="search-maps">{presentation.channelLabel}</option>{hasChannelBreakdown ? <><option value="search">Google Search</option><option value="maps">Google Maps</option></> : null}</select></label>
           <label className="gbp-filter-control"><span>Display</span><select aria-label="Display" value={displayFilter} onChange={(event) => setDisplayFilter(event.target.value as GbpDisplayKey)}><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option></select></label>
           <label className="gbp-filter-search"><Search size={14} /><span className="sr-only">Search reporting periods</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search months" /></label>
           <button className="button gbp-filter-reset" type="button" onClick={resetFilters}><RotateCcw size={13} /> Reset</button>
         </div>
         <div className={`freshness-summary${hasPublishedData ? " is-ready" : " is-pending"}`}><span className="freshness-dot" /> {hasPublishedData ? `Published GBP data through ${latestAvailableRow?.periodLabel}` : "No published GBP data"}</div>
-        {channelFilter !== "search-maps" && <p className="gbp-filter-note">The connected GBP feed currently reports Search + Maps together, so this channel selection is shown as an aggregate until channel-level data is connected.</p>}
+        {!hasChannelBreakdown && <p className="gbp-filter-note">Google Business Profile currently provides Search + Maps as one aggregate. Channel-level filtering will appear when split data is connected.</p>}
       </section>
 
       {hasPublishedData ? <>

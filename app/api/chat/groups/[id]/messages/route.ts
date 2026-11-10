@@ -38,6 +38,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (attachmentUrl) {
     try { new URL(attachmentUrl); } catch { return NextResponse.json({ error: "Document link must be a valid URL." }, { status: 400 }); }
   }
+  const recentMessages = await prisma.chatMessage.count({ where: { senderId: actor.id, createdAt: { gte: new Date(Date.now() - 60_000) } } });
+  if (recentMessages >= 30) return NextResponse.json({ error: "Please wait before sending more messages." }, { status: 429, headers: { "Retry-After": "60" } });
 
   const message = await prisma.$transaction(async (transaction) => {
     const created = await transaction.chatMessage.create({ data: { groupId: id, senderId: actor.id, body: messageBody, attachmentName, attachmentUrl }, include: { sender: { select: { name: true, role: true } } } });

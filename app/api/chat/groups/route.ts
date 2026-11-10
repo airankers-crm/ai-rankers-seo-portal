@@ -33,6 +33,8 @@ export async function POST(request: Request) {
   if (!clientId || !name) return NextResponse.json({ error: "Client and conversation name are required." }, { status: 400 });
   if (name.length > 80) return NextResponse.json({ error: "Conversation name must be 80 characters or fewer." }, { status: 400 });
   if (description && description.length > 180) return NextResponse.json({ error: "Description must be 180 characters or fewer." }, { status: 400 });
+  const recentGroups = await prisma.chatGroup.count({ where: { createdById: actor.id, createdAt: { gte: new Date(Date.now() - 60_000) } } });
+  if (recentGroups >= 10) return NextResponse.json({ error: "Please wait before creating more conversations." }, { status: 429, headers: { "Retry-After": "60" } });
 
   const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, businessName: true } });
   if (!client) return NextResponse.json({ error: "Client workspace was not found." }, { status: 404 });

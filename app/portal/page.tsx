@@ -11,7 +11,7 @@ function getCachedPortalData(clientId: string) {
   return unstable_cache(async () => {
     const [metrics, activityRecords, reportRecords, goalRecords] = await Promise.all([
       prisma.metric.findMany({ where: { clientId, isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } }, orderBy: { position: "asc" } }),
-      prisma.activity.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
+      prisma.activity.findMany({ where: { clientId, clientVisible: true }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.report.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.goal.findMany({
         where: { clientId, isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } },
@@ -55,7 +55,7 @@ export default async function PortalPage() {
   const gbpWebsiteClicks = mapMetric("gbp-website-clicks");
   const gbpDirections = mapMetric("gbp-directions");
   const gbpReviews = mapMetric("gbp-reviews");
-  const activities: DemoActivity[] = activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt ? new Date(activity.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "In progress", status: activity.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS" }));
+  const activities: DemoActivity[] = activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt ? new Date(activity.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : activity.status === "PLANNED" ? "Planned" : "In progress", status: activity.status }));
   const reports: DemoReport[] = reportRecords.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.period }));
   const latestUpdatedAt = metrics.reduce((latest, metric) => new Date(metric.updatedAt) > latest ? new Date(metric.updatedAt) : latest, new Date(0)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const goals: PortalGoal[] = goalRecords;

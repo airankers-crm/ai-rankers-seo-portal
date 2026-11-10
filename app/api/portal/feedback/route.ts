@@ -25,6 +25,8 @@ export async function POST(request: Request) {
   if (!message || message.length > 2000) return NextResponse.json({ error: "Feedback must be between 1 and 2,000 characters." }, { status: 400 });
   if (!pagePath || pagePath.length > 200 || !pageLabel || pageLabel.length > 100) return NextResponse.json({ error: "A valid page context is required." }, { status: 400 });
   if (!access.user.clientId) return NextResponse.json({ error: "A client workspace is required." }, { status: 400 });
+  const recentFeedback = await prisma.feedback.count({ where: { userId: access.user.id, createdAt: { gte: new Date(Date.now() - 60_000) } } });
+  if (recentFeedback >= 5) return NextResponse.json({ error: "Please wait before sending more feedback." }, { status: 429, headers: { "Retry-After": "60" } });
 
   const feedback = await prisma.$transaction(async (transaction) => {
     const created = await transaction.feedback.create({ data: { clientId: access.user.clientId as string, userId: access.user.id, category: category as "ISSUE" | "QUESTION" | "REQUEST" | "PRAISE", message, pagePath, pageLabel, context: normalizeContext(body?.context) ?? undefined } });

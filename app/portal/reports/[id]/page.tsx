@@ -35,7 +35,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     include: {
       reports: { where: { id, isVisible: true } },
       metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } },
-      activities: { orderBy: { createdAt: "desc" }, take: 8 },
+      activities: { where: { clientVisible: true }, orderBy: { createdAt: "desc" }, take: 8 },
       goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
     },
   });
@@ -72,7 +72,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const currentTopTen = kpis.find((metric) => metric.key === "kw-top10")?.value;
   const currentCalls = kpis.find((metric) => metric.key === "gbp-calls")?.value;
   const clientMark = client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-  const activities = client.activities.map((activity) => ({ id: activity.id, date: activity.completedAt ? formatDate(activity.completedAt) : "In progress", type: activity.category, title: activity.title, description: activity.description ?? "The SEO team completed this work as part of the current reporting plan.", status: activity.status === "COMPLETED" ? "Completed" : "In progress", owner: "SEO team", clientVisible: true }));
+  const activities = client.activities.map((activity) => ({ id: activity.id, date: activity.completedAt ? formatDate(activity.completedAt) : activity.status === "PLANNED" ? "Planned" : "In progress", type: activity.category, title: activity.title, description: activity.description ?? "The SEO team completed this work as part of the current reporting plan.", status: activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress", owner: "SEO team", clientVisible: activity.clientVisible }));
   const goals = client.goals.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) }));
 
   const report: ReportViewModel = {

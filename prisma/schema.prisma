@@ -330,6 +330,7 @@ model Activity {
   description String?
   category    String
   status      ActivityStatus @default(PLANNED)
+  clientVisible Boolean      @default(true)
   completedAt DateTime?
   client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt   DateTime       @default(now())

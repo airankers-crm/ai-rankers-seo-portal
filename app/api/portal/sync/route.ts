@@ -17,7 +17,7 @@ function getCachedChangeWatermark(clientId: string) {
         (SELECT MAX("updatedAt") FROM "Goal" WHERE "clientId" = ${clientId}),
         (SELECT MAX(annotation."createdAt") FROM "GoalAnnotation" annotation INNER JOIN "Goal" goal ON goal."id" = annotation."goalId" WHERE goal."clientId" = ${clientId}),
         (SELECT MAX("updatedAt") FROM "Report" WHERE "clientId" = ${clientId}),
-        (SELECT MAX("updatedAt") FROM "Activity" WHERE "clientId" = ${clientId}),
+        (SELECT MAX("updatedAt") FROM "Activity" WHERE "clientId" = ${clientId} AND "clientVisible" = true),
         (SELECT MAX("updatedAt") FROM "Task" WHERE "clientId" = ${clientId} AND "clientVisible" = true),
         (SELECT MAX("publishedAt") FROM "DashboardVersion" WHERE "clientId" = ${clientId})
       ) AS "changedAt"
