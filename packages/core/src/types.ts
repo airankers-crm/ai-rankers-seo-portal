@@ -21,6 +21,9 @@ export type DemoClient = {
   services: string[];
   status: "Active" | "Paused";
   lastPublished: string;
+  draftCount?: number;
+  portalUsers?: number;
+  publishedMetrics?: number;
 };
 
 export type DemoActivity = {

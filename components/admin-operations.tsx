@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Database, Filter, Search, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Database, Filter, Search, ShieldCheck } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 export type AdminOperationRow = Record<string, string>;
@@ -18,7 +18,7 @@ export type AdminOperationConfig = {
   emptyTitle: string;
   emptyDescription: string;
   primaryAction?: { label: string; href: string };
-  rowAction?: { label: string; hrefPrefix: string; hrefSuffix?: string };
+  rowAction?: { label: string; hrefPrefix: string; hrefSuffix?: string; menu?: Array<{ label: string; hrefSuffix: string }> };
 };
 
 export function AdminOperationsPage({ config }: { config: AdminOperationConfig }) {
@@ -60,7 +60,7 @@ export function AdminOperationsPage({ config }: { config: AdminOperationConfig }
             {config.filters?.map((filter) => <label className="ops-filter" key={filter.key}><Filter size={13} /><span className="sr-only">{filter.label}</span><select value={selectedFilters[filter.key] ?? "All"} onChange={(event) => setSelectedFilters((current) => ({ ...current, [filter.key]: event.target.value }))}><option value="All">{filter.label}: All</option>{filter.options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>)}
           </div>
 
-          {filteredRows.length ? <div className="table-scroll ops-table-scroll"><table className="client-table ops-table"><thead><tr>{config.columns.map((column) => <th key={column.key}>{column.label}</th>)}<th>Action</th></tr></thead><tbody>{filteredRows.map((row, index) => <tr key={`${row.id ?? row.name ?? "row"}-${index}`}>{config.columns.map((column) => <td key={column.key}>{row[column.key] ?? "—"}</td>)}<td>{config.rowAction && row.id ? <a className="table-action" href={`${config.rowAction.hrefPrefix}${encodeURIComponent(row.id)}${config.rowAction.hrefSuffix ?? ""}`}>{config.rowAction.label} <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></a> : <button className="table-action" type="button">View details <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></button>}</td></tr>)}</tbody></table></div> : <div className="ops-empty"><div className="ops-empty-mark"><Database size={19} /></div><div><h3>{query || Object.values(selectedFilters).some(Boolean) ? "No records match these filters" : config.emptyTitle}</h3><p>{query || Object.values(selectedFilters).some(Boolean) ? "Clear the search or filters to review the full workspace." : config.emptyDescription}</p></div></div>}
+          {filteredRows.length ? <div className="table-scroll ops-table-scroll"><table className="client-table ops-table"><thead><tr>{config.columns.map((column) => <th key={column.key}>{column.label}</th>)}<th>Action</th></tr></thead><tbody>{filteredRows.map((row, index) => <tr key={`${row.id ?? row.name ?? "row"}-${index}`}>{config.columns.map((column) => <td key={column.key}>{row[column.key] ?? "—"}</td>)}<td>{config.rowAction && row.id ? config.rowAction.menu ? <details className="table-action-menu"><summary className="table-action table-action-menu-trigger">{config.rowAction.label}<ChevronDown size={13} /></summary><div className="table-action-menu-list">{config.rowAction.menu.map((item) => <a href={`${config.rowAction?.hrefPrefix}${encodeURIComponent(row.id as string)}${item.hrefSuffix}`} key={item.label}>{item.label}<ArrowUpRight size={12} /></a>)}</div></details> : <a className="table-action" href={`${config.rowAction.hrefPrefix}${encodeURIComponent(row.id)}${config.rowAction.hrefSuffix ?? ""}`}>{config.rowAction.label} <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></a> : <button className="table-action" type="button">View details <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></button>}</td></tr>)}</tbody></table></div> : <div className="ops-empty"><div className="ops-empty-mark"><Database size={19} /></div><div><h3>{query || Object.values(selectedFilters).some(Boolean) ? "No records match these filters" : config.emptyTitle}</h3><p>{query || Object.values(selectedFilters).some(Boolean) ? "Clear the search or filters to review the full workspace." : config.emptyDescription}</p></div></div>}
         </section>
 
         <section className="ops-callout"><ShieldCheck size={16} /><div><strong>Data truth is visible by design.</strong><p>Provider-backed records, status transitions, and client-safe visibility will be connected to this surface as their typed domain models are introduced. This screen does not imply live CRM data where none is connected.</p></div></section>

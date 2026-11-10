@@ -46,16 +46,39 @@ const portalNav = [
   { label: "Settings", href: "/portal/settings", icon: Settings2 },
 ];
 
-const adminNav = [
-  { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
-  { label: "Clients", href: "/admin/clients", icon: UsersRound },
-  { label: "Client communication", href: "/admin/messages", icon: MessageCircle },
-  { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
-  { label: "Users", href: "/admin/users", icon: UsersRound },
-  { label: "Reports", href: "/admin/reports", icon: FileText },
-  { label: "Templates", href: "/admin/templates", icon: Layers3 },
-  { label: "Integrations", href: "/admin/integrations", icon: Settings2 },
-  { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
+type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
+type NavGroup = { label: string; items: NavItem[] };
+
+const adminNavGroups: NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
+      { label: "Clients", href: "/admin/clients", icon: UsersRound },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { label: "Client communication", href: "/admin/messages", icon: MessageCircle },
+      { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
+    ],
+  },
+  {
+    label: "Reporting & content",
+    items: [
+      { label: "Reports", href: "/admin/reports", icon: FileText },
+      { label: "Templates", href: "/admin/templates", icon: Layers3 },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { label: "Users", href: "/admin/users", icon: UsersRound },
+      { label: "Integrations", href: "/admin/integrations", icon: Settings2 },
+      { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
+    ],
+  },
 ];
 
 export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], presentationMode = false }: AppShellProps) {
@@ -63,7 +86,13 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [collapsed, setCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const pathname = usePathname();
-  const nav = (mode === "admin" ? adminNav : portalNav).filter((item) => !hiddenNav.includes(item.label));
+  const navGroups: NavGroup[] = mode === "admin"
+    ? adminNavGroups
+    : [{ label: "", items: portalNav }];
+  const visibleNavGroups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label)) }))
+    .filter((group) => group.items.length > 0);
+  const nav = visibleNavGroups.flatMap((group) => group.items);
   const activeItem = nav
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((first, second) => second.href.length - first.href.length)[0];
@@ -82,15 +111,22 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
 
         <div className="nav-label">{mode === "admin" ? "CRM workspace" : "Your workspace"}</div>
         <nav className="nav-list" aria-label="Primary navigation">
-          {nav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.label} className={`nav-item${item.label === activeLabel ? " active" : ""}`} href={item.href} aria-label={item.label} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)}>
-                <Icon size={16} strokeWidth={1.8} />
-                <span className="nav-item-label">{item.label}</span>
-              </Link>
-            );
-          })}
+          {visibleNavGroups.map((group) => (
+            <div className="nav-group" key={group.label || "primary"}>
+              {group.label ? <div className="nav-group-label">{group.label}</div> : null}
+              <div className="nav-group-items">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.label} className={`nav-item${item.label === activeLabel ? " active" : ""}`} href={item.href} aria-label={item.label} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)}>
+                      <Icon size={16} strokeWidth={1.8} />
+                      <span className="nav-item-label">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="sidebar-bottom">
