@@ -18,7 +18,7 @@ export async function GET() {
       (SELECT MAX("updatedAt") FROM "Metric" WHERE "clientId" = ${clientId}),
       (SELECT MAX(value."updatedAt") FROM "MetricValue" value INNER JOIN "Metric" metric ON metric."id" = value."metricId" WHERE metric."clientId" = ${clientId}),
       (SELECT MAX("updatedAt") FROM "Goal" WHERE "clientId" = ${clientId}),
-      (SELECT MAX(annotation."updatedAt") FROM "GoalAnnotation" annotation INNER JOIN "Goal" goal ON goal."id" = annotation."goalId" WHERE goal."clientId" = ${clientId}),
+      (SELECT MAX(annotation."createdAt") FROM "GoalAnnotation" annotation INNER JOIN "Goal" goal ON goal."id" = annotation."goalId" WHERE goal."clientId" = ${clientId}),
       (SELECT MAX("updatedAt") FROM "Report" WHERE "clientId" = ${clientId}),
       (SELECT MAX("updatedAt") FROM "Activity" WHERE "clientId" = ${clientId}),
       (SELECT MAX("publishedAt") FROM "DashboardVersion" WHERE "clientId" = ${clientId})

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const SYNC_INTERVAL_MS = 10_000;
+const SYNC_INTERVAL_MS = 60_000;
 
 export function PortalLiveSync() {
   const router = useRouter();
