@@ -10,7 +10,7 @@ export async function GET() {
   if (!actor) return NextResponse.json({ error: "Authentication is required to view conversations." }, { status: 401 });
 
   const groups = await prisma.chatGroup.findMany({
-    where: { isArchived: false, ...(isAdminRole(actor.role) ? {} : { clientId: actor.clientId ?? "__no_client__" }) },
+    where: { isArchived: false, ...(isAdminRole(actor.role) ? {} : { clientId: actor.clientId ?? "__no_client__", client: { status: "ACTIVE" } }) },
     orderBy: { updatedAt: "desc" },
     take: 100,
     include: {

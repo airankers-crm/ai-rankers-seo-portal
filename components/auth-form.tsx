@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { createAuthClient } from "@neon/auth/next";
 import { BinaryOrbitsBackground } from "./binary-orbits-background";
 
@@ -132,7 +132,10 @@ export function AuthForm({
             )}
             <div className="auth-field">
               <label htmlFor="auth-email">Work email</label>
-              <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoFocus required />
+              <div className="auth-input-wrap">
+                <Mail size={16} aria-hidden="true" />
+                <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoFocus required />
+              </div>
             </div>
             <div className="auth-field">
               <div className="auth-field-heading">
@@ -144,7 +147,10 @@ export function AuthForm({
                   </button>
                 )}
               </div>
-              <input id="auth-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={isSignIn ? "current-password" : "new-password"} minLength={8} required />
+              <div className="auth-input-wrap">
+                <LockKeyhole size={16} aria-hidden="true" />
+                <input id="auth-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={isSignIn ? "current-password" : "new-password"} minLength={8} required />
+              </div>
             </div>
             {error && <p className="auth-error" role="alert">{error}</p>}
             <button className="button primary auth-submit" disabled={pending} aria-busy={pending}>

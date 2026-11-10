@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth, isAuthConfigured, requiresProductionAuth } from "./lib/auth/server";
+import { isSameOriginRequest } from "./lib/security/origin";
 
 const publicRoutes = [
   "/",
@@ -16,6 +17,8 @@ const publicRoutes = [
   "/api/health/db",
 ];
 
+const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 function isPublicPath(pathname: string) {
   return publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
@@ -27,6 +30,12 @@ export default function proxy(request: NextRequest) {
   // Otherwise Next/Image receives the login redirect instead of the asset.
   if (!pathname.startsWith("/api/") && /\.[^/]+$/.test(pathname)) {
     return NextResponse.next();
+  }
+
+  // Auth provider callbacks own their own request validation. All application
+  // mutations must prove they originated from this portal to reduce CSRF risk.
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/") && stateChangingMethods.has(request.method) && !isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "This request must originate from the client portal." }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   if (requiresProductionAuth() && !isAuthConfigured() && !isPublicPath(pathname)) {

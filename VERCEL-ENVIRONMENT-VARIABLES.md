@@ -12,6 +12,7 @@ Configure these variables for both Preview and Production as appropriate:
 | `DIRECT_URL` | Yes for migrations | `prisma.config.ts` | Direct Neon PostgreSQL connection used by Prisma migration commands. |
 | `NEON_AUTH_BASE_URL` | Yes for authentication | `lib/auth/server.ts` | Neon Auth server URL used to create the server auth client. |
 | `NEON_AUTH_COOKIE_SECRET` | Yes for authentication | `lib/auth/server.ts` | Private cookie-signing secret. Generate a strong production-only value. |
+| `APP_ORIGIN` | Recommended | `proxy.ts` | Canonical browser origin used for CSRF/Origin validation, such as `https://portal.example.com`. |
 
 ## Optional or provider-managed values
 

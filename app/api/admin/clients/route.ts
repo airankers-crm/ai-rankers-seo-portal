@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../lib/auth/access";
+import { parseSafeHttpUrl } from "../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -14,17 +15,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Admin authentication is required to create a client." }, { status: 401 });
   }
 
+  const recentClients = await prisma.auditLog.count({ where: { actorId: access.user.id, action: "CLIENT_CREATED", createdAt: { gte: new Date(Date.now() - 60_000) } } });
+  if (recentClients >= 10) return NextResponse.json({ error: "Please wait before creating more client workspaces." }, { status: 429, headers: { "Retry-After": "60" } });
+
   const body = await request.json().catch(() => null) as { businessName?: string; websiteUrl?: string; contactEmail?: string } | null;
   const businessName = body?.businessName?.trim();
   if (!businessName) return NextResponse.json({ error: "Business name is required." }, { status: 400 });
 
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
-    try {
-      websiteUrl = new URL(body.websiteUrl.trim()).toString();
-    } catch {
-      return NextResponse.json({ error: "Website URL must be a valid URL." }, { status: 400 });
-    }
+    websiteUrl = parseSafeHttpUrl(body.websiteUrl.trim());
+    if (!websiteUrl) return NextResponse.json({ error: "Website URL must use a safe http or https URL." }, { status: 400 });
   }
 
   const contactEmail = body?.contactEmail?.trim() || null;

@@ -8,9 +8,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ messa
   const actor = await getChatActor();
   if (!actor) return NextResponse.json({ error: "Authentication is required to edit messages." }, { status: 401 });
   const { messageId } = await context.params;
-  const existing = await prisma.chatMessage.findUnique({ where: { id: messageId }, include: { group: { select: { clientId: true } }, sender: { select: { name: true, role: true } } } });
+  const existing = await prisma.chatMessage.findUnique({ where: { id: messageId }, include: { group: { select: { clientId: true, client: { select: { status: true } } } }, sender: { select: { name: true, role: true } } } });
   if (!existing) return NextResponse.json({ error: "Message was not found." }, { status: 404 });
   if (!isAdminRole(actor.role) && existing.senderId !== actor.id) return NextResponse.json({ error: "You can only edit your own messages." }, { status: 403 });
+  if (!isAdminRole(actor.role) && existing.group.client.status !== "ACTIVE") return NextResponse.json({ error: "This client workspace is not currently available." }, { status: 403 });
   if (!canAccessMessage(actor.clientId, actor.role, existing.group.clientId)) return NextResponse.json({ error: "You do not have access to this conversation." }, { status: 403 });
 
   const body = await request.json().catch(() => null) as { body?: string } | null;

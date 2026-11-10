@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { canAccessClient, findAccessibleGroup, getChatActor, recordChatAudit, serializeMessage } from "../../../../../../lib/chat";
+import { parseSafeHttpUrl } from "../../../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -32,17 +33,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const messageBody = body?.body?.trim() ?? "";
   const attachmentName = body?.attachmentName?.trim() || null;
   const attachmentUrl = body?.attachmentUrl?.trim() || null;
+  const safeAttachmentUrl = attachmentUrl ? parseSafeHttpUrl(attachmentUrl) : null;
   if (!messageBody && !attachmentUrl) return NextResponse.json({ error: "Write a message or add a document link." }, { status: 400 });
   if (messageBody.length > 4000) return NextResponse.json({ error: "Messages must be 4,000 characters or fewer." }, { status: 400 });
   if (attachmentName && attachmentName.length > 140) return NextResponse.json({ error: "Document name must be 140 characters or fewer." }, { status: 400 });
   if (attachmentUrl) {
-    try { new URL(attachmentUrl); } catch { return NextResponse.json({ error: "Document link must be a valid URL." }, { status: 400 }); }
+    if (!safeAttachmentUrl) return NextResponse.json({ error: "Document link must use a safe http or https URL." }, { status: 400 });
   }
   const recentMessages = await prisma.chatMessage.count({ where: { senderId: actor.id, createdAt: { gte: new Date(Date.now() - 60_000) } } });
   if (recentMessages >= 30) return NextResponse.json({ error: "Please wait before sending more messages." }, { status: 429, headers: { "Retry-After": "60" } });
 
   const message = await prisma.$transaction(async (transaction) => {
-    const created = await transaction.chatMessage.create({ data: { groupId: id, senderId: actor.id, body: messageBody, attachmentName, attachmentUrl }, include: { sender: { select: { name: true, role: true } } } });
+    const created = await transaction.chatMessage.create({ data: { groupId: id, senderId: actor.id, body: messageBody, attachmentName, attachmentUrl: safeAttachmentUrl }, include: { sender: { select: { name: true, role: true } } } });
     await transaction.chatGroup.update({ where: { id }, data: { updatedAt: new Date() } });
     return created;
   });

@@ -35,10 +35,16 @@ export async function POST(request: Request) {
   const clientId = isAdminRole(currentUser.role) && body?.clientId ? body.clientId : currentUser.clientId;
   if (!clientId) return NextResponse.json({ error: "A client workspace is required." }, { status: 400 });
   if (body?.assigneeId && !isAdminRole(currentUser.role)) return NextResponse.json({ error: "Only agency users can assign a task directly." }, { status: 403 });
+  const assigneeId = body?.assigneeId?.trim() || null;
+  if (assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId }, select: { clientId: true, role: true, status: true } });
+    const allowed = Boolean(assignee && assignee.status === "ACTIVE" && (isAdminRole(assignee.role) || assignee.clientId === clientId));
+    if (!allowed) return NextResponse.json({ error: "The assignee is not active in this client workspace." }, { status: 400 });
+  }
   const recentTasks = await prisma.task.count({ where: { requesterId: currentUser.id, createdAt: { gte: new Date(Date.now() - 60_000) } } });
   if (recentTasks >= 10) return NextResponse.json({ error: "Please wait before creating more task requests." }, { status: 429, headers: { "Retry-After": "60" } });
 
-  const task = await createClientTask({ clientId, title, description: body?.description?.trim() || null, category: body?.category?.trim() || "Client request", priority: body?.priority ?? "NORMAL", dueDate, assigneeId: body?.assigneeId || null, requesterId: currentUser.id });
+  const task = await createClientTask({ clientId, title, description: body?.description?.trim() || null, category: body?.category?.trim() || "Client request", priority: body?.priority ?? "NORMAL", dueDate, assigneeId, requesterId: currentUser.id });
   if (!task) return NextResponse.json({ error: "The task was not created." }, { status: 500 });
   return NextResponse.json({ task }, { status: 201 });
 }

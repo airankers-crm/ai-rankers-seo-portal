@@ -73,7 +73,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const accountRole = mode === "admin" ? "AI Rankers admin" : "Client portal";
 
   return (
-    <div className={`app-shell${presentationMode ? " presentation-shell" : ""}`}>
+    <div className={`app-shell ${mode}-shell${presentationMode ? " presentation-shell" : ""}`}>
       <aside className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
           {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}

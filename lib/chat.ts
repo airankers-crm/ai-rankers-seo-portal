@@ -1,6 +1,7 @@
 import { prisma } from "@ai-rankers/db";
 import type { ChatGroup, ChatMessage, Client, Prisma, User } from "@prisma/client";
 import { getCurrentAppUser, isAdminRole } from "./auth/access";
+import { parseSafeHttpUrl } from "./security/urls";
 
 export type ChatActor = Pick<User, "id" | "name" | "email" | "role" | "status" | "clientId">;
 
@@ -33,7 +34,7 @@ export function serializeMessage(message: ChatMessage & { sender: Pick<User, "na
     senderId: message.senderId,
     body: message.body,
     attachmentName: message.attachmentName,
-    attachmentUrl: message.attachmentUrl,
+    attachmentUrl: message.attachmentUrl ? parseSafeHttpUrl(message.attachmentUrl) : null,
     editedAt: message.editedAt,
     createdAt: message.createdAt,
     senderName: message.sender.name,
@@ -58,9 +59,9 @@ export function serializeGroup(group: ChatGroup & { client: Pick<Client, "busine
 export async function findAccessibleGroup(actor: ChatActor, groupId: string) {
   const group = await prisma.chatGroup.findUnique({
     where: { id: groupId },
-    include: { client: { select: { businessName: true } } },
+    include: { client: { select: { businessName: true, status: true } } },
   });
-  if (!group || !canAccessClient(actor, group.clientId)) return null;
+  if (!group || group.client.status !== "ACTIVE" && !isAdminRole(actor.role) || !canAccessClient(actor, group.clientId)) return null;
   return group;
 }
 

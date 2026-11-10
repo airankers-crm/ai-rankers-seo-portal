@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
-import { getCurrentAppUser } from "../../../../../lib/auth/access";
+import { getCurrentAppUser, isAdminRole } from "../../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const { token } = await params;
   const tokenHash = createHash("sha256").update(token).digest("hex");
-  const invitation = await prisma.clientInvitation.findUnique({ where: { tokenHash }, include: { client: { select: { businessName: true } } } });
+  const invitation = await prisma.clientInvitation.findUnique({ where: { tokenHash }, include: { client: { select: { businessName: true, status: true } } } });
   if (!invitation || invitation.status !== "PENDING") return NextResponse.json({ error: "This invitation is no longer available." }, { status: 404 });
+  if (invitation.role !== "CLIENT" || isAdminRole(user.role)) return NextResponse.json({ error: "This invitation is not valid for this account." }, { status: 403 });
+  if (invitation.client.status !== "ACTIVE") return NextResponse.json({ error: "This client workspace is not currently available." }, { status: 409 });
   if (invitation.expiresAt <= new Date()) {
     await prisma.clientInvitation.update({ where: { id: invitation.id }, data: { status: "EXPIRED" } });
     return NextResponse.json({ error: "This invitation has expired." }, { status: 410 });
@@ -25,10 +27,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "This account is already assigned to another client workspace." }, { status: 409 });
   }
 
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { role: invitation.role, status: "ACTIVE", clientId: invitation.clientId } }),
-    prisma.clientInvitation.update({ where: { id: invitation.id }, data: { status: "ACCEPTED", acceptedAt: new Date() } }),
-  ]);
+  const acceptedAt = new Date();
+  const accepted = await prisma.$transaction(async (transaction) => {
+    const claimed = await transaction.clientInvitation.updateMany({
+      where: { id: invitation.id, status: "PENDING", expiresAt: { gt: acceptedAt } },
+      data: { status: "ACCEPTED", acceptedAt },
+    });
+    if (claimed.count !== 1) return false;
+
+    await transaction.user.update({ where: { id: user.id }, data: { role: invitation.role, status: "ACTIVE", clientId: invitation.clientId } });
+    return true;
+  });
+
+  if (!accepted) return NextResponse.json({ error: "This invitation has already been accepted or expired." }, { status: 409 });
 
   return NextResponse.json({ redirectTo: "/portal", clientName: invitation.client.businessName });
 }

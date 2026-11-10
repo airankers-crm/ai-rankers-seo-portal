@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../../lib/auth/access";
+import { parseSafeHttpUrl } from "../../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
-    try {
-      websiteUrl = new URL(body.websiteUrl.trim()).toString();
-    } catch {
-      return NextResponse.json({ error: "Website URL must be a valid URL." }, { status: 400 });
-    }
+    websiteUrl = parseSafeHttpUrl(body.websiteUrl.trim());
+    if (!websiteUrl) return NextResponse.json({ error: "Website URL must use a safe http or https URL." }, { status: 400 });
   }
 
   const contactEmail = body?.contactEmail?.trim() || null;
