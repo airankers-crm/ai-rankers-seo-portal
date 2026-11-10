@@ -10,6 +10,8 @@ import {
   Activity,
   BarChart3,
   Building2,
+  ChevronDown,
+  CircleHelp,
   FileText,
   Layers3,
   LayoutDashboard,
@@ -41,6 +43,7 @@ const portalNav = [
   { label: "Activities", href: "/portal/activities", icon: Activity },
   { label: "Team communication", href: "/portal/messages", icon: MessageCircle },
   { label: "Reports", href: "/portal/reports", icon: FileText },
+  { label: "Settings", href: "/portal/settings", icon: Settings2 },
 ];
 
 const adminNav = [
@@ -58,6 +61,7 @@ const adminNav = [
 export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], presentationMode = false }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const pathname = usePathname();
   const nav = (mode === "admin" ? adminNav : portalNav).filter((item) => !hiddenNav.includes(item.label));
   const activeItem = nav
@@ -65,6 +69,8 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     .sort((first, second) => second.href.length - first.href.length)[0];
   const activeLabel = activeItem?.label ?? activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview");
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
+  const accountName = mode === "admin" ? "John Smith" : clientName ?? "Client workspace";
+  const accountRole = mode === "admin" ? "AI Rankers admin" : "Client portal";
 
   return (
     <div className={`app-shell${presentationMode ? " presentation-shell" : ""}`}>
@@ -101,20 +107,30 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
 
       <main className="main">
         <header className="topbar">
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div className="topbar-leading">
             <button className="icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((current) => !current)}>
               {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
             </button>
             <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu size={17} />
             </button>
-            <div className="breadcrumb">{mode === "admin" ? "The AI Rankers / " : "Client portal / "}<strong>{activeLabel}</strong></div>
+            <div className="breadcrumb"><span>{mode === "admin" ? "The AI Rankers" : "Client portal"}</span><i>/</i><strong>{activeLabel}</strong></div>
           </div>
           <div className="top-actions">
-            <div className="preview-pill"><span className="dot" /> {mode === "portal" ? "Client presentation" : "Agency workspace"}</div>
-            {mode === "portal" ? <PortalLiveSync /> : null}
-            {mode === "portal" ? <SignOutButton variant="topbar" /> : null}
-            <div className="icon-button icon-button-muted" role="img" aria-label="Notifications will be available in a future release" title="Notifications will be available in a future release"><Activity size={16} /></div>
+            {mode === "portal" ? <PortalLiveSync /> : <span className="workspace-status"><span className="dot" /> Workspace ready</span>}
+            <Link className="topbar-help" href={mode === "admin" ? "/admin/messages" : "/portal/messages"} aria-label="Open help and support" title="Help and support"><CircleHelp size={17} /></Link>
+            <div className="topbar-account">
+              <button className="topbar-account-trigger" type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((current) => !current)}>
+                <span className="topbar-account-avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JS" : brandMark ?? clientInitials}</span>
+                <span className="topbar-account-copy"><strong>{accountName}</strong><small>{accountRole}</small></span>
+                <ChevronDown size={14} />
+              </button>
+              {accountOpen ? <div className="topbar-account-menu" role="menu">
+                <div className="topbar-account-menu-head"><strong>{accountName}</strong><span>{accountRole}</span></div>
+                <Link href={mode === "admin" ? "/admin/settings" : "/portal/settings"} role="menuitem" onClick={() => setAccountOpen(false)}>{mode === "admin" ? "Workspace settings" : "Account settings"}</Link>
+                <SignOutButton variant="menu" />
+              </div> : null}
+            </div>
             {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}
           </div>
         </header>

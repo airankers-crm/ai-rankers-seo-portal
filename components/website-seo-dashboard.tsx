@@ -185,7 +185,7 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
           <h1>Website SEO performance</h1>
           <p>{clientName} · Organic sessions, search visibility, and keyword growth.</p>
         </div>
-        <div className="heading-actions"><span className={`data-confidence${isDraftPreview ? " data-confidence-preview" : ""}`}><CheckCircle2 size={13} /> {isDraftPreview ? "Draft preview · not client-visible" : "Client presentation"}</span></div>
+        {isDraftPreview ? <div className="heading-actions"><span className="data-confidence data-confidence-preview"><CheckCircle2 size={13} /> Draft preview · not client-visible</span></div> : null}
       </div>
 
       <section className="website-seo-filter-bar" aria-label="Filter Website SEO report">

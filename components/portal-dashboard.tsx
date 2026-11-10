@@ -225,7 +225,7 @@ function ReportPreview({ report, onClose }: { report: DemoReport; onClose: () =>
       <section className="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-preview-title" onClick={(event) => event.stopPropagation()}>
         <div className="modal-heading"><div><p className="eyebrow">Client report</p><h2 id="report-preview-title">{report.title}</h2><p>{report.type} · {report.period}</p></div><button ref={closeButtonRef} type="button" className="icon-button" aria-label="Close report preview" onClick={onClose}><X size={16} /></button></div>
         <div className="report-preview-note"><CheckCircle2 size={16} /><div><strong>Published report</strong><p>Reporting-period metrics, activity records, and source status.</p></div></div>
-        <div className="report-preview-grid"><div><span>Report type</span><strong>{report.type}</strong></div><div><span>Reporting period</span><strong>{report.period}</strong></div><div><span>Workspace</span><strong>Client presentation</strong></div></div>
+        <div className="report-preview-grid"><div><span>Report type</span><strong>{report.type}</strong></div><div><span>Reporting period</span><strong>{report.period}</strong></div><div><span>Workspace</span><strong>Client portal</strong></div></div>
         <div className="modal-actions"><button type="button" className="button" onClick={onClose}>Close</button><button type="button" className="button primary" onClick={() => window.print()}><Download size={14} /> Print report</button></div>
       </section>
     </div>

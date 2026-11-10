@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const SYNC_INTERVAL_MS = 10_000;
 
 export function PortalLiveSync() {
   const router = useRouter();
   const latestChangeRef = useRef<string | null>(null);
+  const [syncLabel, setSyncLabel] = useState("Checking sync");
 
   useEffect(() => {
     let active = true;
@@ -18,6 +19,8 @@ export function PortalLiveSync() {
       try {
         const response = await fetch("/api/portal/sync", { cache: "no-store" });
         if (!response.ok || !active) return;
+
+        setSyncLabel("Synced just now");
 
         const payload = await response.json() as { changedAt?: string | null };
         if (!payload.changedAt) return;
@@ -46,5 +49,5 @@ export function PortalLiveSync() {
     };
   }, [router]);
 
-  return <span className="live-sync-pill" title="This portal checks for newly published admin changes automatically"><span className="dot" /> Auto-sync on</span>;
+  return <span className="live-sync-pill" title="This portal checks for newly published admin changes automatically"><span className="dot" /> {syncLabel}</span>;
 }
