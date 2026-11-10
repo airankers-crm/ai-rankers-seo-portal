@@ -12,7 +12,7 @@ export default async function ActivitiesPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
-    include: { activities: { orderBy: { createdAt: "desc" } } },
+    include: { activities: { orderBy: { createdAt: "desc" }, take: 100 } },
   });
 
   if (!client) return <ActivityCenter businessName={demoClient.businessName} activities={demoActivities} />;

@@ -14,7 +14,7 @@ export type TaskDataRow = {
 };
 
 export async function listClientTasks(clientId: string) {
-  return prisma.$queryRaw<TaskDataRow[]>(Prisma.sql`SELECT t."id", t."title", t."description", t."category", t."status"::text AS "status", t."priority"::text AS "priority", t."dueDate", t."assigneeId", u."name" AS "assigneeName" FROM "Task" t LEFT JOIN "User" u ON u."id" = t."assigneeId" WHERE t."clientId" = ${clientId} AND t."clientVisible" = true ORDER BY CASE t."status"::text WHEN 'TODO' THEN 0 WHEN 'IN_PROGRESS' THEN 1 WHEN 'DONE' THEN 2 ELSE 3 END, t."dueDate" ASC NULLS LAST, t."createdAt" DESC`);
+  return prisma.$queryRaw<TaskDataRow[]>(Prisma.sql`SELECT t."id", t."title", t."description", t."category", t."status"::text AS "status", t."priority"::text AS "priority", t."dueDate", t."assigneeId", u."name" AS "assigneeName" FROM "Task" t LEFT JOIN "User" u ON u."id" = t."assigneeId" WHERE t."clientId" = ${clientId} AND t."clientVisible" = true ORDER BY CASE t."status"::text WHEN 'TODO' THEN 0 WHEN 'IN_PROGRESS' THEN 1 WHEN 'DONE' THEN 2 ELSE 3 END, t."dueDate" ASC NULLS LAST, t."createdAt" DESC LIMIT 100`);
 }
 
 export async function createClientTask(input: { clientId: string; title: string; description: string | null; category: string; priority: "LOW" | "NORMAL" | "HIGH" | "URGENT"; dueDate: Date | null; assigneeId: string | null; requesterId: string | null }) {

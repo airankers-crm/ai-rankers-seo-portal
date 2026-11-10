@@ -103,6 +103,7 @@ export function getDefaultDateRange(): DateRangeSelection {
 export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRangeSelection>(value);
+  const [selectingEnd, setSelectingEnd] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(value.start));
   const panelRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -136,6 +137,7 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   function toggle() {
     if (!open) {
       setDraft(value);
+      setSelectingEnd(false);
       setVisibleMonth(startOfMonth(value.start));
     }
     setOpen((current) => !current);
@@ -144,16 +146,19 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   function selectPreset(preset: DateRangePreset) {
     if (preset === "Custom") {
       setDraft((current) => ({ ...current, label: preset }));
+      setSelectingEnd(false);
       return;
     }
     const next = getPresetRange(preset, new Date());
     setDraft((current) => ({ ...current, label: preset, ...next }));
+    setSelectingEnd(false);
     setVisibleMonth(startOfMonth(next.start));
   }
 
   function selectDay(day: Date) {
-    if (!draft.start || draft.end) {
+    if (!selectingEnd) {
       setDraft((current) => ({ ...current, label: "Custom", start: day, end: day }));
+      setSelectingEnd(true);
       return;
     }
     if (isBefore(day, draft.start)) {
@@ -161,26 +166,31 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
       return;
     }
     setDraft((current) => ({ ...current, label: "Custom", end: day }));
+    setSelectingEnd(false);
   }
 
   function updateStart(valueFromInput: string) {
     setDraft((current) => ({ ...current, label: "Custom", start: fromInputValue(valueFromInput) }));
+    setSelectingEnd(false);
   }
 
   function updateEnd(valueFromInput: string) {
     setDraft((current) => ({ ...current, label: "Custom", end: fromInputValue(valueFromInput) }));
+    setSelectingEnd(false);
   }
 
   function apply() {
     if (invalidRange) return;
     const label = draft.label === "Custom" ? formatRange(draft.start, draft.end) : draft.label;
     onApply({ ...draft, label });
+    setSelectingEnd(false);
     setOpen(false);
     triggerRef.current?.focus();
   }
 
   function cancel() {
     setDraft(value);
+    setSelectingEnd(false);
     setOpen(false);
     triggerRef.current?.focus();
   }

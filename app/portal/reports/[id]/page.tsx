@@ -34,7 +34,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
     include: {
       reports: { where: { id, isVisible: true } },
-      metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } },
+      metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } },
       activities: { orderBy: { createdAt: "desc" }, take: 8 },
       goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
     },
@@ -46,8 +46,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const kpis: ReportMetricView[] = metricConfig.flatMap((config) => {
     const metric = metricMap.get(config.key);
     if (!metric) return [];
-    const current = metric.values.at(-1);
-    const previous = metric.values.at(-2);
+    const current = metric.values[0];
+    const previous = metric.values[1];
     const value = current ? Number(current.value) : null;
     const previousValue = previous ? Number(previous.value) : null;
     const change = value !== null && previousValue !== null && previousValue !== 0 ? ((value - previousValue) / Math.abs(previousValue)) * 100 : null;
@@ -58,7 +58,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const rowMap = new Map<string, ReportPeriodRow>();
   for (const key of ["ga4-organic-sessions", "gsc-impressions", "kw-top10"] as const) {
     const metric = metricMap.get(key);
-    for (const value of metric?.values ?? []) {
+    for (const value of [...(metric?.values ?? [])].reverse()) {
       const periodStart = value.periodStart.toISOString();
       const row = rowMap.get(periodStart) ?? { periodStart, periodLabel: periodLabel(value.periodStart), organicTraffic: null, impressions: null, topTen: null };
       if (key === "ga4-organic-sessions") row.organicTraffic = Number(value.value);
