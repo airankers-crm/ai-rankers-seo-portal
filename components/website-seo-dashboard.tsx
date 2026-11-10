@@ -97,17 +97,27 @@ function metricChange(current: number | null, previous: number | null) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
+const trendChartFrame = { width: 700, height: 280, paddingX: 28, plotTop: 26, plotBottom: 238 };
+
+function chartDomain(data: Array<{ value: number }>) {
+  const values = data.map((point) => point.value);
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const range = Math.max(dataMax - dataMin, 1);
+  const breathingRoom = range * 0.12;
+  return { min: dataMin - breathingRoom, max: dataMax + breathingRoom };
+}
+
+function chartY(value: number, data: Array<{ value: number }>) {
+  const domain = chartDomain(data);
+  return trendChartFrame.plotBottom - ((value - domain.min) / Math.max(domain.max - domain.min, 1)) * (trendChartFrame.plotBottom - trendChartFrame.plotTop);
+}
+
 function chartPath(data: Array<{ value: number }>) {
   if (data.length < 2) return "";
-  const width = 700;
-  const height = 210;
-  const padding = 24;
-  const max = Math.max(...data.map((point) => point.value), 1);
-  const min = Math.min(...data.map((point) => point.value), 0);
-  const range = Math.max(max - min, 1);
   return data.map((point, index) => {
-    const x = padding + (index / (data.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((point.value - min) / range) * (height - padding * 2);
+    const x = trendChartFrame.paddingX + (index / (data.length - 1)) * (trendChartFrame.width - trendChartFrame.paddingX * 2);
+    const y = chartY(point.value, data);
     return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
 }
@@ -214,7 +224,7 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
         </div>
 
         <div className="website-seo-main-grid">
-          <section className="card website-seo-chart-card" aria-labelledby="website-seo-chart-title"><div className="website-seo-card-heading"><h2 id="website-seo-chart-title">SEO performance over time</h2></div><div className="website-seo-chart-tabs" role="tablist" aria-label="Website SEO trend metrics">{metricDefinitions.map((definition) => <button key={definition.key} type="button" role="tab" aria-selected={activeMetricKey === definition.key} className={activeMetricKey === definition.key ? "active" : ""} onClick={() => setActiveMetricKey(definition.key)}>{definition.label}</button>)}</div>{chartData.length > 1 ? <div className="website-seo-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "SEO"} trend chart`}><svg viewBox="0 0 700 210" preserveAspectRatio="none"><defs><linearGradient id="websiteSeoTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a085" stopOpacity=".25" /><stop offset="100%" stopColor="#16a085" stopOpacity=".02" /></linearGradient></defs><line x1="24" x2="676" y1="35" y2="35" className="website-seo-grid-line" /><line x1="24" x2="676" y1="90" y2="90" className="website-seo-grid-line" /><line x1="24" x2="676" y1="145" y2="145" className="website-seo-grid-line" /><path d={`${chartPath(chartData)} L676 186 L24 186 Z`} fill="url(#websiteSeoTrendFill)" /><path d={chartPath(chartData)} className="website-seo-chart-line" fill="none" />{chartData.map((point, index) => { const x = 24 + (index / (chartData.length - 1)) * 652; const max = Math.max(...chartData.map((item) => item.value), 1); const min = Math.min(...chartData.map((item) => item.value), 0); const y = 186 - ((point.value - min) / Math.max(max - min, 1)) * 162; return <g key={point.label}><circle cx={x} cy={y} r="4" className="website-seo-chart-point" /><text x={x} y="205" textAnchor="middle" className="website-seo-chart-label">{point.label}</text><text x={x} y={Math.max(y - 10, 13)} textAnchor="middle" className="website-seo-chart-value">{formatMetric(point.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}</text></g>; })}</svg></div> : <div className="website-seo-chart-empty"><BarChart3 size={16} /><span>Publish at least two periods to show SEO movement.</span></div>}</section>
+          <section className="card website-seo-chart-card" aria-labelledby="website-seo-chart-title"><div className="website-seo-card-heading"><h2 id="website-seo-chart-title">SEO performance over time</h2></div><div className="website-seo-chart-tabs" role="tablist" aria-label="Website SEO trend metrics">{metricDefinitions.map((definition) => <button key={definition.key} type="button" role="tab" aria-selected={activeMetricKey === definition.key} className={activeMetricKey === definition.key ? "active" : ""} onClick={() => setActiveMetricKey(definition.key)}>{definition.label}</button>)}</div>{chartData.length > 1 ? <div className="website-seo-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "SEO"} trend chart`}><svg viewBox={`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`} preserveAspectRatio="none"><defs><linearGradient id="websiteSeoTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a085" stopOpacity=".25" /><stop offset="100%" stopColor="#16a085" stopOpacity=".02" /></linearGradient></defs>{[0, 1, 2, 3, 4].map((line) => { const y = trendChartFrame.plotTop + (line / 4) * (trendChartFrame.plotBottom - trendChartFrame.plotTop); return <line key={line} x1={trendChartFrame.paddingX} x2={trendChartFrame.width - trendChartFrame.paddingX} y1={y} y2={y} className="website-seo-grid-line" />; })}<path d={`${chartPath(chartData)} L${trendChartFrame.width - trendChartFrame.paddingX} ${trendChartFrame.plotBottom} L${trendChartFrame.paddingX} ${trendChartFrame.plotBottom} Z`} fill="url(#websiteSeoTrendFill)" /><path d={chartPath(chartData)} className="website-seo-chart-line" fill="none" />{chartData.map((point, index) => { const x = trendChartFrame.paddingX + (index / (chartData.length - 1)) * (trendChartFrame.width - trendChartFrame.paddingX * 2); const y = chartY(point.value, chartData); return <g key={point.label}><circle cx={x} cy={y} r="4.5" className="website-seo-chart-point" /><text x={x} y={trendChartFrame.height - 10} textAnchor="middle" className="website-seo-chart-label">{point.label}</text><text x={x} y={Math.max(y - 12, 14)} textAnchor="middle" className="website-seo-chart-value">{formatMetric(point.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}</text></g>; })}</svg></div> : <div className="website-seo-chart-empty"><BarChart3 size={16} /><span>Publish at least two periods to show SEO movement.</span></div>}</section>
 
           <aside className="card website-seo-insights" aria-labelledby="website-seo-insights-title"><div className="website-seo-card-heading"><h2 id="website-seo-insights-title">Key insights</h2></div><p><CheckCircle2 size={15} /> Organic sessions {insightComparison}.</p><p><CheckCircle2 size={15} /> Search impressions {dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? `${renderChange(metricChange(latestRow?.impressions ?? null, comparisonRow?.impressions ?? null))} vs ${dateRange.compare === "Previous year" ? "previous year" : comparisonPeriodLabel}` : "No comparison available for the selected range"}.</p><p><CheckCircle2 size={15} /> {latestRow?.topTen === null || latestRow?.topTen === undefined ? "Keyword ranking data is unavailable." : `${latestRow.topTen.toLocaleString()} keywords now rank in the top 10.`}</p><div className="website-seo-insight-source">Sources: {sourceLabels || "Published SEO metrics"}.</div></aside>
         </div>

@@ -27,6 +27,7 @@ const audienceContent = {
     alternateLabel: "The AI Rankers team member?",
     alternateHref: "/admin/login",
     alternateAction: "Administrator sign in",
+    points: ["Private client access", "Role-based workspace", "Built for agency collaboration"],
     icon: UserRound,
   },
   admin: {
@@ -38,6 +39,7 @@ const audienceContent = {
     alternateLabel: "Looking for your client portal?",
     alternateHref: "/client/login",
     alternateAction: "Client sign in",
+    points: ["Client access control", "Reporting operations", "Agency workspace controls"],
     icon: ShieldCheck,
   },
 } as const;
@@ -188,9 +190,7 @@ export function AuthForm({
             <p>{content.contextCopy}</p>
           </div>
           <div className="auth-context-points">
-            <span>Private client access</span>
-            <span>Role-based workspace</span>
-            <span>Built for agency collaboration</span>
+            {content.points.map((point) => <span key={point}>{point}</span>)}
           </div>
         </aside>
       </section>
