@@ -1,8 +1,16 @@
 import { prisma } from "@ai-rankers/db";
+import { unstable_cache } from "next/cache";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { WebsiteSeoDashboard, type WebsiteSeoChannel, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
 
 export const dynamic = "force-dynamic";
+
+function getCachedWebsiteSeoClient(clientId: string) {
+  return unstable_cache(() => prisma.client.findUnique({
+    where: { id: clientId },
+    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
+  }), ["portal-website-seo", clientId], { revalidate: 60, tags: [`portal-website-seo:${clientId}`] })();
+}
 
 const metricConfig = [
   { key: "ga4-organic-sessions", viewKey: "organicTraffic", description: "Sessions attributed to organic search in the selected reporting window." },
@@ -24,10 +32,8 @@ function formatPeriod(date: Date) {
 
 export default async function WebsiteSeoPage() {
   const access = await requirePortalAccess();
-  const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
-    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
-  });
+  const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
+  const client = clientId ? await getCachedWebsiteSeoClient(clientId) : null;
 
   if (!client) return <WebsiteSeoDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 
@@ -38,8 +44,8 @@ export default async function WebsiteSeoPage() {
   const metrics: WebsiteSeoMetric[] = metricConfig.flatMap((config) => {
     const metric = metricMap.get(config.key);
     if (!metric) return [];
-    const current = metric.values.at(-1);
-    const previous = metric.values.at(-2);
+    const current = metric.values[0];
+    const previous = metric.values[1];
     const format = metric.valueFormat === "RANK" ? "RANK" : metric.valueFormat === "DURATION_SECONDS" ? "INTEGER" : metric.valueFormat;
     return [{ key: config.viewKey, label: metric.name, value: current ? Number(current.value) : null, previousValue: previous ? Number(previous.value) : null, format, source: metric.source, description: metric.description ?? config.description }];
   });
@@ -47,15 +53,16 @@ export default async function WebsiteSeoPage() {
   const rowMap = new Map<string, WebsiteSeoRow>();
   for (const config of metricConfig) {
     const metric = metricMap.get(config.key);
-    for (const value of metric?.values ?? []) {
-      const periodStart = value.periodStart.toISOString();
-      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(value.periodStart), organicTraffic: null, impressions: null, topTen: null };
+    for (const value of [...(metric?.values ?? [])].reverse()) {
+      const periodStartDate = new Date(value.periodStart);
+      const periodStart = periodStartDate.toISOString();
+      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(periodStartDate), organicTraffic: null, impressions: null, topTen: null };
       existing[config.viewKey] = Number(value.value);
       rowMap.set(periodStart, existing);
     }
   }
 
-  const latestChannelValues = channelConfig.map((config) => ({ config, metric: metricMap.get(config.key) })).map(({ config, metric }) => ({ config, value: metric?.values.at(-1) ? Number(metric.values.at(-1)!.value) : null }));
+  const latestChannelValues = channelConfig.map((config) => ({ config, metric: metricMap.get(config.key) })).map(({ config, metric }) => ({ config, value: metric?.values[0] ? Number(metric.values[0].value) : null }));
   const channels: WebsiteSeoChannel[] | undefined = latestChannelValues.every(({ value }) => value !== null)
     ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
     : undefined;

@@ -99,9 +99,8 @@ export function ChatWorkspace({ mode, groups: startingGroups, initialMessages, c
 
   useEffect(() => {
     if (!activeGroup) return;
-    const initialLoad = window.setTimeout(() => void loadMessages(activeGroup.id), 0);
-    const timer = window.setInterval(() => void loadMessages(activeGroup.id, true), 6000);
-    return () => { window.clearTimeout(initialLoad); window.clearInterval(timer); };
+    const timer = window.setInterval(() => void loadMessages(activeGroup.id, true), 30_000);
+    return () => window.clearInterval(timer);
     // The selected group is the only changing external value for this poller.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGroup?.id]);

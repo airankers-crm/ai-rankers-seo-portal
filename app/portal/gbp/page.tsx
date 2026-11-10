@@ -1,9 +1,17 @@
 import { prisma } from "@ai-rankers/db";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { defaultGbpPresentation, GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow, type GbpPresentationSettings } from "../../../components/gbp-performance-dashboard";
 
 export const dynamic = "force-dynamic";
+
+function getCachedGbpClient(clientId: string) {
+  return unstable_cache(() => prisma.client.findUnique({
+    where: { id: clientId },
+    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
+  }), ["portal-gbp", clientId], { revalidate: 60, tags: [`portal-gbp:${clientId}`] })();
+}
 
 const metricConfig = [
   { key: "gbp-calls", viewKey: "calls", label: "Call clicks", source: "GBP", description: "Calls attributed to the connected Google Business Profile source." },
@@ -21,10 +29,8 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const access = await requirePortalAccess();
   const params = await searchParams;
   if (params?.demo === "1") redirect("/portal/gbp");
-  const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
-    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
-  });
+  const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
+  const client = clientId ? await getCachedGbpClient(clientId) : null;
 
   if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" dataUpdatedAt={null} />;
 
@@ -35,23 +41,24 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const metricMap = new Map((sectionIsPublished ? client.metrics : []).map((metric) => [metric.key, metric]));
   const metrics: GbpMetric[] = metricConfig.map((config) => {
     const metric = metricMap.get(config.key);
-    const current = metric?.values.at(-1);
-    const previous = metric?.values.at(-2);
+    const current = metric?.values[0];
+    const previous = metric?.values[1];
     return { key: config.viewKey, label: metric?.name ?? config.label, value: current ? Number(current.value) : null, previousValue: previous ? Number(previous.value) : null, source: metric?.source ?? config.source, description: metric?.description ?? config.description };
   });
 
   const rowMap = new Map<string, GbpPeriodRow>();
   for (const config of metricConfig) {
-    for (const value of metricMap.get(config.key)?.values ?? []) {
-      const periodStart = value.periodStart.toISOString();
-      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(value.periodStart), calls: null, views: null, clicks: null, directions: null, reviews: null };
+    for (const value of [...(metricMap.get(config.key)?.values ?? [])].reverse()) {
+      const periodStartDate = new Date(value.periodStart);
+      const periodStart = periodStartDate.toISOString();
+      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(periodStartDate), calls: null, views: null, clicks: null, directions: null, reviews: null };
       existing[config.viewKey] = Number(value.value);
       rowMap.set(periodStart, existing);
     }
   }
 
   const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
-  const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => !latest || value.updatedAt > latest ? value.updatedAt : latest, null);
+  const latestDataUpdate = client.metrics.flatMap((metric) => metric.values).reduce<Date | null>((latest, value) => { const updatedAt = new Date(value.updatedAt); return !latest || updatedAt > latest ? updatedAt : latest; }, null);
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
 
   return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} dataUpdatedAt={latestDataUpdate?.toISOString() ?? null} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
