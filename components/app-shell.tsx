@@ -112,7 +112,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     .sort((first, second) => second.href.length - first.href.length)[0];
   const activeLabel = activeItem?.label ?? activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview");
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";
-  const accountName = mode === "admin" ? "John Smith" : clientName ?? "Client workspace";
+  const accountName = mode === "admin" ? "Scott" : clientName ?? "Client workspace";
   const accountRole = mode === "admin" ? "AI Rankers admin" : "Client portal";
 
   return (
@@ -145,9 +145,9 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
 
         <div className="sidebar-bottom">
           <div className="profile">
-            <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JM" : brandMark ?? clientInitials}</div>
+            <div className="avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "SC" : brandMark ?? clientInitials}</div>
             <div className="profile-copy">
-            <div className="profile-name">{mode === "admin" ? "John Smith" : clientName ?? "Client workspace"}</div>
+            <div className="profile-name">{mode === "admin" ? "Scott" : clientName ?? "Client workspace"}</div>
               <div className="profile-role">{mode === "admin" ? "The AI Rankers admin" : "SEO client"}</div>
             </div>
             <SignOutButton compact={collapsed} />

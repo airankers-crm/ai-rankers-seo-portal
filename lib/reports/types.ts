@@ -77,6 +77,7 @@ export type ReportGoalView = {
 export type ReportViewModel = {
   report: { id: string; title: string; type: string; periodLabel: string; status: ReportStatus; publishedAt: string; updatedAt: string };
   client: { businessName: string; brandMark: string; brandAccent: string; websiteUrl: string | null };
+  template?: { sections: { key: string; label: string; description: string; visible: boolean }[] };
   period: { label: string; comparisonLabel: string; lastDataContext: string };
   summary: { status: "ON_TRACK" | "ATTENTION" | "NO_DATA"; title: string; body: string; highlights: string[]; risks: string[]; nextActions: string[] };
   crm: { lifecycle: ReportLifecycleStage[]; availableNow: string[]; nextConnections: string[] };
