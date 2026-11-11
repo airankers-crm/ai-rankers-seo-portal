@@ -742,6 +742,22 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .admin-setting-status.future { color: var(--brand-purple); background: var(--brand-purple-soft); }
 .admin-setting-link { display: inline-flex; align-items: center; gap: 4px; color: var(--orange); font-size: 9px; font-weight: 800; white-space: nowrap; }
 .admin-setting-link:hover { color: var(--brand-purple); }
+.admin-settings-form { display: grid; gap: 14px; }
+.admin-settings-notice { margin: 0; }
+.admin-settings-edit-grid { margin-top: 2px; }
+.admin-settings-edit-grid label { min-width: 0; }
+.admin-settings-edit-grid input, .admin-settings-edit-grid select { min-height: 38px; }
+.admin-settings-readiness-list { margin-top: 14px; }
+.admin-settings-toggle-list { display: grid; border-top: 1px solid #edf0f4; }
+.admin-settings-toggle { display: flex; align-items: center; gap: 11px; min-height: 56px; padding: 10px 0; border-bottom: 1px solid #edf0f4; cursor: pointer; }
+.admin-settings-toggle:last-child { border-bottom: 0; }
+.admin-settings-toggle input { width: 16px; height: 16px; flex: 0 0 16px; accent-color: var(--brand-purple); }
+.admin-settings-toggle span { display: grid; gap: 3px; }
+.admin-settings-toggle strong { color: var(--navy); font-size: 11px; }
+.admin-settings-toggle small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.admin-settings-savebar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 14px 2px 2px; }
+.admin-settings-savebar .button { display: inline-flex; align-items: center; gap: 7px; }
+.admin-settings-last-saved { margin-right: auto; color: var(--muted); font-size: 10px; }
 .admin-settings-side-card { padding: 18px; }
 .admin-settings-side-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: var(--brand-purple); }
 .admin-settings-side-heading h2 { margin: 0; color: var(--navy); font-family: "Manrope", sans-serif; font-size: 15px; letter-spacing: -.03em; }
@@ -2182,6 +2198,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
   .admin-settings-summary { align-items: flex-start; grid-template-columns: auto minmax(0, 1fr); }
   .admin-settings-summary-score { grid-column: 2; justify-items: start; padding-top: 9px; padding-left: 0; border-top: 1px solid #cfe9e4; border-left: 0; }
   .admin-settings-aside { grid-template-columns: minmax(0, 1fr); }
+  .admin-settings-edit-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-settings-savebar { align-items: stretch; flex-direction: column; }
+  .admin-settings-savebar .button { justify-content: center; width: 100%; }
+  .admin-settings-last-saved { margin-right: 0; }
   .admin-settings-card-heading { grid-template-columns: 34px minmax(0, 1fr); }
   .admin-settings-card-heading > .admin-setting-status { grid-column: 2; justify-self: start; }
   .admin-setting-row { align-items: flex-start; flex-direction: column; gap: 8px; }
