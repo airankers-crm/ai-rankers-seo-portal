@@ -220,7 +220,7 @@ export function ChatWorkspace({ mode, groups: startingGroups, initialMessages, c
 
   const shellMark = brandMark ?? (mode === "admin" ? "AR" : initials(activeClientName));
   return (
-    <AppShell mode={mode === "admin" ? "admin" : "portal"} clientName={mode === "admin" ? "AI Rankers" : activeClientName} brandMark={shellMark} brandAccent={accent} activeNav={mode === "admin" ? "Client communication" : "Team communication"}>
+    <AppShell mode={mode === "admin" ? "admin" : "portal"} clientName={mode === "admin" ? "AI Rankers" : activeClientName} brandMark={shellMark} brandAccent={accent} activeNav={mode === "admin" ? "Client communication" : "Feedback"}>
       <div className="content team-communication-page chat-page">
         {error ? <div className="chat-alert error" role="alert"><X size={15} /> <span>{error}</span><button type="button" onClick={() => setError(null)} aria-label="Dismiss error"><X size={14} /></button></div> : null}
         {notice ? <div className="chat-alert success" role="status"><Check size={15} /> {notice}</div> : null}

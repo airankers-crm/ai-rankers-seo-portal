@@ -23,10 +23,10 @@ export default async function ReportsPage() {
   });
 
   if (!client) {
-    const reports: ReportListItem[] = demoReports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.period, report.type), periodLabel: report.period, status: "PUBLISHED", publishedAt: "2026-11-04T00:00:00.000Z", updatedAt: "2026-11-04T00:00:00.000Z", freshness: "PRESENTATION" }));
+    const reports: ReportListItem[] = demoReports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.period, report.type), periodLabel: report.period, status: "PUBLISHED", publishedAt: "2026-11-04T00:00:00.000Z", updatedAt: "2026-11-04T00:00:00.000Z", freshness: "PRESENTATION", hasFile: false, originalFileName: null, fileSizeBytes: null }));
     return <ReportCenter clientName={demoClient.businessName} brandMark={demoClient.initials} brandAccent="#F26B38" reports={reports} />;
   }
 
-  const reports: ReportListItem[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.periodLabel, report.type), periodLabel: report.periodLabel, status: report.isVisible ? "PUBLISHED" : "DRAFT", publishedAt: report.createdAt.toISOString(), updatedAt: report.updatedAt.toISOString(), freshness: "PRESENTATION" }));
+  const reports: ReportListItem[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.periodLabel, report.type), periodLabel: report.periodLabel, status: report.deliveryStatus === "SENT" ? "SENT" : report.status, publishedAt: report.createdAt.toISOString(), updatedAt: report.updatedAt.toISOString(), freshness: "PRESENTATION", hasFile: Boolean(report.storageKey), originalFileName: report.originalFileName, fileSizeBytes: report.sizeBytes }));
   return <ReportCenter clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} reports={reports} />;
 }

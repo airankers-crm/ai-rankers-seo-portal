@@ -49,11 +49,12 @@ const portalNavGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Communication",
-    items: [
-      { label: "Activities", href: "/portal/activities", icon: Activity },
-      { label: "Team communication", href: "/portal/messages", icon: MessageCircle },
-    ],
+    label: "Delivery",
+    items: [{ label: "Activities", href: "/portal/activities", icon: Activity }],
+  },
+  {
+    label: "Support",
+    items: [{ label: "Feedback", href: "/portal/feedback", icon: MessageCircle }],
   },
   {
     label: "Reporting",
@@ -168,7 +169,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
           <div className="top-actions">
             {mode === "portal" ? <PortalLiveSync /> : <span className="workspace-status"><span className="dot" /> Workspace ready</span>}
-            <Link className="topbar-help" href={mode === "admin" ? "/admin/messages" : "/portal/messages"} aria-label="Open help and support" title="Help and support"><CircleHelp size={17} /></Link>
+            <Link className="topbar-help" href={mode === "admin" ? "/admin/messages" : "/portal/feedback"} aria-label={mode === "admin" ? "Open help and support" : "Share feedback"} title={mode === "admin" ? "Help and support" : "Share feedback"}><CircleHelp size={17} /></Link>
             <div className="topbar-account">
               <button className="topbar-account-trigger" type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((current) => !current)}>
                 <span className="topbar-account-avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JS" : brandMark ?? clientInitials}</span>

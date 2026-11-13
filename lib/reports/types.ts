@@ -1,4 +1,4 @@
-export type ReportStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "SENT" | "SCHEDULED" | "DATA_DELAYED";
+export type ReportStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "SENT" | "FAILED" | "SCHEDULED" | "DATA_DELAYED";
 export type ReportMetricStatus = "LIVE" | "PRESENTATION" | "DELAYED" | "UNAVAILABLE";
 
 export type ReportMetricView = {

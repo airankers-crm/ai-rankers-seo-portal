@@ -117,6 +117,20 @@ enum ReportTemplateVersionStatus {
   ARCHIVED
 }
 
+enum ReportStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  SENT
+  FAILED
+}
+
+enum ReportDeliveryStatus {
+  NOT_SENT
+  SENT
+  FAILED
+}
+
 model User {
   id              String             @id @default(cuid())
   authUserId      String?            @unique
@@ -425,18 +439,25 @@ model ChatMessage {
 }
 
 model Report {
-  id          String   @id @default(cuid())
-  clientId    String
-  title       String
-  type        String
-  periodLabel String
-  storageKey  String?
-  isVisible   Boolean  @default(true)
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String       @id @default(cuid())
+  clientId         String
+  title            String
+  type             String
+  periodLabel      String
+  storageKey       String?
+  originalFileName String?
+  mimeType         String?
+  sizeBytes        Int?
+  status           ReportStatus @default(PUBLISHED)
+  deliveryStatus   ReportDeliveryStatus @default(NOT_SENT)
+  sentAt           DateTime?
+  isVisible        Boolean      @default(true)
+  client           Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   @@index([clientId, createdAt])
+  @@index([clientId, status, updatedAt])
 }
 
 model ReportTemplate {

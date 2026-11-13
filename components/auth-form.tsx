@@ -21,7 +21,7 @@ const audienceContent = {
   client: {
     eyebrow: "Client portal",
     title: "Sign in to your client portal",
-    description: "Access approved reports, shared SEO activity, goals, and team communication for your business.",
+    description: "Access approved reports, shared SEO activity, and goals for your business.",
     contextTitle: "A clear view of your SEO work.",
     contextCopy: "Review performance, follow agreed priorities, and keep requests with your agency team in one secure place.",
     alternateLabel: "The AI Rankers team member?",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { Bell, Check, ChevronRight, CircleHelp, ExternalLink, LockKeyhole, Mail, Monitor, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Check, ChevronRight, LockKeyhole, MessageCircle, Monitor, Palette, ShieldCheck, UserRound } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 type PortalSettingsProps = {
@@ -91,13 +91,11 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
           <a href="#display">Display preferences</a>
           <a href="#security">Security</a>
           <a href="#workspace-access">Workspace access</a>
-          <a href="#support">Need something changed?</a>
         </nav>
 
         <section className="portal-settings-intro card">
           <div className="portal-settings-intro-icon"><ShieldCheck size={20} /></div>
           <div><strong>Your client workspace is secure</strong><p>These settings apply to your portal account only. Reporting data, integrations, and what is published are managed by your agency team.</p></div>
-          <Link className="button" href="/portal/messages"><CircleHelp size={14} /> Need help?</Link>
         </section>
 
         <div className="portal-settings-layout">
@@ -121,7 +119,6 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
               <div className="portal-setting-list">
                 <Toggle checked={preferences.reportUpdates} label="Report updates" description="Know when a new monthly report is published." onChange={() => updatePreference("reportUpdates")} />
                 <Toggle checked={preferences.taskUpdates} label="Activity and task updates" description="Get notified when work is completed or needs your attention." onChange={() => updatePreference("taskUpdates")} />
-                <Toggle checked={preferences.teamMessages} label="Team communication" description="Keep up with replies and new messages from your agency team." onChange={() => updatePreference("teamMessages")} />
               </div>
               {preferenceNotice ? <p className={preferenceNotice.kind === "error" ? "auth-error" : "auth-success"} role="status">{preferenceNotice.text}</p> : null}
             </section>
@@ -136,7 +133,7 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
           <aside className="portal-settings-aside">
             <section className="card portal-settings-side-card" id="security" aria-labelledby="security-title"><div className="portal-settings-side-heading"><LockKeyhole size={16} /><h2 id="security-title">Security</h2></div><p>Your sign-in is protected by your account provider. Use a password reset if you need to change your credentials.</p><Link className="portal-settings-side-link" href="/auth/reset-password"><span>Change password</span><ChevronRight size={14} /></Link></section>
             <section className="card portal-settings-side-card" id="workspace-access" aria-labelledby="workspace-title"><div className="portal-settings-side-heading"><Palette size={16} /><h2 id="workspace-title">Workspace access</h2></div><div className="portal-workspace-summary"><span className="portal-workspace-avatar" style={{ backgroundColor: brandAccent ?? "#f26b38" }}>{brandMark ?? clientName.slice(0, 2).toUpperCase()}</span><div><strong>{clientName}</strong><small>Client portal workspace</small></div></div><p>Your agency controls which reports, metrics, and activities are visible here.</p><Link className="portal-settings-side-link" href="/portal/reports"><span>View published reports</span><ChevronRight size={14} /></Link></section>
-            <section className="card portal-settings-side-card portal-settings-help-card" id="support" aria-labelledby="help-title"><div className="portal-settings-side-heading"><Mail size={16} /><h2 id="help-title">Need something changed?</h2></div><p>Ask the AI Rankers team about access, reporting, or a data source.</p><Link className="button primary" href="/portal/messages">Message the team <ExternalLink size={13} /></Link></section>
+            <section className="card portal-settings-side-card portal-settings-feedback-card" aria-labelledby="settings-feedback-title"><div className="portal-settings-side-heading"><MessageCircle size={16} /><h2 id="settings-feedback-title">Need something changed?</h2></div><p>Ask the AI Rankers team about access, reporting, or a data source.</p><Link className="button primary" href="/portal/feedback">Open feedback <ChevronRight size={14} /></Link></section>
           </aside>
         </div>
       </div>

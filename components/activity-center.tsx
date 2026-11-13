@@ -88,14 +88,6 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
           </div>
         </div>
 
-        <section className="card activity-toolbar" aria-label="Activity filters">
-          <div className="activity-toolbar-title"><Filter size={15} /><span>Filter activity</span></div>
-          <label className="activity-search"><Search size={15} /><span className="sr-only">Search activity</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search activity, workstream…" /></label>
-          <select aria-label="Filter by workstream" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select>
-          <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value as ActivityStatusFilter)}><option>All statuses</option><option>Planned</option><option>In progress</option><option>Completed</option></select>
-          {(query || category !== "All workstreams" || status !== "All statuses") && <button className="clear-filters" type="button" onClick={() => { setQuery(""); setCategory("All workstreams"); setStatus("All statuses"); }}><X size={13} /> Clear</button>}
-        </section>
-
           <div className="activity-summary" aria-label="Activity summary">
           <div><strong>{filteredActivities.length}</strong><span>visible activities</span></div>
           <div><strong>{completedCount}</strong><span>completed</span></div>
@@ -104,12 +96,20 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
           <div className="activity-summary-note"><Sparkles size={15} /><span>Activity records are visible after agency publication.</span></div>
         </div>
 
+        <ClientTaskCenter initialTasks={tasks} />
+
         <section className="card activity-panel" aria-labelledby="activity-log-title">
           <div className="activity-panel-heading"><div><p className="eyebrow">Activity records</p><h2 id="activity-log-title">SEO work</h2><p>Published completed, in-progress, and planned work by service.</p></div><span className="panel-meta">{activities.length} total</span></div>
+          <div className="activity-toolbar activity-panel-toolbar" aria-label="Activity filters">
+            <div className="activity-toolbar-title"><Filter size={15} /><span>Filter activity</span></div>
+            <label className="activity-search"><Search size={15} /><span className="sr-only">Search activity</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search activity, workstream…" /></label>
+            <select aria-label="Filter by workstream" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item}>{item}</option>)}</select>
+            <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value as ActivityStatusFilter)}><option>All statuses</option><option>Planned</option><option>In progress</option><option>Completed</option></select>
+            {(query || category !== "All workstreams" || status !== "All statuses") && <button className="clear-filters" type="button" onClick={() => { setQuery(""); setCategory("All workstreams"); setStatus("All statuses"); }}><X size={13} /> Clear</button>}
+          </div>
           {filteredActivities.length === 0 ? <EmptyState message="No activities match these filters. Try a broader search or clear the current view." /> : <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Workstream</th><th>Date</th><th>Status</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredActivities.map((activity) => <tr key={activity.id}><td><div className="activity-name"><span className={`activity-status-icon ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}</span><strong>{activity.title}</strong></div></td><td><span className="workstream-tag">{activity.category}</span></td><td className="activity-date">{activity.date}</td><td><span className={`status ${activity.status === "COMPLETED" ? "complete" : activity.status === "PLANNED" ? "planned" : "progress"}`}>{activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress"}</span></td><td className="activity-detail-cell"><button className="table-action" type="button" onClick={() => setSelectedActivity(activity)}>View details</button></td></tr>)}</tbody></table></div>}
         </section>
 
-        <ClientTaskCenter initialTasks={tasks} />
       </div>
       {selectedActivity && <ActivityDetail activity={selectedActivity} onClose={() => setSelectedActivity(null)} />}
     </AppShell>

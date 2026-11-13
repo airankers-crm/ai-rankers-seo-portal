@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, FileText, Filter, Layers3, MapPin, RefreshCw, Search } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, Download, ExternalLink, FileText, Filter, Layers3, MapPin, RefreshCw, Search } from "lucide-react";
 import { AppShell } from "./app-shell";
 import type { ReportStatus } from "../lib/reports/types";
 
@@ -19,6 +19,9 @@ export type ReportListItem = {
   publishedAt: string;
   updatedAt: string;
   freshness: "PRESENTATION" | "LIVE" | "DELAYED";
+  hasFile?: boolean;
+  originalFileName?: string | null;
+  fileSizeBytes?: number | null;
 };
 
 function statusLabel(status: ReportStatus) {
@@ -27,6 +30,7 @@ function statusLabel(status: ReportStatus) {
   if (status === "IN_REVIEW") return "In review";
   if (status === "SCHEDULED") return "Scheduled";
   if (status === "SENT") return "Sent";
+  if (status === "FAILED") return "Delivery failed";
   return "Draft";
 }
 function formatDate(date: string) {
@@ -49,11 +53,11 @@ type ReportFilters = {
   kind: "ALL" | "MONTHLY";
   service: "ALL" | ReportService;
   period: "ALL" | string;
-  status: "ALL" | "PUBLISHED";
+  status: "ALL" | "PUBLISHED" | "SENT";
   query: string;
 };
 
-const defaultFilters: ReportFilters = { kind: "MONTHLY", service: "ALL", period: "ALL", status: "PUBLISHED", query: "" };
+const defaultFilters: ReportFilters = { kind: "MONTHLY", service: "ALL", period: "ALL", status: "ALL", query: "" };
 
 export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { clientName: string; brandMark: string; brandAccent: string; reports: ReportListItem[] }) {
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(defaultFilters);
@@ -81,7 +85,7 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
     appliedFilters.kind === "MONTHLY" ? "Monthly reports" : "All reports",
     appliedFilters.service === "ALL" ? "All services" : appliedFilters.service,
     appliedFilters.period === "ALL" ? "All months" : appliedFilters.period,
-    appliedFilters.status === "PUBLISHED" ? "Published" : "All statuses",
+    appliedFilters.status === "PUBLISHED" ? "Published" : appliedFilters.status === "SENT" ? "Sent" : "All client-visible reports",
   ].join(" · ");
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Reports">
@@ -96,14 +100,14 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
           <label className="report-filter-field"><span>Report type</span><select value={draftFilters.kind} onChange={(event) => updateDraft("kind", event.target.value as ReportFilters["kind"])}><option value="MONTHLY">Monthly reports</option><option value="ALL">All reports</option></select></label>
           <label className="report-filter-field"><span>Service</span><select value={draftFilters.service} onChange={(event) => updateDraft("service", event.target.value as ReportFilters["service"])}><option value="ALL">All services</option><option value="Website SEO">Website SEO</option><option value="GBP performance">GBP performance</option></select></label>
           <label className="report-filter-field"><span>Reporting period</span><select value={draftFilters.period} onChange={(event) => updateDraft("period", event.target.value)}><option value="ALL">All months</option>{periodOptions.map((period) => <option key={period} value={period}>{period}</option>)}</select></label>
-          <label className="report-filter-field"><span>Status</span><select value={draftFilters.status} onChange={(event) => updateDraft("status", event.target.value as ReportFilters["status"])}><option value="PUBLISHED">Published</option><option value="ALL">All statuses</option></select></label>
+          <label className="report-filter-field"><span>Status</span><select value={draftFilters.status} onChange={(event) => updateDraft("status", event.target.value as ReportFilters["status"])}><option value="ALL">All client-visible</option><option value="PUBLISHED">Published</option><option value="SENT">Sent</option></select></label>
           <label className="report-filter-search"><span>Search reports</span><div><Search size={15} /><input value={draftFilters.query} onChange={(event) => updateDraft("query", event.target.value)} placeholder="Search reports..." aria-label="Search reports" /></div></label>
           <div className="report-filter-actions"><button className="button primary" type="button" onClick={applyFilters}>Apply filters</button><button className="report-filter-reset" type="button" onClick={resetFilters}><RefreshCw size={13} /> Reset</button></div>
         </div>
       </section>
 
       <div className="report-filter-summary"><strong>{filterSummary}</strong><span>{filteredReports.length} {filteredReports.length === 1 ? "report" : "reports"}</span></div>
-      {filteredReports.length === 0 ? <section className="card report-empty"><div className="report-empty-mark"><FileText size={20} /></div><h2>No reports match these filters</h2><p>Try another service, reporting period, or search term.</p><button className="button" type="button" onClick={resetFilters}>Clear filters <RefreshCw size={14} /></button></section> : <div className="report-list">{filteredReports.map((report) => {
+      {filteredReports.length === 0 ? <section className="card report-empty"><div className="report-empty-mark"><FileText size={20} /></div><h2>{reports.length === 0 ? "No reports published yet" : "No reports match these filters"}</h2><p>{reports.length === 0 ? "Your agency team will publish reports here when they are ready." : "Try another service, reporting period, or search term."}</p>{reports.length > 0 ? <button className="button" type="button" onClick={resetFilters}>Clear filters <RefreshCw size={14} /></button> : null}</section> : <div className="report-list">{filteredReports.map((report) => {
         const serviceSlug = report.service === "GBP performance" ? "gbp" : "seo";
         const statusClass = "report-status-" + report.status.toLowerCase();
         return <article className="card report-list-card" key={report.id}>
@@ -113,7 +117,7 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
             <h3>{report.title}</h3>
             <div className="report-list-meta"><span><CalendarDays size={12} /> Period: {report.periodLabel}</span><span>Published: {formatDate(report.publishedAt)}</span><span>Comparison: {comparisonLabel(report.periodLabel)}</span></div>
           </div>
-          <div className="report-list-action"><Link className="button primary" href={"/portal/reports/" + report.id}>View report <ArrowRight size={14} /></Link></div>
+          <div className="report-list-action">{report.hasFile ? <div className="report-file-actions"><a className="button primary" href={`/api/reports/${encodeURIComponent(report.id)}/file`} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a><a className="report-download-link" href={`/api/reports/${encodeURIComponent(report.id)}/file?download=1`}>Download <Download size={13} /></a></div> : <Link className="button primary" href={"/portal/reports/" + report.id}>View report <ArrowRight size={14} /></Link>}</div>
         </article>;
       })}</div>}
     </div>

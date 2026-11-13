@@ -184,7 +184,6 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
           <button className="button gbp-filter-reset" type="button" onClick={resetFilters}><RotateCcw size={13} /> Reset</button>
         </div>
         <div className={`freshness-summary${hasPublishedData ? " is-ready" : " is-pending"}`}><span className="freshness-dot" /> {hasPublishedData ? `Published GBP data through ${latestAvailableRow?.periodLabel}` : "No published GBP data"}</div>
-        {!hasChannelBreakdown && <p className="gbp-filter-note">Google Business Profile currently provides Search + Maps as one aggregate. Channel-level filtering will appear when split data is connected.</p>}
       </section>
 
       {hasPublishedData ? <>
