@@ -8,7 +8,7 @@ export default async function PortalSettingsPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
-      select: { businessName: true, brandMark: true, brandAccent: true, timezone: true, contactEmail: true },
+      select: { businessName: true, brandMark: true, brandAccent: true, timezone: true, contactEmail: true, websiteUrl: true, hasGbpSeo: true },
   });
 
   return (
@@ -17,6 +17,9 @@ export default async function PortalSettingsPage() {
       brandMark={client?.brandMark}
       brandAccent={client?.brandAccent}
       clientTimezone={client?.timezone ?? "America/New_York"}
+      websiteUrl={client?.websiteUrl}
+      contactEmail={client?.contactEmail}
+      hasGbpSeo={Boolean(client?.hasGbpSeo)}
       userName={access.user?.name ?? "Client user"}
       userEmail={access.user?.email ?? client?.contactEmail ?? ""}
       canEditProfile={Boolean(access.user && !access.preview)}

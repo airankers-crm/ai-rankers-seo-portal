@@ -2192,6 +2192,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .portal-settings-card-heading { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 18px; }
 .portal-settings-card-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; }
 .portal-settings-card-icon.profile { color: var(--brand-purple); background: var(--brand-purple-soft); }
+.portal-settings-card-icon.business { color: #207b91; background: #e7f6fa; }
+.portal-settings-card-icon.gbp { color: #2c7d62; background: #e6f8ef; }
 .portal-settings-card-icon.notifications { color: #b66a16; background: #fff1dd; }
 .portal-settings-card-icon.display { color: #187f9a; background: #e6f6fb; }
 .portal-settings-card-heading h2, .portal-settings-side-heading h2 { margin: 1px 0 4px; color: var(--navy); font-family: "Manrope", sans-serif; font-size: 15px; letter-spacing: -.03em; }
@@ -2220,6 +2222,27 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .portal-settings-preference-row strong { color: var(--navy); font-size: 11px; }
 .portal-settings-preference-row small { color: var(--muted); font-size: 9px; line-height: 1.4; }
 .portal-settings-badge { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; color: #247c63; background: #e7f8ef; font-size: 9px; font-weight: 800; }
+.portal-settings-badge.is-muted { color: #7e8997; background: #f0f2f5; }
+.portal-settings-badge .status-dot { width: 6px; height: 6px; }
+.portal-settings-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid #edf0f4; border-radius: 10px; background: #edf0f4; }
+.portal-settings-detail-grid > div { display: grid; gap: 5px; min-width: 0; padding: 12px; background: #fff; }
+.portal-settings-detail-grid span { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 9px; font-weight: 700; }
+.portal-settings-detail-grid strong { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow-wrap: anywhere; color: var(--navy); font-size: 11px; }
+.portal-settings-detail-grid a { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow-wrap: anywhere; color: var(--brand-purple); }
+.portal-settings-inline-note { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.portal-settings-inline-note svg { flex: 0 0 auto; color: var(--teal); }
+.portal-settings-inline-note span { flex: 1; }
+.portal-settings-inline-note a { display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; color: var(--brand-purple); font-weight: 800; white-space: nowrap; }
+.portal-settings-integration-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid #dcefe6; border-radius: 10px; background: #f8fdfb; }
+.portal-settings-integration-name { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.portal-settings-provider-icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 8px; color: #2c7d62; background: #dff4e9; }
+.portal-settings-integration-name > div { display: grid; gap: 3px; min-width: 0; }
+.portal-settings-integration-name strong { color: var(--navy); font-size: 11px; }
+.portal-settings-integration-name small { color: var(--muted); font-size: 9px; }
+.portal-settings-integration-footer { display: flex; align-items: center; gap: 12px; margin-top: 12px; color: var(--muted); font-size: 9px; }
+.portal-settings-integration-footer > span { flex: 1; }
+.portal-settings-integration-footer .portal-settings-side-link { margin: 0; padding: 0; border: 0; white-space: nowrap; }
+.portal-settings-integration-footer .button { flex: 0 0 auto; min-height: 30px; padding: 0 10px; font-size: 9px; }
 .portal-settings-side-card { padding: 18px; }
 .portal-settings-side-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--brand-purple); }
 .portal-settings-side-heading h2 { margin: 0; }

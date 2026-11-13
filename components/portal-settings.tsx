@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { Bell, Check, ChevronRight, LockKeyhole, MessageCircle, Monitor, Palette, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Building2, Check, ChevronRight, ExternalLink, Globe2, Link2, LockKeyhole, MapPin, MessageCircle, Monitor, Palette, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 type PortalSettingsProps = {
@@ -10,6 +10,9 @@ type PortalSettingsProps = {
   brandMark?: string | null;
   brandAccent?: string | null;
   clientTimezone: string;
+  websiteUrl?: string | null;
+  contactEmail?: string | null;
+  hasGbpSeo: boolean;
   userName: string;
   userEmail: string;
   canEditProfile: boolean;
@@ -32,7 +35,7 @@ function Toggle({ checked, label, description, onChange }: { checked: boolean; l
   );
 }
 
-export function PortalSettings({ clientName, brandMark, brandAccent, clientTimezone, userName, userEmail, canEditProfile }: PortalSettingsProps) {
+export function PortalSettings({ clientName, brandMark, brandAccent, clientTimezone, websiteUrl, contactEmail, hasGbpSeo, userName, userEmail, canEditProfile }: PortalSettingsProps) {
   const [name, setName] = useState(userName);
   const [savingName, setSavingName] = useState(false);
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
@@ -86,6 +89,8 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
         </div>
 
         <nav className="portal-settings-section-nav" aria-label="Settings sections">
+          <a href="#business">Business information</a>
+          <a href="#gbp">Google Business Profile</a>
           <a href="#profile">Your profile</a>
           <a href="#notifications">Notifications</a>
           <a href="#display">Display preferences</a>
@@ -100,6 +105,29 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
 
         <div className="portal-settings-layout">
           <div className="portal-settings-main">
+            <section className="card portal-settings-card" id="business" aria-labelledby="business-title">
+              <div className="portal-settings-card-heading"><div className="portal-settings-card-icon business"><Building2 size={17} /></div><div><h2 id="business-title">Business information</h2><p>Review the business details used across your client portal and reports.</p></div></div>
+              <div className="portal-settings-detail-grid">
+                <div><span>Business name</span><strong>{clientName}</strong></div>
+                <div><span>Website</span><strong>{websiteUrl ? <a href={websiteUrl} target="_blank" rel="noreferrer">{websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")} <ExternalLink size={11} /></a> : "Not provided"}</strong></div>
+                <div><span>Contact email</span><strong>{contactEmail || "Not provided"}</strong></div>
+                <div><span>Reporting timezone</span><strong>{clientTimezone.replace("_", " ")}</strong></div>
+              </div>
+              <div className="portal-settings-inline-note"><ShieldCheck size={13} /><span>Business identity changes are managed by the AI Rankers team so reports stay consistent.</span><Link href="/portal/feedback">Request an update <ChevronRight size={12} /></Link></div>
+            </section>
+
+            <section className="card portal-settings-card" id="gbp" aria-labelledby="gbp-title">
+              <div className="portal-settings-card-heading"><div className="portal-settings-card-icon gbp"><Globe2 size={17} /></div><div><h2 id="gbp-title">Google Business Profile</h2><p>Check the profile connection used for local visibility reporting.</p></div></div>
+              <div className="portal-settings-integration-head"><div className="portal-settings-integration-name"><span className="portal-settings-provider-icon"><Globe2 size={16} /></span><div><strong>Google Business Profile</strong><small>{hasGbpSeo ? "Enabled for this workspace" : "Not enabled for this workspace"}</small></div></div><span className={`portal-settings-badge${hasGbpSeo ? "" : " is-muted"}`}><span className="status-dot" /> {hasGbpSeo ? "Configured" : "Not configured"}</span></div>
+              <div className="portal-settings-detail-grid portal-settings-integration-grid">
+                <div><span><Link2 size={11} /> Connection</span><strong>{hasGbpSeo ? "Managed by your agency" : "Awaiting setup"}</strong></div>
+                <div><span><MapPin size={11} /> Profile location</span><strong>{clientName}</strong></div>
+                <div><span><RefreshCw size={11} /> Data sync</span><strong>{hasGbpSeo ? "Agency-managed sync" : "Not connected"}</strong></div>
+                <div><span><ShieldCheck size={11} /> Account access</span><strong>Securely managed</strong></div>
+              </div>
+              <div className="portal-settings-integration-footer"><span>Need to change the connected account or location?</span><Link className="portal-settings-side-link" href="/portal/feedback">Contact AI Rankers <ChevronRight size={14} /></Link>{hasGbpSeo ? <Link className="button" href="/portal/gbp">View GBP performance <ChevronRight size={13} /></Link> : null}</div>
+            </section>
+
             <section className="card portal-settings-card" id="profile" aria-labelledby="profile-title">
               <div className="portal-settings-card-heading"><div className="portal-settings-card-icon profile"><UserRound size={17} /></div><div><h2 id="profile-title">Your profile</h2><p>Update the name your agency team sees when you communicate.</p></div></div>
               <form className="portal-settings-form" onSubmit={saveProfile}>
