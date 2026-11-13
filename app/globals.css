@@ -784,6 +784,55 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .workspace-form label { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 700; }
 .workspace-form input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; outline: 0; color: var(--ink); background: white; font-size: 13px; }
 .workspace-form input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(242,107,56,.12); }
+
+/* Guided client setup keeps the admin workflow focused without changing the client portal data model. */
+.client-setup-wizard { display: grid; gap: 16px; }
+.client-setup-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 18px 20px; border: 1px solid #e4d9f5; border-radius: 13px; background: linear-gradient(135deg, #fbf9ff 0%, #fff 72%); }
+.client-setup-intro h2 { margin: 3px 0 5px; color: var(--navy); font-size: 20px; }
+.client-setup-intro p:not(.eyebrow) { max-width: 700px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.setup-progress-label { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #d9cbef; border-radius: 999px; color: #6f3fb5; background: #fff; font-size: 10px; font-weight: 800; }
+.client-setup-stepper { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: white; }
+.client-setup-stepper > span { display: flex; align-items: center; min-width: max-content; color: #9aa3b4; font-size: 10px; font-weight: 800; }
+.client-setup-stepper > span > a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 7px; border-radius: 7px; color: inherit; text-decoration: none; }
+.client-setup-stepper > span.current > a { color: #6f3fb5; background: #f1ebff; }
+.client-setup-stepper > span.complete > a { color: #148f83; }
+.client-setup-stepper > span > i { width: 28px; height: 1px; margin: 0 2px; background: #e2e6ee; }
+.client-setup-stepper > span.complete > i { background: #a7ded4; }
+.step-label-short { display: none; }
+.client-setup-content { min-width: 0; }
+.client-setup-navigation { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 2px; }
+.setup-save-note { color: var(--muted); font-size: 10px; text-align: center; }
+.setup-first-grid { align-items: start; }
+.setup-side-card { min-height: 100%; }
+.setup-detail-card, .setup-review-card, .setup-invite-card { margin-top: 0; }
+.setup-card-number { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; color: #6f3fb5; background: #f0eaff; font-size: 11px; font-weight: 900; }
+.business-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.business-profile-grid > div { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--soft); }
+.business-profile-grid span, .review-summary span { color: var(--muted); font-size: 10px; }
+.business-profile-grid strong { color: var(--navy); font-size: 13px; }
+.setup-guidance { margin-top: 13px; padding: 13px; border-left: 3px solid var(--orange); border-radius: 7px; background: #fff8f4; }
+.setup-guidance strong { color: var(--navy); font-size: 11px; }
+.setup-guidance p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.setup-source-layout { display: grid; gap: 13px; }
+.setup-source-card { display: grid; gap: 9px; padding: 14px 16px; border: 1px solid #ccece6; border-radius: 10px; background: #f5fffc; }
+.setup-source-card-heading { display: flex; align-items: center; gap: 9px; }
+.setup-source-card-heading > div { display: grid; gap: 2px; }
+.setup-source-card-heading strong { color: var(--navy); font-size: 12px; }
+.setup-source-card-heading span:last-child { color: var(--muted); font-size: 9px; }
+.setup-source-card > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.setup-source-icon { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; color: #08766d; background: #d9f4eb; font-size: 12px; font-weight: 900; }
+.setup-checklist { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.setup-checklist span { display: inline-flex; align-items: center; gap: 5px; color: #08766d; font-size: 9px; font-weight: 800; }
+.setup-checklist svg { flex: 0 0 auto; }
+.review-summary { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 9px; }
+.review-summary > div { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--soft); }
+.review-summary strong { color: var(--navy); font-size: 17px; }
+.review-checklist { display: grid; gap: 9px; margin-top: 13px; }
+.review-checklist > div { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+.review-checklist > div > svg { flex: 0 0 auto; color: #148f83; }
+.review-checklist span:nth-child(2) { display: grid; flex: 1; gap: 4px; }
+.review-checklist strong { color: var(--navy); font-size: 11px; }
+.review-checklist small { color: var(--muted); font-size: 9px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
 .back-link { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 20px; color: var(--orange); font-size: 11px; font-weight: 800; }
 .detail-list { display: grid; }
@@ -1749,6 +1798,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
   .publish-status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .publish-safety { grid-column: 1 / -1; padding: 4px 2px; }
   .publish-action-row { align-items: stretch; flex-direction: column; }
+  .client-setup-intro { flex-direction: column; }
+  .client-setup-navigation { align-items: stretch; flex-wrap: wrap; }
+  .setup-save-note { order: 3; flex: 1 0 100%; }
+  .business-profile-grid, .review-summary { grid-template-columns: 1fr; }
+  .review-checklist > div { align-items: flex-start; flex-wrap: wrap; }
+  .review-checklist > div .button, .review-checklist > div .status { margin-left: 25px; }
   .version-row { grid-template-columns: minmax(0, 1fr) auto; }
   .version-row .table-action { grid-column: 1 / -1; justify-self: start; }
   .agency-pulse-grid { grid-template-columns: 1fr; }
