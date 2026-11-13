@@ -120,7 +120,7 @@ function draftsMatch(left: MetricDraft, right: MetricDraft) {
 export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections, initialView = "all" }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[]; initialView?: EditorView }) {
   const [metrics, setMetrics] = useState(initialMetrics);
   const defaultView = initialMetrics.some((metric) => metricView(metric) === "website") ? "website" : "gbp";
-  const [activeView, setActiveView] = useState<EditorView>(initialView === "all" || initialMetrics.some((metric) => metricView(metric) === initialView) ? initialView : defaultView);
+  const [activeView, setActiveView] = useState<EditorView>(initialView ?? defaultView);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<MetricDraft | null>(null);
   const [message, setMessage] = useState("");
