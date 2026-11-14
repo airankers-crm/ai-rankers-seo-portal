@@ -32,11 +32,11 @@ function getCachedPortalData(clientId: string) {
 export default async function PortalPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
+    where: { id: access.user?.clientId ?? "__no_client__" },
     select: { id: true, businessName: true, brandMark: true, brandAccent: true },
   });
 
-  if (!client) return <PortalOverviewDashboard />;
+  if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", metrics: {}, activities: [], reports: [], goals: [] }} />;
 
   const { metrics, activities: activityRecords, reports: reportRecords, goals: goalRecords } = await getCachedPortalData(client.id);
 

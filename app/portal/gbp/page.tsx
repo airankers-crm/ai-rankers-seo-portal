@@ -29,7 +29,7 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const access = await requirePortalAccess();
   const params = await searchParams;
   if (params?.demo === "1") redirect("/portal/gbp");
-  const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
+  const clientId = access.user?.clientId;
   const client = clientId ? await getCachedGbpClient(clientId) : null;
 
   if (!client) return <GbpPerformanceDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} connectionStatus="not-connected" />;

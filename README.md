@@ -12,6 +12,7 @@ The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neo
 - `/portal/website-seo` — organic visibility reporting
 - `/portal/gbp` — Google Business Profile presentation
 - `/portal/activities` — client-safe work history and tasks
+- `/portal/leads` — client-scoped website inquiry records
 - `/portal/reports` — report library and report detail
 - `/portal/messages` — client communication surface
 
@@ -25,6 +26,7 @@ The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neo
 - `/admin/goals` — goal operations
 - `/admin/reports` — report operations
 - `/admin/integrations` — provider readiness boundary
+- `/admin/leads` — agency lead inbox across connected client workspaces
 - `/admin/sync-health` — synchronization readiness boundary
 - `/admin/audit` — audit activity
 
@@ -133,6 +135,10 @@ Deploy a Preview first, verify authentication, database access, authorization, p
 ## Current implementation boundary
 
 The current release contains the client portal foundation, admin operations surfaces, authentication entry points, goals, activities, reporting presentation, Prisma persistence, and Neon connection boundaries.
+
+### WordPress MetForm lead intake
+
+The lead boundary is a secured Next.js route: `POST /api/webhooks/metform/{clientId}`. Configure the WordPress MetForm REST API integration to send the form payload to that URL with the `x-metform-webhook-secret` header set to the same value as `METFORM_WEBHOOK_SECRET` in the Vercel environment. If the installed MetForm screen exposes only a URL field, append `?token=<same-secret>` instead; the header is preferred because query strings can be logged. The endpoint accepts common `name`, `phone`, `email`, `service`, `message`, `pageUrl`, `formId`, and `entryId` field names, stores the record against the route client, and deduplicates retries when an entry ID is provided. Use a synthetic submission for the first test.
 
 Some provider integrations and advanced CRM capabilities remain explicit implementation boundaries. Presentation/demo data is labeled in the UI and must not be represented as live provider data.
 

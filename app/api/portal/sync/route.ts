@@ -29,7 +29,7 @@ function getCachedChangeWatermark(clientId: string) {
 
 export async function GET() {
   const access = await requirePortalAccess();
-  const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
+  const clientId = access.user?.clientId;
 
   if (!clientId) return NextResponse.json({ changedAt: null }, { headers: { "Cache-Control": "no-store" } });
 

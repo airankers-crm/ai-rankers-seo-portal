@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await prisma.client.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Client workspace not found." }, { status: 404 });
 
-  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
+  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; businessPhone?: string; serviceArea?: string; businessHours?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
     websiteUrl = parseSafeHttpUrl(body.websiteUrl.trim());
@@ -26,6 +26,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail)) {
     return NextResponse.json({ error: "Contact email must be valid." }, { status: 400 });
   }
+
+  const businessPhone = body?.businessPhone?.trim().slice(0, 40) || null;
+  const serviceArea = body?.serviceArea?.trim().slice(0, 160) || null;
+  const businessHours = body?.businessHours?.trim().slice(0, 160) || null;
 
   const brandMark = body?.brandMark?.trim().slice(0, 3).toUpperCase() || null;
   const brandAccent = body?.brandAccent?.trim() || existing.brandAccent;
@@ -38,6 +42,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     data: {
       websiteUrl,
       contactEmail,
+      businessPhone,
+      serviceArea,
+      businessHours,
       brandMark,
       brandAccent,
       timezone: body?.timezone?.trim() || existing.timezone,
@@ -53,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       action: "CLIENT_SETTINGS_UPDATED",
       entityType: "Client",
       entityId: updated.id,
-      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo },
+      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, businessPhone: updated.businessPhone, serviceArea: updated.serviceArea, businessHours: updated.businessHours, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo },
     },
   });
 

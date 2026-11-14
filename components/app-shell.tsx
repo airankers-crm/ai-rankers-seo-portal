@@ -13,6 +13,7 @@ import {
   ChevronDown,
   CircleHelp,
   FileText,
+  Inbox,
   Layers3,
   LayoutDashboard,
   MessageCircle,
@@ -46,6 +47,7 @@ const portalNavGroups: NavGroup[] = [
       { label: "Overview", href: "/portal", icon: LayoutDashboard },
       { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
       { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
+      { label: "Leads", href: "/portal/leads", icon: Inbox },
     ],
   },
   {
@@ -72,6 +74,7 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
       { label: "Clients", href: "/admin/clients", icon: UsersRound },
+      { label: "Leads", href: "/admin/leads", icon: Inbox },
     ],
   },
   {

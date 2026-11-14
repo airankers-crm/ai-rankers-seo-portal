@@ -12,6 +12,7 @@ Configure these variables for both Preview and Production as appropriate:
 | `DIRECT_URL` | Yes for migrations | `prisma.config.ts` | Direct Neon PostgreSQL connection used by Prisma migration commands. |
 | `NEON_AUTH_BASE_URL` | Yes for authentication | `lib/auth/server.ts` | Neon Auth server URL used to create the server auth client. |
 | `NEON_AUTH_COOKIE_SECRET` | Yes for authentication | `lib/auth/server.ts` | Private cookie-signing secret. Generate a strong production-only value. |
+| `METFORM_WEBHOOK_SECRET` | Yes for lead intake | `app/api/webhooks/metform/[clientId]/route.ts` | Private shared secret used by WordPress MetForm to authenticate lead submissions. |
 | `APP_ORIGIN` | Recommended | `proxy.ts` | Canonical browser origin used for CSRF/Origin validation, such as `https://portal.example.com`. |
 
 ## Optional or provider-managed values
@@ -56,3 +57,5 @@ pnpm prisma migrate status
 ## Security rule
 
 If `NEON_AUTH_BASE_URL` or `NEON_AUTH_COOKIE_SECRET` is missing in production, the application must fail closed rather than expose preview/demo access.
+
+Keep `METFORM_WEBHOOK_SECRET` server-only. Never expose it as a `NEXT_PUBLIC_` variable or include it in client-side code.

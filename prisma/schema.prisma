@@ -111,6 +111,14 @@ enum FeedbackStatus {
   RESOLVED
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
+
 enum ReportTemplateVersionStatus {
   DRAFT
   PUBLISHED
@@ -164,6 +172,9 @@ model Client {
   brandAccent   String             @default("#F26B38")
   websiteUrl    String?
   contactEmail  String?
+  businessPhone String?
+  serviceArea   String?
+  businessHours String?
   timezone      String             @default("America/New_York")
   hasWebsiteSeo Boolean            @default(false)
   hasGbpSeo     Boolean            @default(false)
@@ -181,6 +192,7 @@ model Client {
   auditLogs     AuditLog[]
   tasks         Task[]
   feedback      Feedback[]
+  leads         Lead[]
   chatGroups    ChatGroup[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -401,6 +413,29 @@ model Feedback {
 
   @@index([clientId, status, createdAt])
   @@index([userId, createdAt])
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  clientId      String
+  source        String     @default("wordpress-metform")
+  sourceEventId String?
+  formId        String?
+  name          String
+  phone         String?
+  email         String?
+  service       String?
+  message       String?
+  pageUrl       String?
+  submittedAt   DateTime   @default(now())
+  status        LeadStatus @default(NEW)
+  client        Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([clientId, source, sourceEventId])
+  @@index([clientId, status, submittedAt])
+  @@index([clientId, submittedAt])
 }
 
 model ChatGroup {

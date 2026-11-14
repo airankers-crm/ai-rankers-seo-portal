@@ -1,5 +1,4 @@
 import { prisma } from "@ai-rankers/db";
-import { demoClient, demoReports } from "@ai-rankers/core";
 import { ReportCenter, type ReportListItem, type ReportService } from "../../../components/report-center";
 import { requirePortalAccess } from "../../../lib/auth/access";
 
@@ -18,13 +17,12 @@ function getReportKind(periodLabel: string, type: string): ReportListItem["kind"
 export default async function ReportsPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
+    where: { id: access.user?.clientId ?? "__no_client__" },
     include: { reports: { where: { isVisible: true }, orderBy: { createdAt: "desc" }, take: 50 } },
   });
 
   if (!client) {
-    const reports: ReportListItem[] = demoReports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.period, report.type), periodLabel: report.period, status: "PUBLISHED", publishedAt: "2026-11-04T00:00:00.000Z", updatedAt: "2026-11-04T00:00:00.000Z", freshness: "PRESENTATION", hasFile: false, originalFileName: null, fileSizeBytes: null }));
-    return <ReportCenter clientName={demoClient.businessName} brandMark={demoClient.initials} brandAccent="#F26B38" reports={reports} />;
+    return <ReportCenter clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" reports={[]} />;
   }
 
   const reports: ReportListItem[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.periodLabel, report.type), periodLabel: report.periodLabel, status: report.deliveryStatus === "SENT" ? "SENT" : report.status, publishedAt: report.createdAt.toISOString(), updatedAt: report.updatedAt.toISOString(), freshness: "PRESENTATION", hasFile: Boolean(report.storageKey), originalFileName: report.originalFileName, fileSizeBytes: report.sizeBytes }));

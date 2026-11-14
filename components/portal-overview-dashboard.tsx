@@ -47,22 +47,22 @@ export function PortalOverviewDashboard({ databaseData }: { databaseData?: Porta
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null);
   const reportTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const metrics = { organicTraffic: databaseData?.metrics.organicTraffic ?? demoMetrics.organicTraffic, impressions: databaseData?.metrics.impressions ?? demoMetrics.impressions, topTen: databaseData?.metrics.topTen ?? demoMetrics.topTen, calls: databaseData?.metrics.calls ?? demoMetrics.calls, gbpViews: databaseData?.metrics.gbpViews, gbpWebsiteClicks: databaseData?.metrics.gbpWebsiteClicks, gbpDirections: databaseData?.metrics.gbpDirections, gbpReviews: databaseData?.metrics.gbpReviews } satisfies PortalMetricSet;
-  const activities = databaseData?.activities ?? demoActivities;
-  const reports = databaseData?.reports ?? demoReports;
+  const metrics = databaseData ? databaseData.metrics : demoMetrics;
+  const activities = databaseData ? databaseData.activities : demoActivities;
+  const reports = databaseData ? databaseData.reports : demoReports;
   const goals = databaseData?.goals ?? [];
   const clientName = databaseData?.businessName ?? demoClient.businessName;
   const brandMark = databaseData?.brandMark ?? clientName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const brandAccent = databaseData?.brandAccent ?? "#F26B38";
   const visibleMetricKeys = new Set(metricMeta.filter(({ key, source, channel }) => Boolean(metrics[key]) && (filters.source === "All sources" || filters.source === source) && (filters.channel === "All channels" || filters.channel === channel)).map(({ key }) => key));
   const activeChartKey = visibleMetricKeys.has(chartKey) ? chartKey : ([...visibleMetricKeys][0] ?? "organicTraffic");
-  const chartMetric = metrics[activeChartKey] ?? metrics.organicTraffic;
+  const chartMetric = metrics[activeChartKey] ?? metrics.organicTraffic ?? { id: "empty", label: "No data", value: 0, source: "GA4" as const, history: [] };
   const visiblePoints = dateRange.label === "Last 30 days" ? 2 : dateRange.label === "Last 90 days" ? 3 : chartMetric.history.length;
   const chartData = chartMetric.history.slice(-visiblePoints).map((point) => ({ label: point.label, value: point.value }));
   const query = searchQuery.trim().toLowerCase();
   const visibleActivities = activities.filter((activity) => !query || `${activity.title} ${activity.category}`.toLowerCase().includes(query));
   const visibleReports = reports.filter((report) => !query || `${report.title} ${report.type} ${report.period}`.toLowerCase().includes(query));
-  const trafficTrend = getMetricTrend(metrics.organicTraffic);
+  const trafficTrend = metrics.organicTraffic ? getMetricTrend(metrics.organicTraffic) : 0;
   const localSignals = [{ label: "Profile views", value: formatMetric(metrics.gbpViews), icon: <MapPin size={14} /> }, { label: "Website clicks", value: formatMetric(metrics.gbpWebsiteClicks), icon: <ArrowRight size={14} /> }, { label: "Direction requests", value: formatMetric(metrics.gbpDirections), icon: <Gauge size={14} /> }];
 
   function resetFilters() { setDateRange(portalDateRange()); setFilters({ source: "All sources", channel: "All channels" }); setSearchQuery(""); }

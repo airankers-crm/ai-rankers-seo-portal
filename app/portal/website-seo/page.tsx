@@ -32,7 +32,7 @@ function formatPeriod(date: Date) {
 
 export default async function WebsiteSeoPage() {
   const access = await requirePortalAccess();
-  const clientId = access.user?.clientId ?? (await prisma.client.findUnique({ where: { slug: "tony-roofing" }, select: { id: true } }))?.id;
+  const clientId = access.user?.clientId;
   const client = clientId ? await getCachedWebsiteSeoClient(clientId) : null;
 
   if (!client) return <WebsiteSeoDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;

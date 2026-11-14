@@ -1,5 +1,4 @@
 import type { DemoActivity } from "@ai-rankers/core";
-import { demoActivities, demoClient } from "@ai-rankers/core";
 import { prisma } from "@ai-rankers/db";
 import { ActivityCenter } from "../../../components/activity-center";
 import type { ClientTask } from "../../../components/client-task-center";
@@ -11,11 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function ActivitiesPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
+    where: { id: access.user?.clientId ?? "__no_client__" },
     include: { activities: { where: { clientVisible: true }, orderBy: { createdAt: "desc" }, take: 100 } },
   });
 
-  if (!client) return <ActivityCenter businessName={demoClient.businessName} activities={demoActivities} />;
+  if (!client) return <ActivityCenter businessName="Client workspace" activities={[]} />;
 
   const activities: DemoActivity[] = client.activities.map((activity) => ({
     id: activity.id,

@@ -12,6 +12,9 @@ type PortalSettingsProps = {
   clientTimezone: string;
   websiteUrl?: string | null;
   contactEmail?: string | null;
+  businessPhone?: string | null;
+  serviceArea?: string | null;
+  businessHours?: string | null;
   hasGbpSeo: boolean;
   userName: string;
   userEmail: string;
@@ -35,7 +38,7 @@ function Toggle({ checked, label, description, onChange }: { checked: boolean; l
   );
 }
 
-export function PortalSettings({ clientName, brandMark, brandAccent, clientTimezone, websiteUrl, contactEmail, hasGbpSeo, userName, userEmail, canEditProfile }: PortalSettingsProps) {
+export function PortalSettings({ clientName, brandMark, brandAccent, clientTimezone, websiteUrl, contactEmail, businessPhone, serviceArea, businessHours, hasGbpSeo, userName, userEmail, canEditProfile }: PortalSettingsProps) {
   const [name, setName] = useState(userName);
   const [savingName, setSavingName] = useState(false);
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
@@ -111,6 +114,9 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
                 <div><span>Business name</span><strong>{clientName}</strong></div>
                 <div><span>Website</span><strong>{websiteUrl ? <a href={websiteUrl} target="_blank" rel="noreferrer">{websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")} <ExternalLink size={11} /></a> : "Not provided"}</strong></div>
                 <div><span>Contact email</span><strong>{contactEmail || "Not provided"}</strong></div>
+                <div><span>Phone</span><strong>{businessPhone || "Not provided"}</strong></div>
+                <div><span>Service area</span><strong>{serviceArea || "Not provided"}</strong></div>
+                <div><span>Business hours</span><strong>{businessHours || "Not provided"}</strong></div>
                 <div><span>Reporting timezone</span><strong>{clientTimezone.replace("_", " ")}</strong></div>
               </div>
               <div className="portal-settings-inline-note"><ShieldCheck size={13} /><span>Business identity changes are managed by the AI Rankers team so reports stay consistent.</span><Link href="/portal/feedback">Request an update <ChevronRight size={12} /></Link></div>

@@ -1,4 +1,11 @@
-import { AdminOperationsPage } from "../../../components/admin-operations";
+import { prisma } from "@ai-rankers/db";
+import { LeadInbox } from "../../../components/lead-inbox";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
-export default async function AdminLeadsPage() { await requireAdminAccess(); return <AdminOperationsPage config={{ activeNav: "Clients", title: "Lead inbox", description: "Turn verified inquiries into a clear next action without claiming attribution that the connected sources cannot prove.", sourceLabel: "Lead data boundary", sourceDescription: "No live lead provider is connected. Source, qualification, owner, and due-state fields are prepared for the CRM foundation.", columns: [{ key: "name", label: "Inquiry" }, { key: "source", label: "Source" }, { key: "stage", label: "Stage" }, { key: "nextAction", label: "Next action" }], filters: [{ key: "stage", label: "Stage", options: ["New", "Contacted", "Qualified", "Opportunity"] }], emptyTitle: "No verified inquiries yet", emptyDescription: "When a connected form, call, or CRM source provides an inquiry, it will appear here with source and qualification context.", primaryAction: { label: "View integrations", href: "/admin/integrations" } }} />; }
+export const dynamic = "force-dynamic";
+
+export default async function AdminLeadsPage() {
+  await requireAdminAccess();
+  const leads = await prisma.lead.findMany({ include: { client: { select: { businessName: true } } }, orderBy: { submittedAt: "desc" }, take: 200 });
+  return <LeadInbox mode="admin" leads={leads.map((lead) => ({ id: lead.id, clientName: lead.client.businessName, name: lead.name, phone: lead.phone, email: lead.email, service: lead.service, message: lead.message, source: lead.source, status: lead.status, submittedAt: lead.submittedAt.toISOString() }))} />;
+}

@@ -33,7 +33,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
-    where: access.user?.clientId ? { id: access.user.clientId } : { slug: "tony-roofing" },
+    where: { id: access.user?.clientId ?? "__no_client__" },
     include: {
       reports: { where: { id, isVisible: true } },
       metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } },
