@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- This migration was applied to the production Neon database before the
+-- migration directory was restored to this repository.
