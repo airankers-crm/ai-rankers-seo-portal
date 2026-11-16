@@ -47,7 +47,6 @@ const portalNavGroups: NavGroup[] = [
       { label: "Overview", href: "/portal", icon: LayoutDashboard },
       { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
       { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
-      { label: "Leads", href: "/portal/leads", icon: Inbox },
     ],
   },
   {
