@@ -11,7 +11,7 @@ type ProviderRun = {
   name: "GA4" | "GSC" | "GBP";
   configured: boolean;
   result?: GoogleProviderResult;
-  error?: string;
+  error?: { code: string; message: string };
 };
 
 type SyncSummary = {
@@ -44,7 +44,7 @@ function providerConfigured(name: ProviderRun["name"], integration: { ga4Propert
 }
 
 function providerWarning(name: ProviderRun["name"], integration: { ga4PropertyId: string | null; gscSiteUrl: string | null; gbpAccountId: string | null; gbpLocationId: string | null }) {
-  if (name === "GBP" && Boolean(integration.gbpAccountId) !== Boolean(integration.gbpLocationId)) return "GBP account and location must both be selected before GBP sync can run.";
+  if (name === "GBP" && Boolean(integration.gbpAccountId) !== Boolean(integration.gbpLocationId)) return { code: "GBP_RESOURCE_INCOMPLETE", message: "GBP account and location must both be selected before GBP sync can run." };
   return null;
 }
 
@@ -67,7 +67,7 @@ async function loadProviderResults(accessToken: string, integration: { ga4Proper
           ? await fetchGscMetrics(accessToken, integration.gscSiteUrl!, window)
           : await fetchGbpMetrics(accessToken, integration.gbpAccountId!, integration.gbpLocationId!, window);
     } catch (error) {
-      provider.error = safeError(error).message;
+      provider.error = safeError(error);
     }
   }
   return providers;
@@ -97,7 +97,7 @@ export async function syncGoogleClient(clientId: string, mode: GoogleSyncMode): 
     const window = getGoogleSyncWindow();
     const providers = await loadProviderResults(accessToken, integration, window);
     const points = providers.flatMap((provider) => provider.result?.points ?? []);
-    const warnings = providers.flatMap((provider) => [...(provider.result?.warnings ?? []), ...(provider.error ? [`${provider.name}: ${provider.error}`] : [])]);
+    const warnings = providers.flatMap((provider) => [...(provider.result?.warnings ?? []), ...(provider.error ? [`${provider.name}: ${provider.error.message}`] : [])]);
     const configuredProviders = providers.filter((provider) => provider.configured);
     const successfulProviders = configuredProviders.filter((provider) => provider.result).length;
     const failedProviders = configuredProviders.filter((provider) => provider.error).length;
@@ -105,12 +105,13 @@ export async function syncGoogleClient(clientId: string, mode: GoogleSyncMode): 
 
     const counts = await prisma.$transaction(async (transaction) => writePoints(clientId, points, transaction));
     const status = failedProviders === 0 && successfulProviders > 0 ? "SUCCEEDED" : successfulProviders > 0 ? "PARTIAL" : "FAILED";
-    const errorCode = status === "SUCCEEDED" ? null : failedProviders ? "GOOGLE_PROVIDER_SYNC_PARTIAL" : "GOOGLE_PROVIDER_SYNC_FAILED";
+    const providerErrors = providers.filter((provider) => provider.error).map((provider) => ({ provider: provider.name, code: provider.error!.code, message: provider.error!.message }));
+    const errorCode = status === "SUCCEEDED" ? null : providerErrors[0]?.code ?? (failedProviders ? "GOOGLE_PROVIDER_SYNC_PARTIAL" : "GOOGLE_PROVIDER_SYNC_FAILED");
     const errorMessage = warnings.length ? warnings.slice(0, 3).join(" ") : null;
     const completedAt = new Date();
 
     await prisma.$transaction(async (transaction) => {
-      await transaction.integrationSyncRun.update({ where: { id: run.id }, data: { status, completedAt, rowsFetched, rowsWritten: counts.written, rowsSkipped: counts.skipped, rowsOverridden: counts.overridden, warningCount: warnings.length, errorMessage, errorDetails: warnings.length ? { warnings: warnings.slice(0, 20) } : undefined } });
+      await transaction.integrationSyncRun.update({ where: { id: run.id }, data: { status, completedAt, rowsFetched, rowsWritten: counts.written, rowsSkipped: counts.skipped, rowsOverridden: counts.overridden, warningCount: warnings.length, errorMessage, errorDetails: warnings.length ? { warnings: warnings.slice(0, 20), providerErrors } : undefined } });
       await transaction.googleIntegration.update({ where: { id: integration.id }, data: { lastAttemptedAt: completedAt, ...(successfulProviders > 0 ? { lastSyncedAt: completedAt } : {}), status: "CONNECTED", lastErrorCode: errorCode, lastErrorMessage: errorMessage } });
     });
 
