@@ -1,4 +1,41 @@
-import { AdminOperationsPage } from "../../../components/admin-operations";
+import { prisma } from "@ai-rankers/db";
+import { GoogleIntegrationsAdmin } from "../../../components/google-integrations-admin";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
-export default async function AdminIntegrationsPage() { await requireAdminAccess(); return <AdminOperationsPage config={{ activeNav: "Integrations", title: "Integrations", description: "", sourceLabel: "Provider readiness", sourceDescription: "GA4, Search Console, GBP, ranking, and call/form adapter boundaries are not connected in this presentation build.", columns: [{ key: "provider", label: "Provider" }, { key: "coverage", label: "Coverage" }, { key: "status", label: "Status" }, { key: "nextStep", label: "Next step" }], rows: [{ id: "ga4", provider: "Google Analytics 4", coverage: "Organic sessions", status: "Not connected", nextStep: "Connect property" }, { id: "gsc", provider: "Google Search Console", coverage: "Queries · pages · impressions", status: "Not connected", nextStep: "Connect property" }, { id: "gbp", provider: "Google Business Profile", coverage: "Calls · views · reviews", status: "Not connected", nextStep: "Connect locations" }, { id: "crm", provider: "Forms / calls", coverage: "Inquiry to outcome", status: "Not connected", nextStep: "Choose provider" }], filters: [{ key: "status", label: "Status", options: ["Not connected", "Connecting", "Connected", "Delayed", "Error"] }], emptyTitle: "No providers configured", emptyDescription: "Provider cards will appear here with identifiers, scopes, freshness, errors, and reconnect actions.", primaryAction: { label: "Review sync health", href: "/admin/sync-health" } }} />; }
+export const dynamic = "force-dynamic";
+
+const errorMessages: Record<string, string> = {
+  google_oauth_not_configured: "Google OAuth is not configured yet. Add the Google Cloud OAuth environment variables before connecting.",
+  google_authorization_denied: "Google authorization was canceled.",
+  google_callback_invalid: "The Google callback was incomplete.",
+  google_callback_state_invalid: "The Google authorization state was invalid or expired.",
+  google_callback_state_reused: "The Google authorization callback has already been used.",
+  google_callback_failed: "Google connection failed. Review the integration error and try again.",
+  auth_required: "Super Admin authentication is required.",
+};
+
+export default async function AdminIntegrationsPage({ searchParams }: { searchParams?: Promise<{ error?: string; connected?: string }> }) {
+  await requireAdminAccess();
+  const params = await searchParams;
+  const clients = await prisma.client.findMany({
+    where: { status: { not: "ARCHIVED" } },
+    orderBy: { businessName: "asc" },
+    include: { googleIntegration: true },
+  });
+
+  return <GoogleIntegrationsAdmin
+    queryMessage={params?.connected === "1" ? "Google account connected. Discover and select the client resources next." : params?.error ? errorMessages[params.error] ?? "The Google integration request could not be completed." : null}
+    clients={clients.map((client) => ({
+      id: client.id,
+      businessName: client.businessName,
+      status: client.googleIntegration?.status ?? "DISCONNECTED",
+      googleAccountEmail: client.googleIntegration?.googleAccountEmail ?? null,
+      ga4PropertyId: client.googleIntegration?.ga4PropertyId ?? null,
+      gscSiteUrl: client.googleIntegration?.gscSiteUrl ?? null,
+      gbpAccountId: client.googleIntegration?.gbpAccountId ?? null,
+      gbpLocationId: client.googleIntegration?.gbpLocationId ?? null,
+      lastSyncedAt: client.googleIntegration?.lastSyncedAt?.toISOString() ?? null,
+      lastErrorMessage: client.googleIntegration?.lastErrorMessage ?? null,
+    }))}
+  />;
+}

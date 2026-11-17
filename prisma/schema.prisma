@@ -31,6 +31,28 @@ enum ClientStatus {
   ARCHIVED
 }
 
+enum GoogleIntegrationStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  RECONNECT_REQUIRED
+  ERROR
+}
+
+enum IntegrationSyncStatus {
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELED
+}
+
+enum IntegrationSyncMode {
+  INITIAL_BACKFILL
+  MANUAL
+  SCHEDULED
+}
+
 enum SectionKind {
   OVERVIEW
   GBP
@@ -163,6 +185,7 @@ model User {
   feedbackSubmissions Feedback[]
   chatGroupsCreated ChatGroup[]         @relation("ChatGroupCreator")
   chatMessages      ChatMessage[]       @relation("ChatMessageSender")
+  googleOAuthStates GoogleOAuthState[]
 }
 
 model Client {
@@ -195,6 +218,9 @@ model Client {
   feedback      Feedback[]
   leads         Lead[]
   chatGroups    ChatGroup[]
+  googleIntegration GoogleIntegration?
+  integrationSyncRuns IntegrationSyncRun[]
+  googleOAuthStates GoogleOAuthState[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
@@ -571,4 +597,72 @@ model AuditLog {
 
   @@index([clientId, createdAt])
   @@index([actorId, createdAt])
+}
+
+model GoogleIntegration {
+  id                    String                   @id @default(cuid())
+  clientId              String                   @unique
+  status                GoogleIntegrationStatus  @default(DISCONNECTED)
+  googleAccountEmail    String?
+  googleSubject         String?
+  scopes                String[]                 @default([])
+  ga4PropertyId         String?
+  gscSiteUrl            String?
+  gbpAccountId          String?
+  gbpLocationId         String?
+  encryptedRefreshToken String?
+  encryptedAccessToken  String?
+  accessTokenExpiresAt  DateTime?
+  lastSyncedAt          DateTime?
+  lastAttemptedAt       DateTime?
+  lastErrorCode         String?
+  lastErrorMessage      String?
+  connectedAt           DateTime?
+  disconnectedAt        DateTime?
+  client                Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  syncRuns              IntegrationSyncRun[]
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  @@index([status, lastSyncedAt])
+}
+
+model IntegrationSyncRun {
+  id              String               @id @default(cuid())
+  integrationId   String
+  clientId        String
+  mode            IntegrationSyncMode
+  status          IntegrationSyncStatus @default(RUNNING)
+  startedAt       DateTime             @default(now())
+  completedAt     DateTime?
+  rowsFetched     Int                  @default(0)
+  rowsWritten     Int                  @default(0)
+  rowsSkipped     Int                  @default(0)
+  rowsOverridden  Int                  @default(0)
+  warningCount    Int                  @default(0)
+  errorMessage    String?
+  errorDetails    Json?
+  integration     GoogleIntegration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  client          Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, startedAt])
+  @@index([integrationId, startedAt])
+  @@index([status, startedAt])
+}
+
+model GoogleOAuthState {
+  id                    String   @id @default(cuid())
+  stateHash             String   @unique
+  clientId              String
+  userId                String
+  returnPath            String
+  encryptedCodeVerifier String
+  expiresAt             DateTime
+  consumedAt            DateTime?
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+
+  @@index([clientId, expiresAt])
+  @@index([userId, expiresAt])
 }

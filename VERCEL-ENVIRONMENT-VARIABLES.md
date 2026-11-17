@@ -14,6 +14,11 @@ Configure these variables for both Preview and Production as appropriate:
 | `NEON_AUTH_COOKIE_SECRET` | Yes for authentication | `lib/auth/server.ts` | Private cookie-signing secret. Generate a strong production-only value. |
 | `METFORM_WEBHOOK_SECRET` | Yes for lead intake | `app/api/webhooks/metform/[clientId]/route.ts` | Private shared secret used by WordPress MetForm to authenticate lead submissions. |
 | `APP_ORIGIN` | Recommended | `proxy.ts` | Canonical browser origin used for CSRF/Origin validation, such as `https://portal.example.com`. |
+| `INTEGRATION_ENCRYPTION_KEY` | Yes before connecting Google | `lib/security/encryption.ts` | Base64-encoded 32-byte AES-256-GCM key for encrypting Google credentials and OAuth PKCE verifiers. |
+| `GOOGLE_CLIENT_ID` | Yes before connecting Google | Google OAuth boundary | OAuth client ID from Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | Yes before connecting Google | Google OAuth boundary | OAuth client secret from Google Cloud Console; server-only. |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Yes before connecting Google | Google OAuth callback | Exact registered OAuth callback URL. |
+| `CRON_SECRET` | Yes before scheduled sync | Google sync cron boundary | Server-only bearer secret for scheduled sync requests. |
 
 ## Optional or provider-managed values
 

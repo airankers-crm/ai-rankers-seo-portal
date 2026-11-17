@@ -54,7 +54,7 @@ export default function proxy(request: NextRequest) {
   const auth = getAuth();
   if (!auth) return NextResponse.next();
 
-  const adminRequest = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/");
+  const adminRequest = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/") || pathname.startsWith("/api/integrations/google");
 
   return auth.middleware({
     loginUrl: adminRequest ? "/admin/login" : "/client/login",

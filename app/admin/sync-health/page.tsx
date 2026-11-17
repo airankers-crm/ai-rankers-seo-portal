@@ -1,4 +1,34 @@
+import { prisma } from "@ai-rankers/db";
 import { AdminOperationsPage } from "../../../components/admin-operations";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
-export default async function AdminSyncHealthPage() { await requireAdminAccess(); return <AdminOperationsPage config={{ activeNav: "Integrations", title: "Sync health", description: "See source freshness, coverage, warnings, retries, and affected metrics before a report is published.", sourceLabel: "Sync run boundary", sourceDescription: "No provider sync runs exist in the current database. The screen is intentionally explicit about the absence of freshness evidence.", columns: [{ key: "source", label: "Source" }, { key: "freshness", label: "Freshness" }, { key: "coverage", label: "Coverage" }, { key: "status", label: "Status" }], filters: [{ key: "status", label: "Status", options: ["Healthy", "Delayed", "Error", "Not connected"] }], emptyTitle: "No sync runs to review", emptyDescription: "Connect a provider to begin recording attempted syncs, rows, warnings, retries, and affected metrics.", primaryAction: { label: "Open integrations", href: "/admin/integrations" } }} />; }
+export const dynamic = "force-dynamic";
+
+export default async function AdminSyncHealthPage() {
+  await requireAdminAccess();
+  const runs = await prisma.integrationSyncRun.findMany({ orderBy: { startedAt: "desc" }, take: 50, include: { client: true, integration: true } });
+  const rows = runs.map((run) => ({
+    id: run.clientId,
+    client: run.client.businessName,
+    provider: "Google",
+    mode: run.mode === "INITIAL_BACKFILL" ? "Initial backfill" : run.mode === "SCHEDULED" ? "Scheduled" : "Manual",
+    status: run.status,
+    freshness: run.completedAt?.toLocaleString("en-US") ?? "Running",
+    coverage: `${run.rowsWritten} written · ${run.rowsOverridden} overrides · ${run.rowsSkipped} skipped`,
+    error: run.errorMessage ?? "—",
+  }));
+
+  return <AdminOperationsPage config={{
+    activeNav: "Integrations",
+    title: "Sync health",
+    description: "Review Google sync attempts, freshness, coverage, overrides, and errors across client workspaces.",
+    sourceLabel: "Google sync runs",
+    sourceDescription: runs.length ? "Recent Google integration runs are loaded from the tenant-scoped database." : "No Google sync runs exist yet. Connect a client and start a provider sync to begin recording health data.",
+    columns: [{ key: "client", label: "Client" }, { key: "provider", label: "Provider" }, { key: "mode", label: "Mode" }, { key: "status", label: "Status" }, { key: "freshness", label: "Completed" }, { key: "coverage", label: "Coverage" }, { key: "error", label: "Error" }],
+    filters: [{ key: "status", label: "Status", options: ["RUNNING", "SUCCEEDED", "PARTIAL", "FAILED", "CANCELED"] }],
+    rows,
+    emptyTitle: "No sync runs to review",
+    emptyDescription: "Connect a Google account from Integrations before running a sync.",
+    primaryAction: { label: "Open integrations", href: "/admin/integrations" },
+  }} />;
+}
