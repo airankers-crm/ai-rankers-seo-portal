@@ -28,6 +28,12 @@ type SyncSummary = {
 
 function safeError(error: unknown) {
   if (error instanceof GoogleOAuthError) return { code: error.code, message: error.message };
+  if (error instanceof Error) {
+    const cause = error.cause && typeof error.cause === "object" ? error.cause as { code?: unknown; name?: unknown } : null;
+    const causeCode = typeof cause?.code === "string" ? cause.code : typeof cause?.name === "string" ? cause.name : error.name;
+    const normalizedCode = causeCode.toUpperCase().replace(/[^A-Z0-9_]+/g, "_").slice(0, 48) || "ERROR";
+    return { code: `GOOGLE_${normalizedCode}`, message: "Google data could not be loaded for this provider." };
+  }
   return { code: "GOOGLE_PROVIDER_ERROR", message: "Google data could not be loaded for this provider." };
 }
 
