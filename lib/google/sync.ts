@@ -28,6 +28,9 @@ type SyncSummary = {
 
 function safeError(error: unknown) {
   if (error instanceof GoogleOAuthError) return { code: error.code, message: error.message };
+  if (error && typeof error === "object" && "code" in error && typeof error.code === "string" && /^P\d{4}$/.test(error.code)) {
+    return { code: `PRISMA_${error.code}`, message: "Google data could not be saved to the reporting database." };
+  }
   if (error instanceof Error) {
     const cause = error.cause && typeof error.cause === "object" ? error.cause as { code?: unknown; name?: unknown } : null;
     const causeCode = typeof cause?.code === "string" ? cause.code : typeof cause?.name === "string" ? cause.name : error.name;
@@ -103,7 +106,7 @@ export async function syncGoogleClient(clientId: string, mode: GoogleSyncMode): 
     const failedProviders = configuredProviders.filter((provider) => provider.error).length;
     const rowsFetched = points.length;
 
-    const counts = await prisma.$transaction(async (transaction) => writePoints(clientId, points, transaction));
+    const counts = await prisma.$transaction(async (transaction) => writePoints(clientId, points, transaction), { maxWait: 10_000, timeout: 30_000 });
     const status = failedProviders === 0 && successfulProviders > 0 ? "SUCCEEDED" : successfulProviders > 0 ? "PARTIAL" : "FAILED";
     const providerErrors = providers.filter((provider) => provider.error).map((provider) => ({ provider: provider.name, code: provider.error!.code, message: provider.error!.message }));
     const errorCode = status === "SUCCEEDED" ? null : providerErrors[0]?.code ?? (failedProviders ? "GOOGLE_PROVIDER_SYNC_PARTIAL" : "GOOGLE_PROVIDER_SYNC_FAILED");
