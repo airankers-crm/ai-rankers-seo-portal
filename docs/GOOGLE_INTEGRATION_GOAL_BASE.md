@@ -28,7 +28,7 @@ Provider data must not be collapsed into a generic Google dashboard or rendered 
 - Replaced the placeholder Super Admin Integrations page.
 - Connected Sync Health to persisted sync-run records.
 - Added live GA4 Data API, Search Console Search Analytics, and GBP Performance/review fetchers.
-- Added idempotent twelve-month backfill writes, manual Sync now, and twice-daily scheduled sync.
+- Added idempotent twelve-month backfill writes, manual Sync now, and a protected daily scheduled sync compatible with the current Vercel plan.
 - Added safe partial-provider error handling and compound tenant integrity for sync runs.
 
 ## Remaining implementation phases

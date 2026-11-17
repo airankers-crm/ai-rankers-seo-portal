@@ -33,7 +33,7 @@ Implemented in this release and requiring live-provider QA:
 - Live Search Console Search Analytics fetchers in `lib/google/reporting.ts`.
 - Live GBP Performance and review fetchers in `lib/google/reporting.ts`.
 - Twelve-month historical backfill execution through the sync worker.
-- Twice-daily `/api/cron/google-sync` route and multi-client orchestration.
+- Daily `/api/cron/google-sync` route and multi-client orchestration.
 - Idempotent provider writes into `MetricValue`, with manual override protection.
 
 No fake provider records may be introduced to make a blocked test pass.
