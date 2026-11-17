@@ -27,14 +27,14 @@ Implemented foundation:
 - Super Admin Integrations page backed by real client and integration records.
 - Sync Health page backed by persisted sync-run records.
 
-Not yet available and therefore requiring a separate QA gate:
+Implemented in this release and requiring live-provider QA:
 
-- Live GA4 reporting fetchers.
-- Live Search Console Search Analytics fetchers.
-- Live GBP Performance reporting fetchers.
-- Six-to-twelve-month historical backfill execution.
-- Twice-daily cron route and batch orchestration.
-- Production sync writes from provider responses into `MetricValue`.
+- Live GA4 reporting fetchers in `lib/google/reporting.ts`.
+- Live Search Console Search Analytics fetchers in `lib/google/reporting.ts`.
+- Live GBP Performance and review fetchers in `lib/google/reporting.ts`.
+- Twelve-month historical backfill execution through the sync worker.
+- Twice-daily `/api/cron/google-sync` route and multi-client orchestration.
+- Idempotent provider writes into `MetricValue`, with manual override protection.
 
 No fake provider records may be introduced to make a blocked test pass.
 
@@ -214,6 +214,18 @@ Use distinct client IDs and distinct provider resource identifiers. Never reuse 
 | J-04 | Record a partial run | Successful provider counts and failed-provider warning are distinguishable | Screenshot/database |
 | J-05 | Inspect client portal after failed run | Previously published safe data remains available; no raw error appears | Screenshot |
 
+### K. Live provider sync
+
+| ID | Test | Expected result | Evidence |
+| --- | --- | --- | --- |
+| K-01 | Click “Sync Google data now” for a connected client with selected resources | A manual run is recorded and provider values are written to the correct tenant | Sync Health and database query |
+| K-02 | Run the same manual sync twice | Existing non-overridden periods update idempotently; duplicate values are not created | Unique-constraint/query evidence |
+| K-03 | Configure only GA4 | GA4 succeeds while unconfigured GSC/GBP are reported as warnings; no fake rows are created | Sync summary/database |
+| K-04 | Send a cron request without the bearer secret | HTTP 401; no provider request or database mutation occurs | Response/log evidence |
+| K-05 | Send a cron request with the configured secret | Connected clients are processed and only sanitized summaries are returned | Response/log evidence |
+| K-06 | Make one provider return an API error | Run becomes PARTIAL when another provider succeeds; prior values remain intact | Sync Health/database |
+| K-07 | Run sync with an overridden period | Override remains unchanged and `rowsOverridden` increments | Database/result |
+
 ## Security QA gates
 
 The release fails QA if any of the following occurs:
@@ -239,7 +251,7 @@ Attach the following evidence before enabling production connections:
 6. Database evidence for tenant IDs, encrypted token fields, selected resource IDs, and audit logs.
 7. Manual override preservation evidence.
 8. One end-to-end evidence set for each page mapping: GSC → Website SEO, GA4 → Analytics, GBP → GBP Performance.
-9. A documented list of remaining provider sync/backfill/cron tests if those components are not yet enabled.
+9. Live-provider evidence for K-01 through K-07, with API responses and credentials redacted.
 
 ## QA completion definition
 

@@ -86,6 +86,22 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
     }
   }
 
+  async function syncNow() {
+    if (!selected) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/integrations/google/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: selected.id }) });
+      const payload = await response.json() as { summary?: { status: string; rowsWritten: number; warningCount: number }; error?: string };
+      if (!response.ok || !payload.summary) throw new Error(payload.error ?? "Google sync could not be completed.");
+      setMessage(`${payload.summary.status === "SUCCEEDED" ? "Google data synced" : "Google sync completed with warnings"}: ${payload.summary.rowsWritten} values written${payload.summary.warningCount ? `, ${payload.summary.warningCount} warning(s)` : ""}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Google sync could not be completed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function disconnect() {
     if (!selected || !window.confirm(`Disconnect Google for ${selected.businessName}?`)) return;
     setBusy(true);
@@ -110,7 +126,7 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
       {selected ? <section className="card" style={{ padding: 18 }}>
         <div className="page-heading" style={{ marginBottom: 18 }}><div><p className="eyebrow">Google connection</p><h2>{selected.businessName}</h2><p>{selected.googleAccountEmail ?? "No Google account connected"}</p></div><span className={`status ${selected.status === "CONNECTED" ? "complete" : selected.status === "ERROR" || selected.status === "RECONNECT_REQUIRED" ? "urgent" : "planned"}`}>{statusLabel(selected.status)}</span></div>
         {selected.status === "CONNECTED" ? <>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}><button className="button" type="button" onClick={discover} disabled={busy}><RefreshCw size={14} /> {busy ? "Loading" : "Discover Google resources"}</button><button className="button" type="button" onClick={disconnect} disabled={busy}><Unplug size={14} /> Disconnect</button></div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}><button className="button" type="button" onClick={discover} disabled={busy}><RefreshCw size={14} /> {busy ? "Loading" : "Discover Google resources"}</button><button className="button primary" type="button" onClick={syncNow} disabled={busy}><RefreshCw size={14} /> {busy ? "Syncing" : "Sync Google data now"}</button><button className="button" type="button" onClick={disconnect} disabled={busy}><Unplug size={14} /> Disconnect</button></div>
           <div className="setup-source-layout">
             <label><span className="eyebrow">GA4 property</span><select value={ga4PropertyId} onChange={(event) => setGa4PropertyId(event.target.value)} disabled={!resources || busy}><option value="">Select a GA4 property</option>{resources?.ga4Properties.map((property) => <option key={property.id} value={property.id}>{property.label} ({property.id})</option>)}</select></label>
             <label><span className="eyebrow">Search Console site</span><select value={gscSiteUrl} onChange={(event) => setGscSiteUrl(event.target.value)} disabled={!resources || busy}><option value="">Select a Search Console site</option>{resources?.gscSites.map((site) => <option key={site.id} value={site.id}>{site.label}</option>)}</select></label>

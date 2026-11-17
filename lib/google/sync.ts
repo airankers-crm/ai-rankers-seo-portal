@@ -1,0 +1,127 @@
+import { prisma } from "@ai-rankers/db";
+import type { Prisma } from "@prisma/client";
+import { provisionGoogleMetrics, writeGoogleMetricValue } from "./provision";
+import { fetchGa4Metrics, fetchGbpMetrics, fetchGscMetrics, getGoogleSyncWindow, type GoogleMetricPoint, type GoogleProviderResult } from "./reporting";
+import { GoogleOAuthError } from "./oauth";
+import { getGoogleAccessToken } from "./tokens";
+
+export type GoogleSyncMode = "INITIAL_BACKFILL" | "MANUAL" | "SCHEDULED";
+
+type ProviderRun = {
+  name: "GA4" | "GSC" | "GBP";
+  configured: boolean;
+  result?: GoogleProviderResult;
+  error?: string;
+};
+
+type SyncSummary = {
+  clientId: string;
+  status: "SUCCEEDED" | "PARTIAL" | "FAILED";
+  rowsFetched: number;
+  rowsWritten: number;
+  rowsSkipped: number;
+  rowsOverridden: number;
+  warningCount: number;
+  warnings: string[];
+  errorCode?: string;
+};
+
+function safeError(error: unknown) {
+  if (error instanceof GoogleOAuthError) return { code: error.code, message: error.message };
+  return { code: "GOOGLE_PROVIDER_ERROR", message: "Google data could not be loaded for this provider." };
+}
+
+function providerConfigured(name: ProviderRun["name"], integration: { ga4PropertyId: string | null; gscSiteUrl: string | null; gbpAccountId: string | null; gbpLocationId: string | null }) {
+  if (name === "GA4") return Boolean(integration.ga4PropertyId);
+  if (name === "GSC") return Boolean(integration.gscSiteUrl);
+  return Boolean(integration.gbpAccountId && integration.gbpLocationId);
+}
+
+function providerWarning(name: ProviderRun["name"], integration: { ga4PropertyId: string | null; gscSiteUrl: string | null; gbpAccountId: string | null; gbpLocationId: string | null }) {
+  if (name === "GBP" && Boolean(integration.gbpAccountId) !== Boolean(integration.gbpLocationId)) return "GBP account and location must both be selected before GBP sync can run.";
+  return null;
+}
+
+async function loadProviderResults(accessToken: string, integration: { ga4PropertyId: string | null; gscSiteUrl: string | null; gbpAccountId: string | null; gbpLocationId: string | null }, window: ReturnType<typeof getGoogleSyncWindow>) {
+  const providers: ProviderRun[] = [
+    { name: "GA4", configured: providerConfigured("GA4", integration) },
+    { name: "GSC", configured: providerConfigured("GSC", integration) },
+    { name: "GBP", configured: providerConfigured("GBP", integration) },
+  ];
+
+  for (const provider of providers) {
+    if (!provider.configured) {
+      provider.error = providerWarning(provider.name, integration) ?? undefined;
+      continue;
+    }
+    try {
+      provider.result = provider.name === "GA4"
+        ? await fetchGa4Metrics(accessToken, integration.ga4PropertyId!, window)
+        : provider.name === "GSC"
+          ? await fetchGscMetrics(accessToken, integration.gscSiteUrl!, window)
+          : await fetchGbpMetrics(accessToken, integration.gbpAccountId!, integration.gbpLocationId!, window);
+    } catch (error) {
+      provider.error = safeError(error).message;
+    }
+  }
+  return providers;
+}
+
+async function writePoints(clientId: string, points: GoogleMetricPoint[], database: Prisma.TransactionClient) {
+  const counts = { written: 0, skipped: 0, overridden: 0 };
+  for (const point of points) {
+    const result = await writeGoogleMetricValue({ clientId, ...point }, database);
+    if (result === "created" || result === "updated") counts.written += 1;
+    if (result === "missing_metric") counts.skipped += 1;
+    if (result === "overridden") counts.overridden += 1;
+  }
+  return counts;
+}
+
+export async function syncGoogleClient(clientId: string, mode: GoogleSyncMode): Promise<SyncSummary> {
+  const integration = await prisma.googleIntegration.findUnique({ where: { clientId } });
+  if (!integration) throw new GoogleOAuthError("GOOGLE_INTEGRATION_NOT_FOUND", "Google is not connected for this client.", 404);
+
+  const run = await prisma.integrationSyncRun.create({ data: { integrationId: integration.id, clientId, mode, status: "RUNNING" } });
+  await prisma.googleIntegration.update({ where: { id: integration.id }, data: { lastAttemptedAt: new Date() } });
+
+  try {
+    const { accessToken } = await getGoogleAccessToken(clientId);
+    await provisionGoogleMetrics(clientId);
+    const window = getGoogleSyncWindow();
+    const providers = await loadProviderResults(accessToken, integration, window);
+    const points = providers.flatMap((provider) => provider.result?.points ?? []);
+    const warnings = providers.flatMap((provider) => [...(provider.result?.warnings ?? []), ...(provider.error ? [`${provider.name}: ${provider.error}`] : [])]);
+    const configuredProviders = providers.filter((provider) => provider.configured);
+    const successfulProviders = configuredProviders.filter((provider) => provider.result).length;
+    const failedProviders = configuredProviders.filter((provider) => provider.error).length;
+    const rowsFetched = points.length;
+
+    const counts = await prisma.$transaction(async (transaction) => writePoints(clientId, points, transaction));
+    const status = failedProviders === 0 && successfulProviders > 0 ? "SUCCEEDED" : successfulProviders > 0 ? "PARTIAL" : "FAILED";
+    const errorCode = status === "SUCCEEDED" ? null : failedProviders ? "GOOGLE_PROVIDER_SYNC_PARTIAL" : "GOOGLE_PROVIDER_SYNC_FAILED";
+    const errorMessage = warnings.length ? warnings.slice(0, 3).join(" ") : null;
+    const completedAt = new Date();
+
+    await prisma.$transaction(async (transaction) => {
+      await transaction.integrationSyncRun.update({ where: { id: run.id }, data: { status, completedAt, rowsFetched, rowsWritten: counts.written, rowsSkipped: counts.skipped, rowsOverridden: counts.overridden, warningCount: warnings.length, errorMessage, errorDetails: warnings.length ? { warnings: warnings.slice(0, 20) } : undefined } });
+      await transaction.googleIntegration.update({ where: { id: integration.id }, data: { lastAttemptedAt: completedAt, ...(successfulProviders > 0 ? { lastSyncedAt: completedAt } : {}), status: "CONNECTED", lastErrorCode: errorCode, lastErrorMessage: errorMessage } });
+    });
+
+    return { clientId, status, rowsFetched, rowsWritten: counts.written, rowsSkipped: counts.skipped, rowsOverridden: counts.overridden, warningCount: warnings.length, warnings, ...(errorCode ? { errorCode } : {}) };
+  } catch (error) {
+    const safe = safeError(error);
+    await prisma.$transaction(async (transaction) => {
+      await transaction.integrationSyncRun.update({ where: { id: run.id }, data: { status: "FAILED", completedAt: new Date(), warningCount: 1, errorMessage: safe.message, errorDetails: { code: safe.code } } });
+      await transaction.googleIntegration.update({ where: { id: integration.id }, data: { lastAttemptedAt: new Date(), lastErrorCode: safe.code, lastErrorMessage: safe.message, ...(safe.code === "invalid_grant" || safe.code === "unauthorized_client" ? { status: "RECONNECT_REQUIRED" } : {}) } });
+    });
+    return { clientId, status: "FAILED", rowsFetched: 0, rowsWritten: 0, rowsSkipped: 0, rowsOverridden: 0, warningCount: 1, warnings: [safe.message], errorCode: safe.code };
+  }
+}
+
+export async function syncAllConnectedClients(mode: GoogleSyncMode) {
+  const integrations = await prisma.googleIntegration.findMany({ where: { status: "CONNECTED" }, select: { clientId: true } });
+  const results: SyncSummary[] = [];
+  for (const integration of integrations) results.push(await syncGoogleClient(integration.clientId, mode));
+  return results;
+}

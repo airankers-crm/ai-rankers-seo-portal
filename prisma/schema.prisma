@@ -625,6 +625,7 @@ model GoogleIntegration {
   updatedAt             DateTime                 @updatedAt
 
   @@index([status, lastSyncedAt])
+  @@unique([id, clientId])
 }
 
 model IntegrationSyncRun {
@@ -642,7 +643,7 @@ model IntegrationSyncRun {
   warningCount    Int                  @default(0)
   errorMessage    String?
   errorDetails    Json?
-  integration     GoogleIntegration   @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  integration     GoogleIntegration   @relation(fields: [integrationId, clientId], references: [id, clientId], onDelete: Cascade)
   client          Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, startedAt])

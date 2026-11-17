@@ -15,6 +15,7 @@ const publicRoutes = [
   "/auth/reset-password",
   "/api/auth/redirect",
   "/api/health/db",
+  "/api/cron/google-sync",
   "/api/webhooks/metform",
 ];
 
