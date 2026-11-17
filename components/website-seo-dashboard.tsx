@@ -79,7 +79,7 @@ function initialRange(): DateRangeSelection {
 }
 
 function formatMetric(value: number | null, format: WebsiteSeoMetric["format"]) {
-  if (value === null) return "—";
+  if (value === null) return "0";
   if (format === "PERCENT") return `${value.toFixed(1)}%`;
   if (format === "CURRENCY") return `$${value.toLocaleString()}`;
   if (format === "DECIMAL") return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -87,7 +87,7 @@ function formatMetric(value: number | null, format: WebsiteSeoMetric["format"]) 
 }
 
 function compactMetric(value: number | null, format: WebsiteSeoMetric["format"]) {
-  if (value === null) return "—";
+  if (value === null) return "0";
   if (format === "INTEGER" && value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return formatMetric(value, format);
 }
@@ -132,13 +132,16 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
   const [query, setQuery] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{ label: string; value: number; x: number; y: number } | null>(null);
   const [activeMetricKey, setActiveMetricKey] = useState<WebsiteMetricKey>("organicTraffic");
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
-  const acquisitionChannels = channels?.length ? channels : presentationChannels;
+  const hasReportingData = rows.length > 0 || metrics.some((metric) => metric.value !== null);
+  const zeroChannels = presentationChannels.map((channel) => ({ ...channel, value: 0 }));
+  const acquisitionChannels = channels?.length ? channels : hasReportingData ? presentationChannels : zeroChannels;
   const acquisitionTotal = acquisitionChannels.reduce((total, channel) => total + channel.value, 0);
   const topChannel = acquisitionChannels.reduce<WebsiteSeoChannel | undefined>((top, channel) => !top || channel.value > top.value ? channel : top, undefined);
   const activeChannel = acquisitionChannels.find((channel) => channel.key === (selectedChannel ?? topChannel?.key)) ?? topChannel;
-  const channelIsPreview = !channels?.length;
+  const channelIsPreview = !channels?.length && hasReportingData;
 
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -156,15 +159,19 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
   const previousRow = visibleRows.at(-2);
   const previousYearRow = latestRow ? (() => { const target = new Date(latestRow.periodStart); target.setUTCFullYear(target.getUTCFullYear() - 1); return rows.find((row) => row.periodStart.slice(0, 7) === target.toISOString().slice(0, 7)); })() : undefined;
   const comparisonRow = dateRange.compare === "Previous year" ? previousYearRow : previousRow;
-  const hasPublishedData = rows.length > 0;
   const chartRows = visibleRows.filter((row) => row[activeMetricKey] !== null);
   const chartData = chartRows.map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
+  const emptyChartData = Array.from({ length: 13 }, (_, index) => ({ label: index === 0 ? visibleRows[0]?.periodLabel ?? "Start" : index === 12 ? visibleRows.at(-1)?.periodLabel ?? "Now" : `Point ${index + 1}`, value: 0 }));
+  const displayChartData = chartData.length > 1 ? chartData : chartData.length === 1 ? [{ ...chartData[0] }, { label: "Now", value: chartData[0].value }] : emptyChartData;
   const activeMetric = metricDefinitions.find((metric) => metric.key === activeMetricKey);
   const sourceLabels = [...new Set(metrics.map((metric) => metric.source))].join(", ");
   const comparisonAvailable = dateRange.compare !== "None" && Boolean(comparisonRow);
   const comparisonLabel = dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? dateRange.compare === "Previous year" ? "vs previous year" : "vs previous period" : "Comparison unavailable";
   const comparisonPeriodLabel = comparisonRow?.periodLabel ?? "the previous period";
   const insightComparison = dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? `${renderChange(metricChange(latestRow?.organicTraffic ?? null, comparisonRow?.organicTraffic ?? null))} vs ${dateRange.compare === "Previous year" ? "previous year" : comparisonPeriodLabel}` : "No comparison available for the selected range";
+  const acquisitionGradient = acquisitionTotal > 0 ? `conic-gradient(${acquisitionChannels.reduce<{ stops: string[]; offset: number }>((result, channel) => { const start = result.offset; const end = start + (channel.value / acquisitionTotal) * 100; result.stops.push(`${channel.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`); result.offset = end; return result; }, { stops: [], offset: 0 }).stops.join(", ")})` : "conic-gradient(#e7edf4 0 100%)";
+  const zeroTableRow: WebsiteSeoRow = { periodStart: "empty", periodLabel: "No published data", organicTraffic: 0, impressions: 0, topTen: 0 };
+  const tableRows = visibleRows.length > 0 ? visibleRows : query ? [] : [zeroTableRow];
 
   const handleDonutMove = (event: MouseEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -182,6 +189,18 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
     setHoveredChannel(channel?.key ?? null);
   };
 
+  const handleChartMove = (event: MouseEvent<HTMLDivElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const relativeX = Math.min(Math.max(event.clientX - bounds.left, 0), bounds.width);
+    const chartX = (relativeX / Math.max(bounds.width, 1)) * trendChartFrame.width;
+    const index = Math.round(((chartX - trendChartFrame.paddingX) / (trendChartFrame.width - trendChartFrame.paddingX * 2)) * (displayChartData.length - 1));
+    const safeIndex = Math.min(displayChartData.length - 1, Math.max(0, index));
+    const point = displayChartData[safeIndex];
+    if (!point) return;
+    const x = trendChartFrame.paddingX + (safeIndex / Math.max(displayChartData.length - 1, 1)) * (trendChartFrame.width - trendChartFrame.paddingX * 2);
+    setHoveredPoint({ label: point.label, value: point.value, x, y: chartY(point.value, displayChartData) });
+  };
+
   function resetFilters() {
     setDateRange(initialRange());
     setQuery("");
@@ -190,14 +209,14 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
     setActiveMetricKey("organicTraffic");
   }
 
-  return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO" hiddenNav={isSectionPublished ? [] : ["Website SEO"]} presentationMode>
+  return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Website SEO">
     <div className="content website-seo-final" aria-label={`${sectionName} performance report`}>
       <div className="page-heading website-seo-final-heading">
         <div>
           <h1>Website SEO performance</h1>
           <p>{clientName} · Organic sessions, search visibility, and keyword growth.</p>
         </div>
-        {isDraftPreview ? <div className="heading-actions"><span className="data-confidence data-confidence-preview"><CheckCircle2 size={13} /> Draft preview · not client-visible</span></div> : null}
+        {isDraftPreview ? <div className="heading-actions"><span className="data-confidence data-confidence-preview"><CheckCircle2 size={13} /> Draft preview · not client-visible</span></div> : !isSectionPublished ? <div className="heading-actions"><span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Section not published · showing 0 until sync</span></div> : null}
       </div>
 
       <section className="website-seo-filter-bar" aria-label="Filter Website SEO report">
@@ -211,7 +230,7 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
         </div>
       </section>
 
-      {hasPublishedData ? <>
+      <>
         <div className="website-seo-kpi-grid">
           {metricDefinitions.map((definition) => {
             const metric = metricMap.get(definition.key);
@@ -219,21 +238,21 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website SEO", b
             const previous = comparisonRow?.[definition.key] ?? null;
             const change = comparisonAvailable ? metricChange(current, previous) : null;
             const Icon = definition.icon;
-            return <article className="card website-seo-kpi" key={definition.key}><div className="website-seo-kpi-top"><span className="website-seo-kpi-label"><Icon size={16} /> {metric?.label ?? definition.label}</span><span className="website-seo-period-badge">Latest period</span><span className="source-badge">{metric?.source ?? "—"}</span></div><strong>{compactMetric(current, metric?.format ?? "INTEGER")}</strong><div className="website-seo-kpi-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {renderChange(change)}</span>{change !== null ? <span>{comparisonLabel}</span> : null}</div></article>;
+             return <article className="card website-seo-kpi" key={definition.key}><div className="website-seo-kpi-top"><span className="website-seo-kpi-label"><Icon size={16} /> {metric?.label ?? definition.label}</span><span className="website-seo-period-badge">{hasReportingData ? "Latest period" : "Awaiting data"}</span><span className={`source-badge${metric ? "" : " pending"}`}>{metric?.source ?? "Awaiting data"}</span></div><strong>{compactMetric(current, metric?.format ?? "INTEGER")}</strong><div className="website-seo-kpi-foot"><span className={change === null || change >= 0 ? "trend-up" : "trend-down"}>{change !== null && (change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />)} {renderChange(change)}</span>{change !== null ? <span>{comparisonLabel}</span> : <span>Awaiting comparison</span>}</div></article>;
           })}
         </div>
 
         <div className="website-seo-main-grid">
-          <section className="card website-seo-chart-card" aria-labelledby="website-seo-chart-title"><div className="website-seo-card-heading"><h2 id="website-seo-chart-title">SEO performance over time</h2></div><div className="website-seo-chart-tabs" role="tablist" aria-label="Website SEO trend metrics">{metricDefinitions.map((definition) => <button key={definition.key} type="button" role="tab" aria-selected={activeMetricKey === definition.key} className={activeMetricKey === definition.key ? "active" : ""} onClick={() => setActiveMetricKey(definition.key)}>{definition.label}</button>)}</div>{chartData.length > 1 ? <div className="website-seo-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "SEO"} trend chart`}><svg viewBox={`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`} preserveAspectRatio="none"><defs><linearGradient id="websiteSeoTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a085" stopOpacity=".25" /><stop offset="100%" stopColor="#16a085" stopOpacity=".02" /></linearGradient></defs>{[0, 1, 2, 3, 4].map((line) => { const y = trendChartFrame.plotTop + (line / 4) * (trendChartFrame.plotBottom - trendChartFrame.plotTop); return <line key={line} x1={trendChartFrame.paddingX} x2={trendChartFrame.width - trendChartFrame.paddingX} y1={y} y2={y} className="website-seo-grid-line" />; })}<path d={`${chartPath(chartData)} L${trendChartFrame.width - trendChartFrame.paddingX} ${trendChartFrame.plotBottom} L${trendChartFrame.paddingX} ${trendChartFrame.plotBottom} Z`} fill="url(#websiteSeoTrendFill)" /><path d={chartPath(chartData)} className="website-seo-chart-line" fill="none" />{chartData.map((point, index) => { const x = trendChartFrame.paddingX + (index / (chartData.length - 1)) * (trendChartFrame.width - trendChartFrame.paddingX * 2); const y = chartY(point.value, chartData); return <g key={point.label}><circle cx={x} cy={y} r="4.5" className="website-seo-chart-point" /><text x={x} y={trendChartFrame.height - 10} textAnchor="middle" className="website-seo-chart-label">{point.label}</text><text x={x} y={Math.max(y - 12, 14)} textAnchor="middle" className="website-seo-chart-value">{formatMetric(point.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}</text></g>; })}</svg></div> : <div className="website-seo-chart-empty"><BarChart3 size={16} /><span>Publish at least two periods to show SEO movement.</span></div>}</section>
+          <section className="card website-seo-chart-card" aria-labelledby="website-seo-chart-title"><div className="website-seo-card-heading"><h2 id="website-seo-chart-title">SEO performance over time</h2></div><div className="website-seo-chart-tabs" role="tablist" aria-label="Website SEO trend metrics">{metricDefinitions.map((definition) => <button key={definition.key} type="button" role="tab" aria-selected={activeMetricKey === definition.key} className={activeMetricKey === definition.key ? "active" : ""} onClick={() => setActiveMetricKey(definition.key)}>{definition.label}</button>)}</div><div className="website-seo-chart-wrap" role="img" aria-label={`${activeMetric?.label ?? "SEO"} trend chart`} onMouseMove={handleChartMove} onMouseLeave={() => setHoveredPoint(null)}><svg viewBox={`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`} preserveAspectRatio="none"><defs><linearGradient id="websiteSeoTrendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16a085" stopOpacity=".25" /><stop offset="100%" stopColor="#16a085" stopOpacity=".02" /></linearGradient></defs>{[0, 1, 2, 3, 4].map((line) => { const y = trendChartFrame.plotTop + (line / 4) * (trendChartFrame.plotBottom - trendChartFrame.plotTop); return <line key={line} x1={trendChartFrame.paddingX} x2={trendChartFrame.width - trendChartFrame.paddingX} y1={y} y2={y} className="website-seo-grid-line" />; })}<path d={`${chartPath(displayChartData)} L${trendChartFrame.width - trendChartFrame.paddingX} ${trendChartFrame.plotBottom} L${trendChartFrame.paddingX} ${trendChartFrame.plotBottom} Z`} fill="url(#websiteSeoTrendFill)" /><path d={chartPath(displayChartData)} className="website-seo-chart-line" fill="none" />{displayChartData.map((point, index) => { const x = trendChartFrame.paddingX + (index / (displayChartData.length - 1)) * (trendChartFrame.width - trendChartFrame.paddingX * 2); const y = chartY(point.value, displayChartData); const showLabel = displayChartData.length <= 8 || index === 0 || index === Math.floor((displayChartData.length - 1) / 2) || index === displayChartData.length - 1; return <g key={`${point.label}-${index}`} tabIndex={0} onMouseEnter={() => setHoveredPoint({ label: point.label, value: point.value, x, y })} onFocus={() => setHoveredPoint({ label: point.label, value: point.value, x, y })} onBlur={() => setHoveredPoint(null)}><title>{`${point.label}: ${formatMetric(point.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}`}</title><circle cx={x} cy={y} r="8" className="website-seo-chart-point-hit" /><circle cx={x} cy={y} r="4.5" className="website-seo-chart-point" />{showLabel ? <><text x={x} y={trendChartFrame.height - 10} textAnchor="middle" className="website-seo-chart-label">{point.label}</text><text x={x} y={Math.max(y - 12, 14)} textAnchor="middle" className="website-seo-chart-value">{formatMetric(point.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}</text></> : null}</g>; })}</svg>{hoveredPoint ? <div className="website-seo-chart-tooltip" style={{ left: `${(hoveredPoint.x / trendChartFrame.width) * 100}%`, top: `${(hoveredPoint.y / trendChartFrame.height) * 100}%` }}><strong>{hoveredPoint.label}</strong><span>{activeMetric?.label ?? "SEO"}: {formatMetric(hoveredPoint.value, metricMap.get(activeMetricKey)?.format ?? "INTEGER")}</span></div> : null}</div><p className="website-seo-chart-empty">{hasReportingData ? "Hover a point to inspect its value. Publish at least two periods to show SEO movement." : "Hover anywhere on the chart to inspect the nearest value. First sync will replace the 0 baseline with reporting data."}</p></section>
 
-          <aside className="card website-seo-insights" aria-labelledby="website-seo-insights-title"><div className="website-seo-card-heading"><h2 id="website-seo-insights-title">Key insights</h2></div><p><CheckCircle2 size={15} /> Organic sessions {insightComparison}.</p><p><CheckCircle2 size={15} /> Search impressions {dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? `${renderChange(metricChange(latestRow?.impressions ?? null, comparisonRow?.impressions ?? null))} vs ${dateRange.compare === "Previous year" ? "previous year" : comparisonPeriodLabel}` : "No comparison available for the selected range"}.</p><p><CheckCircle2 size={15} /> {latestRow?.topTen === null || latestRow?.topTen === undefined ? "Keyword ranking data is unavailable." : `${latestRow.topTen.toLocaleString()} keywords now rank in the top 10.`}</p><div className="website-seo-insight-source">Sources: {sourceLabels || "Published SEO metrics"}.</div></aside>
+          <aside className="card website-seo-insights" aria-labelledby="website-seo-insights-title"><div className="website-seo-card-heading"><h2 id="website-seo-insights-title">Key insights</h2></div><p><CheckCircle2 size={15} /> Organic sessions {insightComparison}.</p><p><CheckCircle2 size={15} /> Search impressions {dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? `${renderChange(metricChange(latestRow?.impressions ?? null, comparisonRow?.impressions ?? null))} vs ${dateRange.compare === "Previous year" ? "previous year" : comparisonPeriodLabel}` : "No comparison available for the selected range"}.</p><p><CheckCircle2 size={15} /> {latestRow?.topTen === null || latestRow?.topTen === undefined ? "0 keywords currently rank in the top 10." : `${latestRow.topTen.toLocaleString()} keywords now rank in the top 10.`}</p><div className="website-seo-insight-source">Sources: {sourceLabels || "Awaiting SEO data"}.</div></aside>
         </div>
 
-        <div className="website-seo-lower-grid"><section className="card website-seo-results-card" aria-labelledby="website-seo-results-title"><div className="website-seo-card-heading"><div><h2 id="website-seo-results-title">Results by month</h2><p>Latest six-month reporting window</p></div><Table2 size={18} color="#148f83" /></div><div className="website-seo-table-wrap"><table className="website-seo-table"><thead><tr><th>Month</th><th>Organic sessions</th><th>Search impressions</th><th>Top-10 keywords</th></tr></thead><tbody>{visibleRows.map((row, index) => <tr key={row.periodStart} className={index === visibleRows.length - 1 ? "is-latest" : undefined}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest period" : "Historical period"}</span></td><td>{formatMetric(row.organicTraffic, metricMap.get("organicTraffic")?.format ?? "INTEGER")}</td><td>{formatMetric(row.impressions, metricMap.get("impressions")?.format ?? "INTEGER")}</td><td>{formatMetric(row.topTen, metricMap.get("topTen")?.format ?? "RANK")}</td></tr>)}</tbody></table></div><div className="website-seo-table-foot"><span><TrendingUp size={13} /> Ranking values are point-in-time counts and are not summed.</span><span>{visibleRows.length} periods · {dateRange.label}</span></div></section>
+        <div className="website-seo-lower-grid"><section className="card website-seo-results-card" aria-labelledby="website-seo-results-title"><div className="website-seo-card-heading"><div><h2 id="website-seo-results-title">Results by month</h2><p>Latest six-month reporting window</p></div><Table2 size={18} color="#148f83" /></div><div className="website-seo-table-wrap"><table className="website-seo-table"><thead><tr><th>Month</th><th>Organic sessions</th><th>Search impressions</th><th>Top-10 keywords</th></tr></thead><tbody>{tableRows.length ? tableRows.map((row, index) => <tr key={row.periodStart} className={index === tableRows.length - 1 ? "is-latest" : undefined}><td><strong>{row.periodLabel}</strong><span>{row.periodLabel === "No published data" ? "Awaiting first sync" : index === tableRows.length - 1 ? "Latest period" : "Historical period"}</span></td><td>{formatMetric(row.organicTraffic, metricMap.get("organicTraffic")?.format ?? "INTEGER")}</td><td>{formatMetric(row.impressions, metricMap.get("impressions")?.format ?? "INTEGER")}</td><td>{formatMetric(row.topTen, metricMap.get("topTen")?.format ?? "RANK")}</td></tr>) : <tr><td colSpan={4}>No periods match this search.</td></tr>}</tbody></table></div><div className="website-seo-table-foot"><span><TrendingUp size={13} /> Ranking values are point-in-time counts and are not summed.</span><span>{visibleRows.length} periods · {dateRange.label}</span></div></section>
 
-          <section className="card website-seo-acquisition-card" aria-labelledby="website-seo-acquisition-title"><div className="website-seo-card-heading"><h2 id="website-seo-acquisition-title">Acquisition channels</h2><span className="source-badge pending">{channelIsPreview ? "GA4 preview" : "GA4"}</span></div><div className="website-seo-acquisition-layout"><div className="website-seo-donut-wrap"><div className="website-seo-donut" style={{ background: `conic-gradient(${acquisitionChannels.reduce<{ stops: string[]; offset: number }>((result, channel) => { const start = result.offset; const end = start + (channel.value / acquisitionTotal) * 100; result.stops.push(`${channel.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`); result.offset = end; return result; }, { stops: [], offset: 0 }).stops.join(", ")})` }} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)} role="img" aria-label={`${acquisitionTotal.toLocaleString()} ${channelIsPreview ? "preview " : ""}sessions by acquisition channel`}><div className="website-seo-donut-center"><strong>{(hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.value : acquisitionTotal)?.toLocaleString()}</strong><span>{hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.label : channelIsPreview ? "Preview sessions" : "Sessions"}</span></div></div></div><div className="website-seo-channel-list">{acquisitionChannels.map((channel) => { const share = acquisitionTotal ? (channel.value / acquisitionTotal) * 100 : 0; const active = (hoveredChannel ?? selectedChannel ?? activeChannel?.key) === channel.key; return <button type="button" className={`website-seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} onMouseEnter={() => setHoveredChannel(channel.key)} onMouseLeave={() => setHoveredChannel(null)} aria-pressed={active}><span className="website-seo-channel-swatch" style={{ backgroundColor: channel.color }} /><strong>{channel.label}</strong><span>{share.toFixed(1)}%</span></button>; })}</div></div><p className="website-seo-acquisition-note"><Info size={13} /> {channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : "GA4 channel attribution is connected."}</p></section></div>
+          <section className="card website-seo-acquisition-card" aria-labelledby="website-seo-acquisition-title"><div className="website-seo-card-heading"><h2 id="website-seo-acquisition-title">Acquisition channels</h2><span className="source-badge pending">{channelIsPreview ? "GA4 preview" : hasReportingData ? "GA4" : "Awaiting data"}</span></div><div className="website-seo-acquisition-layout"><div className="website-seo-donut-wrap"><div className="website-seo-donut" style={{ background: acquisitionGradient }} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)} role="img" aria-label={`${acquisitionTotal.toLocaleString()} ${channelIsPreview ? "preview " : ""}sessions by acquisition channel`}><div className="website-seo-donut-center"><strong>{(hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.value : acquisitionTotal)?.toLocaleString()}</strong><span>{hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.label : channelIsPreview ? "Preview sessions" : "Sessions"}</span></div></div></div><div className="website-seo-channel-list">{acquisitionChannels.map((channel) => { const share = acquisitionTotal ? (channel.value / acquisitionTotal) * 100 : 0; const active = (hoveredChannel ?? selectedChannel ?? activeChannel?.key) === channel.key; return <button type="button" className={`website-seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} onMouseEnter={() => setHoveredChannel(channel.key)} onMouseLeave={() => setHoveredChannel(null)} aria-pressed={active}><span className="website-seo-channel-swatch" style={{ backgroundColor: channel.color }} /><strong>{channel.label}</strong><span>{share.toFixed(1)}%</span></button>; })}</div></div><p className="website-seo-acquisition-note"><Info size={13} /> {channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : hasReportingData ? "GA4 channel attribution is connected." : "0 sessions until GA4 channel attribution is connected."}</p></section></div>
 
-      </> : <section className="card website-seo-empty"><BarChart3 size={20} /><div><h2>No Website SEO data published yet.</h2><p>Publish at least one reporting period to show the client-facing SEO report.</p></div></section>}
+      </>
 
       <PortalFeedback pagePath="/portal/website-seo" pageLabel="Website SEO" context={{ dateRange: dateRange.label, selectedChannel: activeChannel?.label ?? null, search: query || null }} />
     </div>

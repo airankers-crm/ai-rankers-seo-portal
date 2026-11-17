@@ -148,6 +148,7 @@ model User {
   role            Role
   status          UserStatus         @default(INVITED)
   clientId        String?
+  portalPreferences Json?
   client          Client?            @relation(fields: [clientId], references: [id])
   allClients      Boolean            @default(false)
   assignedClients ClientAdmin[]

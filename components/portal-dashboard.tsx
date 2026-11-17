@@ -56,9 +56,10 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
   const goals = databaseData?.goals ?? [];
   const clientName = databaseData?.businessName ?? demoClient.businessName;
   const chartData = useMemo(() => {
-    const visiblePoints = dateRange.label === "Last 30 days" ? 2 : dateRange.label === "Last 90 days" ? 3 : metrics.organicTraffic.history.length;
+    const selectedDays = Math.max(1, Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / 86_400_000) + 1);
+    const visiblePoints = selectedDays <= 31 ? Math.min(2, metrics.organicTraffic.history.length) : selectedDays <= 93 ? Math.min(3, metrics.organicTraffic.history.length) : metrics.organicTraffic.history.length;
     return metrics.organicTraffic.history.slice(-visiblePoints).map((point) => ({ label: point.label, value: point.value }));
-  }, [dateRange.label, metrics.organicTraffic.history]);
+  }, [dateRange.end, dateRange.start, metrics.organicTraffic.history]);
   const trafficTrend = getMetricTrend(metrics.organicTraffic);
   const keywordTrend = getMetricTrend(metrics.topTen);
   const brandMark = databaseData?.brandMark ?? clientName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();

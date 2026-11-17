@@ -1,6 +1,7 @@
 import { prisma } from "@ai-rankers/db";
 import { PortalSettings } from "../../../components/portal-settings";
 import { requirePortalAccess } from "../../../lib/auth/access";
+import { parsePortalPreferences } from "../../../lib/portal-preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function PortalSettingsPage() {
       userName={access.user?.name ?? "Client user"}
       userEmail={access.user?.email ?? client?.contactEmail ?? ""}
       canEditProfile={Boolean(access.user && !access.preview)}
+      initialPreferences={parsePortalPreferences(access.user?.portalPreferences)}
     />
   );
 }

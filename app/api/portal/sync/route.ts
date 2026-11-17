@@ -33,8 +33,17 @@ export async function GET() {
 
   if (!clientId) return NextResponse.json({ changedAt: null }, { headers: { "Cache-Control": "no-store" } });
 
-  return NextResponse.json(
-    { changedAt: await getCachedChangeWatermark(clientId) },
-    { headers: { "Cache-Control": "no-store" } },
-  );
+  try {
+    return NextResponse.json(
+      { changedAt: await getCachedChangeWatermark(clientId), available: true },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    // Published-data polling is best-effort. A short provider or database outage
+    // must not interrupt the portal itself; the client will retry automatically.
+    return NextResponse.json(
+      { changedAt: null, available: false },
+      { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" } },
+    );
+  }
 }

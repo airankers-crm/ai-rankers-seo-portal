@@ -50,9 +50,9 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
       return matchesQuery && matchesCategory && matchesStatus;
     });
   }, [activities, category, query, status]);
-  const completedCount = activities.filter((activity) => activity.status === "COMPLETED").length;
-  const plannedCount = activities.filter((activity) => activity.status === "PLANNED").length;
-  const inProgressCount = activities.filter((activity) => activity.status === "IN_PROGRESS").length;
+  const completedCount = filteredActivities.filter((activity) => activity.status === "COMPLETED").length;
+  const plannedCount = filteredActivities.filter((activity) => activity.status === "PLANNED").length;
+  const inProgressCount = filteredActivities.filter((activity) => activity.status === "IN_PROGRESS").length;
 
   function exportCsv() {
     const rows = [

@@ -3,7 +3,7 @@
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export const dateRangePresets = ["Last 7 days", "Last 30 days", "Last 90 days", "Last 6 months", "This year", "Custom"] as const;
+export const dateRangePresets = ["Custom", "Today", "Yesterday", "Last 3 days", "Last 1 week", "Last 3 weeks", "Last 1 month", "Last 6 months", "Last 1 year"] as const;
 export const comparisonOptions = ["None", "Previous period", "Previous year"] as const;
 export type DateRangePreset = (typeof dateRangePresets)[number];
 export type ComparisonOption = (typeof comparisonOptions)[number];
@@ -76,12 +76,16 @@ function isBetween(date: Date, start: Date, end: Date) {
   return current > startOfDay(start).getTime() && current < startOfDay(end).getTime();
 }
 
-function getPresetRange(preset: Exclude<DateRangePreset, "Custom">, anchor: Date) {
+export function getPresetRange(preset: Exclude<DateRangePreset, "Custom">, anchor: Date) {
   const end = startOfDay(anchor);
-  if (preset === "This year") return { start: new Date(end.getFullYear(), 0, 1), end };
+  if (preset === "Today") return { start: end, end };
+  if (preset === "Yesterday") { const yesterday = addDays(end, -1); return { start: yesterday, end: yesterday }; }
+  if (preset === "Last 3 days") return { start: addDays(end, -2), end };
+  if (preset === "Last 1 week") return { start: addDays(end, -6), end };
+  if (preset === "Last 3 weeks") return { start: addDays(end, -20), end };
+  if (preset === "Last 1 month") return { start: addDays(end, -29), end };
   if (preset === "Last 6 months") return { start: new Date(end.getFullYear(), end.getMonth() - 5, 1), end };
-  const days = preset === "Last 7 days" ? 7 : preset === "Last 30 days" ? 30 : 90;
-  return { start: addDays(end, -(days - 1)), end };
+  return { start: addDays(end, -364), end };
 }
 
 function calendarDays(month: Date) {
@@ -95,13 +99,14 @@ function calendarDays(month: Date) {
 }
 
 export function getDefaultDateRange(): DateRangeSelection {
-  const preset: Exclude<DateRangePreset, "Custom"> = "Last 30 days";
+  const preset: Exclude<DateRangePreset, "Custom"> = "Last 1 month";
   const { start, end } = getPresetRange(preset, new Date());
   return { label: preset, start, end, compare: "None" };
 }
 
 export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<"presets" | "custom">("presets");
   const [draft, setDraft] = useState<DateRangeSelection>(value);
   const [selectingEnd, setSelectingEnd] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(value.start));
@@ -137,6 +142,7 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   function toggle() {
     if (!open) {
       setDraft(value);
+      setPanel("presets");
       setSelectingEnd(false);
       setVisibleMonth(startOfMonth(value.start));
     }
@@ -146,7 +152,9 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
   function selectPreset(preset: DateRangePreset) {
     if (preset === "Custom") {
       setDraft((current) => ({ ...current, label: preset }));
+      setPanel("custom");
       setSelectingEnd(false);
+      setVisibleMonth(startOfMonth(draft.start));
       return;
     }
     const next = getPresetRange(preset, new Date());
@@ -183,6 +191,7 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
     if (invalidRange) return;
     const label = draft.label === "Custom" ? formatRange(draft.start, draft.end) : draft.label;
     onApply({ ...draft, label });
+    setPanel("presets");
     setSelectingEnd(false);
     setOpen(false);
     triggerRef.current?.focus();
@@ -190,26 +199,39 @@ export function DateRangePicker({ value, onApply }: DateRangePickerProps) {
 
   function cancel() {
     setDraft(value);
+    setPanel("presets");
     setSelectingEnd(false);
     setOpen(false);
     triggerRef.current?.focus();
   }
 
+  const selectedPreset = dateRangePresets.includes(draft.label as DateRangePreset) ? draft.label : "Custom";
+
   return <div className="date-range-picker" ref={panelRef}>
     <button ref={triggerRef} className={`date-range-trigger${open ? " open" : ""}`} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={toggle}><CalendarDays size={14} /><span>{value.label}</span><ChevronDown size={13} /></button>
-    {open && <div className="date-range-popover" role="dialog" aria-label="Choose date range">
-      <div className="date-range-calendar-panel">
-        <div className="date-range-calendar-nav"><button type="button" className="calendar-nav-button" aria-label="Previous year" onClick={() => setVisibleMonth((current) => addYears(current, -1))}><ChevronsLeft size={15} /></button><button type="button" className="calendar-nav-button" aria-label="Previous month" onClick={() => setVisibleMonth((current) => addMonths(current, -1))}><ChevronLeft size={15} /></button><span className="calendar-nav-spacer" /><button type="button" className="calendar-nav-button" aria-label="Next month" onClick={() => setVisibleMonth((current) => addMonths(current, 1))}><ChevronRight size={15} /></button><button type="button" className="calendar-nav-button" aria-label="Next year" onClick={() => setVisibleMonth((current) => addYears(current, 1))}><ChevronsRight size={15} /></button></div>
-        <div className="date-range-calendars"><CalendarMonth month={visibleMonth} days={firstCalendarDays} start={draft.start} end={draft.end} onSelect={selectDay} /><CalendarMonth month={nextMonth} days={secondCalendarDays} start={draft.start} end={draft.end} onSelect={selectDay} /></div>
-      </div>
-      <div className="date-range-options">
-        <label className="date-range-field date-range-preset"><span>Date range</span><span className="select-wrap"><select value={draft.label === formatRange(draft.start, draft.end) ? "Custom" : draft.label} onChange={(event) => selectPreset(event.target.value as DateRangePreset)}>{dateRangePresets.map((preset) => <option key={preset}>{preset}</option>)}</select><ChevronDown size={14} /></span></label>
-        <div className="date-range-inputs"><label className="date-range-field"><span>Start date</span><input type="date" value={toInputValue(draft.start)} onChange={(event) => updateStart(event.target.value)} /></label><label className="date-range-field"><span>End date</span><input type="date" value={toInputValue(draft.end)} onChange={(event) => updateEnd(event.target.value)} /></label></div>
+    {open && panel === "presets" ? <div className="date-range-popover date-range-popover-presets" role="dialog" aria-label="Choose date range">
+      <div className="date-range-preset-panel">
+        <div className="date-range-popover-heading"><strong>Reporting period</strong><span>Select a preset or choose Custom.</span></div>
+        <div className="date-range-preset-list" role="listbox" aria-label="Date range presets">{dateRangePresets.map((preset) => <button type="button" role="option" aria-selected={selectedPreset === preset} className={selectedPreset === preset ? "active" : ""} key={preset} onClick={() => selectPreset(preset)}><span>{preset}</span>{selectedPreset === preset ? <Check size={13} /> : null}</button>)}</div>
         <label className="date-range-field"><span>Compare to</span><span className="select-wrap"><select value={draft.compare} onChange={(event) => setDraft((current) => ({ ...current, compare: event.target.value as ComparisonOption }))}>{comparisonOptions.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={14} /></span></label>
-        {invalidRange && <p className="date-range-error" role="alert">End date must be on or after the start date.</p>}
-        <div className="date-range-actions"><button className="button primary" type="button" disabled={invalidRange} onClick={apply}><Check size={13} /> Apply</button><button className="button" type="button" onClick={cancel}>Cancel</button></div>
+        <div className="date-range-actions"><button className="button primary" type="button" onClick={apply}><Check size={13} /> Apply</button><button className="button" type="button" onClick={cancel}>Cancel</button></div>
       </div>
-    </div>}
+    </div> : null}
+    {open && panel === "custom" ? <div className="date-range-popover date-range-popover-custom" role="dialog" aria-label="Choose custom date range">
+      <div className="date-range-custom-header"><button type="button" className="date-range-back" onClick={() => setPanel("presets")}><ChevronLeft size={14} /> Presets</button><div><strong>Custom date range</strong><span>Select a start and end date.</span></div></div>
+      <div className="date-range-custom-layout">
+        <div className="date-range-calendar-panel">
+          <div className="date-range-calendar-nav"><button type="button" className="calendar-nav-button" aria-label="Previous year" onClick={() => setVisibleMonth((current) => addYears(current, -1))}><ChevronsLeft size={15} /></button><button type="button" className="calendar-nav-button" aria-label="Previous month" onClick={() => setVisibleMonth((current) => addMonths(current, -1))}><ChevronLeft size={15} /></button><span className="calendar-nav-spacer" /><button type="button" className="calendar-nav-button" aria-label="Next month" onClick={() => setVisibleMonth((current) => addMonths(current, 1))}><ChevronRight size={15} /></button><button type="button" className="calendar-nav-button" aria-label="Next year" onClick={() => setVisibleMonth((current) => addYears(current, 1))}><ChevronsRight size={15} /></button></div>
+          <div className="date-range-calendars"><CalendarMonth month={visibleMonth} days={firstCalendarDays} start={draft.start} end={draft.end} onSelect={selectDay} /><CalendarMonth month={nextMonth} days={secondCalendarDays} start={draft.start} end={draft.end} onSelect={selectDay} /></div>
+        </div>
+        <div className="date-range-options">
+          <div className="date-range-inputs"><label className="date-range-field"><span>Start date</span><input type="date" value={toInputValue(draft.start)} onChange={(event) => updateStart(event.target.value)} /></label><label className="date-range-field"><span>End date</span><input type="date" value={toInputValue(draft.end)} onChange={(event) => updateEnd(event.target.value)} /></label></div>
+          <label className="date-range-field"><span>Compare to</span><span className="select-wrap"><select value={draft.compare} onChange={(event) => setDraft((current) => ({ ...current, compare: event.target.value as ComparisonOption }))}>{comparisonOptions.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={14} /></span></label>
+          {invalidRange && <p className="date-range-error" role="alert">End date must be on or after the start date.</p>}
+          <div className="date-range-actions"><button className="button primary" type="button" disabled={invalidRange} onClick={apply}><Check size={13} /> Apply</button><button className="button" type="button" onClick={cancel}>Cancel</button></div>
+        </div>
+      </div>
+    </div> : null}
   </div>;
 }
 

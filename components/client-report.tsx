@@ -36,7 +36,9 @@ function templateVisible(report: ReportViewModel, key: string) {
 export function ClientReport({ report }: { report: ReportViewModel }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(() => {
     const now = new Date();
-    return { label: "This year", start: new Date(now.getFullYear(), 0, 1), end: now, compare: "Previous period" };
+    const start = new Date(now);
+    start.setDate(start.getDate() - 364);
+    return { label: "Last 1 year", start, end: now, compare: "Previous period" };
   });
   const visibleRows = report.websiteSeo.rows.filter((row) => {
     const periodStart = new Date(row.periodStart).getTime();

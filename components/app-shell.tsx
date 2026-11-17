@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { SignOutButton } from "./sign-out-button";
 import { PortalLiveSync } from "./portal-live-sync";
+import { PortalPreferenceEffects } from "./portal-preference-effects";
 import {
   Activity,
   BarChart3,
@@ -23,7 +24,7 @@ import {
   Settings2,
   ShieldCheck,
   UsersRound,
-  X,
+  LineChart,
 } from "lucide-react";
 
 type AppShellProps = {
@@ -34,7 +35,7 @@ type AppShellProps = {
   brandAccent?: string;
   activeNav?: string;
   hiddenNav?: string[];
-  presentationMode?: boolean;
+  shellVariant?: "analytics" | "analytics-details";
 };
 
 type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
@@ -46,6 +47,7 @@ const portalNavGroups: NavGroup[] = [
     items: [
       { label: "Overview", href: "/portal", icon: LayoutDashboard },
       { label: "Website SEO", href: "/portal/website-seo", icon: BarChart3 },
+      { label: "Analytics", href: "/portal/analytics", icon: LineChart },
       { label: "GBP performance", href: "/portal/gbp", icon: Building2 },
     ],
   },
@@ -100,7 +102,7 @@ const adminNavGroups: NavGroup[] = [
   },
 ];
 
-export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], presentationMode = false }: AppShellProps) {
+export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], shellVariant }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -119,8 +121,10 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const accountRole = mode === "admin" ? "AI Rankers admin" : "Client portal";
 
   return (
-    <div className={`app-shell ${mode}-shell${presentationMode ? " presentation-shell" : ""}`}>
-      <aside className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
+    <div className={`app-shell ${mode}-shell${shellVariant ? ` ${shellVariant}-shell` : ""}`}>
+      {mode === "portal" ? <PortalPreferenceEffects /> : null}
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <aside id="portal-navigation" className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
           {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
           <span className="brand-sub">SEO intelligence</span>
@@ -157,16 +161,13 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
         </div>
       </aside>
+      {mobileOpen ? <button className="sidebar-backdrop" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} /> : null}
 
-      <main className="main">
+      <main className="main" id="main-content">
         <header className="topbar">
           <div className="topbar-leading">
-            <button className="icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((current) => !current)}>
-              {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-            </button>
-            <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
-              <Menu size={17} />
-            </button>
+            <button className="icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((current) => !current)}>{collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button>
+            <button className="icon-button mobile-menu" type="button" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="portal-navigation" onClick={() => setMobileOpen((current) => !current)}><Menu size={17} /></button>
             <div className="breadcrumb"><span>{mode === "admin" ? "The AI Rankers" : "Client portal"}</span><i>/</i><strong>{activeLabel}</strong></div>
           </div>
           <div className="top-actions">
@@ -184,7 +185,6 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
                 <SignOutButton variant="menu" />
               </div> : null}
             </div>
-            {mobileOpen && <button className="icon-button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={17} /></button>}
           </div>
         </header>
         {children}

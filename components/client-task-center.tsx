@@ -31,9 +31,9 @@ export function ClientTaskCenter({ initialTasks = [] }: { initialTasks?: ClientT
     setPending(true);
     setFeedback("");
     setError("");
-    const response = await fetch("/api/tasks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title, description, category, priority, dueDate: dueDate || undefined }) });
-    const body = await response.json().catch(() => null) as { task?: ClientTask; error?: string } | null;
-    if (!response.ok || !body?.task) {
+    const response = await fetch("/api/tasks", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title, description, category, priority, dueDate: dueDate || undefined }) }).catch(() => null);
+    const body = await response?.json().catch(() => null) as { task?: ClientTask; error?: string } | null;
+    if (!response?.ok || !body?.task) {
       setError(body?.error ?? "We could not create this task request.");
       setPending(false);
       return;

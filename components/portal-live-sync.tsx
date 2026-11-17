@@ -8,7 +8,7 @@ const SYNC_INTERVAL_MS = 60_000;
 export function PortalLiveSync() {
   const router = useRouter();
   const latestChangeRef = useRef<string | null>(null);
-  const [syncLabel, setSyncLabel] = useState("Checking sync");
+  const [syncLabel, setSyncLabel] = useState("Checking updates");
 
   useEffect(() => {
     let active = true;
@@ -18,9 +18,13 @@ export function PortalLiveSync() {
 
       try {
         const response = await fetch("/api/portal/sync", { cache: "no-store" });
-        if (!response.ok || !active) return;
+        if (!active) return;
+        if (!response.ok) {
+          setSyncLabel("Updates temporarily unavailable");
+          return;
+        }
 
-        setSyncLabel("Synced just now");
+        setSyncLabel("Portal up to date");
 
         const payload = await response.json() as { changedAt?: string | null };
         if (!payload.changedAt) return;
@@ -33,7 +37,7 @@ export function PortalLiveSync() {
 
         latestChangeRef.current = payload.changedAt;
       } catch {
-        // A temporary sync failure should not interrupt the client presentation.
+        if (active) setSyncLabel("Updates temporarily unavailable");
       }
     }
 
@@ -49,5 +53,5 @@ export function PortalLiveSync() {
     };
   }, [router]);
 
-  return <span className="live-sync-pill" title="This portal checks for newly published admin changes automatically"><span className="dot" /> {syncLabel}</span>;
+  return <span className="live-sync-pill" title="This checks for newly published workspace changes; it is not a provider-sync status."><span className="dot" /> {syncLabel}</span>;
 }

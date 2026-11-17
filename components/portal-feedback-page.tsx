@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronRight, CircleAlert, Clock3, Database, FilePlus2, Headphones, MessageCircle, Paperclip, Save, Send, ShieldCheck } from "lucide-react";
 
 type RequestType = "QUESTION" | "ISSUE" | "REQUEST" | "DATA_UPDATE";
@@ -33,26 +33,40 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
   const [requestType, setRequestType] = useState<RequestType>("QUESTION");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-  const [attachmentName, setAttachmentName] = useState("");
+  const [documentUrl, setDocumentUrl] = useState("");
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  function handleFile(file: File | null) {
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Please choose a file smaller than 10 MB.");
-      return;
+  useEffect(() => {
+    let timer: number | undefined;
+    try {
+      const stored = window.localStorage.getItem("ai-rankers-feedback-draft");
+      if (!stored) return;
+      const draft = JSON.parse(stored) as { requestType?: RequestType; subject?: string; message?: string; documentUrl?: string };
+      timer = window.setTimeout(() => {
+        if (draft.requestType && requestTypes.some((item) => item.value === draft.requestType)) setRequestType(draft.requestType);
+        if (typeof draft.subject === "string") setSubject(draft.subject);
+        if (typeof draft.message === "string") setMessage(draft.message);
+        if (typeof draft.documentUrl === "string") setDocumentUrl(draft.documentUrl);
+      }, 0);
+    } catch {
+      // A malformed or blocked local draft should not interrupt support access.
     }
-    setError("");
-    setAttachmentName(file.name);
-  }
+    return () => { if (timer !== undefined) window.clearTimeout(timer); };
+  }, []);
 
   function saveDraft() {
-    setSaved(true);
-    setSuccess("");
-    setTimeout(() => setSaved(false), 2600);
+    try {
+      window.localStorage.setItem("ai-rankers-feedback-draft", JSON.stringify({ requestType, subject, message, documentUrl }));
+      setSaved(true);
+      setSuccess("");
+      setError("");
+      window.setTimeout(() => setSaved(false), 2600);
+    } catch {
+      setError("Your browser blocked draft storage. You can still send the request now.");
+    }
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -63,11 +77,21 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
       setError("Add a subject and message before sending.");
       return;
     }
+    const trimmedDocumentUrl = documentUrl.trim();
+    if (trimmedDocumentUrl) {
+      try {
+        const parsed = new URL(trimmedDocumentUrl);
+        if (!new Set(["http:", "https:"]).has(parsed.protocol)) throw new Error("Unsupported URL");
+      } catch {
+        setError("Enter a valid https:// document link or leave it blank.");
+        return;
+      }
+    }
 
     setPending(true);
     setError("");
     const category = requestType === "DATA_UPDATE" ? "REQUEST" : requestType;
-    const composedMessage = `Subject: ${trimmedSubject}\n\n${trimmedMessage}${attachmentName ? `\n\nAttachment reference: ${attachmentName}` : ""}`;
+    const composedMessage = `Subject: ${trimmedSubject}\n\n${trimmedMessage}${trimmedDocumentUrl ? `\n\nSupporting document: ${trimmedDocumentUrl}` : ""}`;
     const response = await fetch("/api/portal/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -76,7 +100,7 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
         message: composedMessage,
         pagePath: "/portal/feedback",
         pageLabel: "Client feedback",
-        context: { source: "Feedback page", requestType, attachmentName: attachmentName || null },
+        context: { source: "Feedback page", requestType, documentUrl: trimmedDocumentUrl || null },
       }),
     }).catch(() => null);
 
@@ -89,7 +113,8 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
 
     setSubject("");
     setMessage("");
-    setAttachmentName("");
+    setDocumentUrl("");
+    window.localStorage.removeItem("ai-rankers-feedback-draft");
     setSuccess("Your message was sent to The AI Rankers team.");
     setPending(false);
   }
@@ -114,11 +139,7 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
       <label className="feedback-page-field"><span>Subject</span><input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="What can we help with?" maxLength={140} required /></label>
       <label className="feedback-page-field feedback-page-message"><span>Message</span><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Tell us what you need help with" maxLength={2000} rows={6} required /><small>{message.length}/2000</small></label>
 
-      <label className="feedback-upload" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); handleFile(event.dataTransfer.files[0] ?? null); }}>
-        <input type="file" accept=".pdf,.png,.jpg,.jpeg,.csv,.doc,.docx" onChange={(event) => handleFile(event.target.files?.[0] ?? null)} />
-        <span className="feedback-upload-icon"><Paperclip size={20} /></span>
-        <span><strong>{attachmentName || "Attach a file"}</strong><small>{attachmentName ? "File reference will be included with your request" : "Drag and drop a file here, or click to browse"}</small></span>
-      </label>
+      <label className="feedback-document-field"><span>Supporting document <small>Optional</small></span><div><Paperclip size={16} /><input type="url" value={documentUrl} onChange={(event) => setDocumentUrl(event.target.value)} placeholder="https://drive.google.com/…" maxLength={500} /></div><small>Paste a secure share link. Binary file upload is not presented as available until storage is connected.</small></label>
 
       {error ? <p className="form-error feedback-page-error"><CircleAlert size={14} /> {error}</p> : null}
       {success ? <p className="save-status feedback-page-success" role="status"><CheckCircle2 size={14} /> {success}</p> : null}
