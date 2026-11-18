@@ -103,7 +103,6 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [accountOpen, setAccountOpen] = useState(false);
   const [unreadReports, setUnreadReports] = useState(0);
   const pathname = usePathname();
-
   useEffect(() => {
     if (mode !== "portal") return;
     let active = true;
@@ -129,7 +128,6 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
       window.removeEventListener("portal-report-seen", onReportSeen);
     };
   }, [mode]);
-
   const navGroups: NavGroup[] = mode === "admin" ? adminNavGroups : portalNavGroups;
   const visibleNavGroups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label)) }))
