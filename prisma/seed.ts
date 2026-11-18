@@ -42,19 +42,6 @@ async function main() {
     create: { email: "tony.roofing.demo@theairankers.com", name: "Tony Roofing", role: "CLIENT", status: "ACTIVE", clientId: client.id },
   });
 
-  const supportGroup = await prisma.chatGroup.upsert({
-    where: { clientId_name: { clientId: client.id, name: "SEO delivery" } },
-    update: { description: "Reports, tasks, approvals, and delivery decisions for the client workspace.", isArchived: false, createdById: admin.id },
-    create: { id: `${client.id}-seo-delivery`, clientId: client.id, name: "SEO delivery", description: "Reports, tasks, approvals, and delivery decisions for the client workspace.", createdById: admin.id },
-  });
-  const existingChatMessages = await prisma.chatMessage.count({ where: { groupId: supportGroup.id } });
-  if (existingChatMessages === 0) {
-    await prisma.chatMessage.createMany({ data: [
-      { groupId: supportGroup.id, senderId: admin.id, body: "Welcome to the SEO delivery group. We will share report decisions, approvals, and next steps here." },
-      { groupId: supportGroup.id, senderId: admin.id, body: "The first presentation dataset is ready for review. Reply here with any requested changes for the support team." },
-    ] });
-  }
-
   const overview = await prisma.section.upsert({
     where: { id: `${client.id}-overview` },
     update: { name: "Overview", isVisible: true, isDraft: false },

@@ -158,7 +158,6 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
               <div className="portal-setting-list">
                 <Toggle checked={preferences.reportUpdates} label="Report updates" description="Allow notifications when a new client report is published." onChange={() => void updatePreference("reportUpdates")} disabled={savingPreferences || !canEditProfile} />
                 <Toggle checked={preferences.taskUpdates} label="Activity and task updates" description="Allow notifications when published work changes or needs your attention." onChange={() => void updatePreference("taskUpdates")} disabled={savingPreferences || !canEditProfile} />
-                <Toggle checked={preferences.teamMessages} label="Support replies" description="Allow notifications when the AI Rankers team responds to a request." onChange={() => void updatePreference("teamMessages")} disabled={savingPreferences || !canEditProfile} />
               </div>
               {preferenceNotice ? <p className={preferenceNotice.kind === "error" ? "auth-error" : "auth-success"} role="status">{preferenceNotice.text}</p> : null}
             </section>

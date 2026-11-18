@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SignOutButton } from "./sign-out-button";
 import { PortalLiveSync } from "./portal-live-sync";
 import { PortalPreferenceEffects } from "./portal-preference-effects";
@@ -77,11 +77,8 @@ const adminNavGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Communication",
-    items: [
-      { label: "Client communication", href: "/admin/messages", icon: MessageCircle },
-      { label: "Feedback", href: "/admin/feedback", icon: MessageCircle },
-    ],
+    label: "Support",
+    items: [{ label: "Feedback", href: "/admin/feedback", icon: MessageCircle }],
   },
   {
     label: "Reporting & content",
@@ -104,7 +101,35 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [unreadReports, setUnreadReports] = useState(0);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (mode !== "portal") return;
+    let active = true;
+
+    async function refreshNotifications() {
+      try {
+        const response = await fetch("/api/portal/notifications", { cache: "no-store" });
+        if (!active || !response.ok) return;
+        const payload = await response.json() as { reports?: number };
+        setUnreadReports(Number.isFinite(payload.reports) ? Math.max(0, payload.reports ?? 0) : 0);
+      } catch {
+        // Notification badges are helpful but must never block portal navigation.
+      }
+    }
+
+    void refreshNotifications();
+    const interval = window.setInterval(() => void refreshNotifications(), 30_000);
+    const onReportSeen = () => void refreshNotifications();
+    window.addEventListener("portal-report-seen", onReportSeen);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("portal-report-seen", onReportSeen);
+    };
+  }, [mode]);
+
   const navGroups: NavGroup[] = mode === "admin" ? adminNavGroups : portalNavGroups;
   const visibleNavGroups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label)) }))
@@ -136,10 +161,13 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
               <div className="nav-group-items">
                 {group.items.map((item) => {
                   const Icon = item.icon;
+                  const badgeCount = mode === "portal" && item.href === "/portal/reports" ? unreadReports : 0;
+                  const itemLabel = badgeCount > 0 ? `${item.label} (${badgeCount} unread)` : item.label;
                   return (
-                    <Link key={item.label} className={`nav-item${item.label === activeLabel ? " active" : ""}`} href={item.href} aria-label={item.label} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)}>
+                    <Link key={item.label} className={`nav-item${item.label === activeLabel ? " active" : ""}`} href={item.href} aria-label={itemLabel} title={collapsed ? itemLabel : undefined} onClick={() => setMobileOpen(false)}>
                       <Icon size={16} strokeWidth={1.8} />
                       <span className="nav-item-label">{item.label}</span>
+                      {badgeCount > 0 ? <span className="nav-item-badge" aria-hidden="true">{badgeCount > 9 ? "9+" : badgeCount}</span> : null}
                     </Link>
                   );
                 })}
@@ -170,7 +198,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
           </div>
           <div className="top-actions">
             {mode === "portal" ? <PortalLiveSync /> : <span className="workspace-status"><span className="dot" /> Workspace ready</span>}
-            <Link className="topbar-help" href={mode === "admin" ? "/admin/messages" : "/portal/feedback"} aria-label={mode === "admin" ? "Open help and support" : "Share feedback"} title={mode === "admin" ? "Help and support" : "Share feedback"}><CircleHelp size={17} /></Link>
+            <Link className="topbar-help" href={mode === "admin" ? "/admin/feedback" : "/portal/feedback"} aria-label={mode === "admin" ? "Open client feedback" : "Share feedback"} title={mode === "admin" ? "Client feedback" : "Share feedback"}><CircleHelp size={17} /></Link>
             <div className="topbar-account">
               <button className="topbar-account-trigger" type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((current) => !current)}>
                 <span className="topbar-account-avatar" style={mode === "portal" ? { backgroundColor: brandAccent } : undefined}>{mode === "admin" ? "JS" : brandMark ?? clientInitials}</span>

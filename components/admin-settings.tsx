@@ -209,8 +209,8 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
 
             <section className="card admin-settings-side-card admin-settings-help-card">
               <div className="admin-settings-side-heading"><UsersRound size={16} /><h2>Need to change something?</h2></div>
-              <p>Use the communication workspace when a setting needs review, approval, or a client-specific decision.</p>
-              <Link href="/admin/messages" className="button primary">Open communication <ArrowUpRight size={13} /></Link>
+              <p>Review client questions, issues, and requests when a setting needs attention or approval.</p>
+              <Link href="/admin/feedback" className="button primary">Open feedback <ArrowUpRight size={13} /></Link>
             </section>
 
             <section className="admin-settings-truth">

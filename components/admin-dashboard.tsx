@@ -40,7 +40,7 @@ function AgencyPulse({ clients, summary }: { clients: DemoClient[]; summary: Adm
 function AdminWorkflow({ previewClient }: { previewClient: DemoClient }) {
   const actions = [
     { label: "Manage client portal", detail: "Edit Website GSC and GBP results", href: `/admin/clients/${previewClient.id}`, icon: PencilLine, tone: "orange" },
-    { label: "Open team communication", detail: "Review client groups and support messages", href: "/admin/messages", icon: MessageCircle, tone: "teal" },
+    { label: "Review client feedback", detail: "Review questions, issues, and requests", href: "/admin/feedback", icon: MessageCircle, tone: "teal" },
     { label: "Add client workspace", detail: "Create an isolated reporting workspace", href: "/admin/clients/new", icon: Plus, tone: "purple" },
   ] as const;
 

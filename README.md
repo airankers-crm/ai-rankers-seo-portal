@@ -13,7 +13,6 @@ The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neo
 - `/portal/gbp` — Google Business Profile presentation
 - `/portal/activities` — client-safe work history and tasks
 - `/portal/reports` — report library and report detail
-- `/portal/messages` — client communication surface
 
 ### Agency/admin workspace
 
