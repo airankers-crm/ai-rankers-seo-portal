@@ -14,7 +14,6 @@ import {
   ChevronDown,
   CircleHelp,
   FileText,
-  Layers3,
   LayoutDashboard,
   MessageCircle,
   Menu,
@@ -84,7 +83,6 @@ const adminNavGroups: NavGroup[] = [
     label: "Reporting & content",
     items: [
       { label: "Reports", href: "/admin/reports", icon: FileText },
-      { label: "Templates", href: "/admin/templates", icon: Layers3 },
     ],
   },
   {

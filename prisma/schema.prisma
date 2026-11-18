@@ -141,12 +141,6 @@ enum FeedbackStatus {
   RESOLVED
 }
 
-enum ReportTemplateVersionStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum ReportStatus {
   DRAFT
   IN_REVIEW
@@ -210,7 +204,6 @@ model Client {
   metrics                   Metric[]
   activities                Activity[]
   reports                   Report[]
-  reportTemplateAssignments ReportTemplateAssignment[]
   versions                  DashboardVersion[]
   goals                     Goal[]
   auditLogs                 AuditLog[]
@@ -473,52 +466,6 @@ model ReportRead {
 
   @@id([reportId, userId])
   @@index([userId, seenAt])
-}
-
-model ReportTemplate {
-  id          String                     @id @default(cuid())
-  key         String                     @unique
-  title       String
-  category    String
-  description String
-  isActive    Boolean                    @default(true)
-  versions    ReportTemplateVersion[]
-  assignments ReportTemplateAssignment[]
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @updatedAt
-}
-
-model ReportTemplateVersion {
-  id          String                      @id @default(cuid())
-  templateId  String
-  version     Int
-  label       String
-  status      ReportTemplateVersionStatus @default(DRAFT)
-  config      Json
-  publishedAt DateTime?
-  template    ReportTemplate              @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  assignments ReportTemplateAssignment[]
-  createdAt   DateTime                    @default(now())
-  updatedAt   DateTime                    @updatedAt
-
-  @@unique([templateId, version])
-  @@index([templateId, status])
-}
-
-model ReportTemplateAssignment {
-  id         String                @id @default(cuid())
-  clientId   String
-  templateId String
-  versionId  String
-  service    String
-  client     Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template   ReportTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  version    ReportTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  assignedAt DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
-
-  @@unique([clientId, service])
-  @@index([versionId])
 }
 
 model WorkspaceSettings {

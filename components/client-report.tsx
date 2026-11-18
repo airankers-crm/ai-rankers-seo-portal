@@ -26,11 +26,15 @@ function sourceLabel(source: string) {
 }
 
 function templateSection(report: ReportViewModel, key: string, fallback: string) {
-  return report.template?.sections.find((section) => section.key === key)?.label ?? fallback;
+  void report;
+  void key;
+  return fallback;
 }
 
 function templateVisible(report: ReportViewModel, key: string) {
-  return report.template?.sections.find((section) => section.key === key)?.visible ?? true;
+  void report;
+  void key;
+  return true;
 }
 
 export function ClientReport({ report }: { report: ReportViewModel }) {

@@ -1,6 +1,5 @@
 import { prisma } from "@ai-rankers/db";
 import type { ReportMetricView, ReportPeriodRow, ReportViewModel } from "./types";
-import type { ReportTemplateConfig } from "../report-templates";
 
 const metricConfig = [
   { key: "ga4-organic-sessions", label: "Organic clicks", definition: "Sessions attributed to organic search in the selected reporting window.", format: "INTEGER" as const },
@@ -23,7 +22,7 @@ function metricDirection(change: number | null, higherIsBetter: boolean) {
   return positive ? "POSITIVE" as const : "NEGATIVE" as const;
 }
 
-export async function buildReportView(clientId: string, reportId?: string, template?: ReportTemplateConfig): Promise<ReportViewModel | null> {
+export async function buildReportView(clientId: string, reportId?: string): Promise<ReportViewModel | null> {
   const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
   const client = settings ? await prisma.client.findUnique({
     where: { id: clientId },
@@ -69,13 +68,12 @@ export async function buildReportView(clientId: string, reportId?: string, templ
   const clientMark = client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const activities = client.activities.map((activity) => ({ id: activity.id, date: activity.completedAt ? formatDate(activity.completedAt) : activity.status === "PLANNED" ? "Planned" : "In progress", type: activity.category, title: activity.title, description: activity.description ?? "The SEO team completed this work as part of the current reporting plan.", status: activity.status === "COMPLETED" ? "Completed" : activity.status === "PLANNED" ? "Planned" : "In progress", owner: "SEO team", clientVisible: activity.clientVisible }));
   const goals = client.goals.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) }));
-  const title = template?.coverTitle || reportRecord.title;
-  const description = template?.coverDescription || `${client.businessName} · ${reportRecord.periodLabel}. Current values, previous-period comparison, source coverage, and client-visible delivery records.`;
+  const title = reportRecord.title;
+  const description = `${client.businessName} · ${reportRecord.periodLabel}. Current values, previous-period comparison, source coverage, and client-visible delivery records.`;
 
   return {
     report: { id: reportRecord.id, title, type: reportRecord.type, periodLabel: reportRecord.periodLabel, status: "PUBLISHED", publishedAt: reportRecord.createdAt.toISOString(), updatedAt: reportRecord.updatedAt.toISOString() },
     client: { businessName: client.businessName, brandMark: clientMark, brandAccent: client.brandAccent, websiteUrl: client.websiteUrl },
-    template: template ? { sections: template.sections } : undefined,
     period: { label: reportRecord.periodLabel, comparisonLabel: "Previous reporting period", lastDataContext: "Presentation dataset · source context included" },
     summary: { status: "ON_TRACK", title: "Reporting period summary", body: description, highlights: [`Organic sessions: ${currentOrganic?.toLocaleString() ?? "not connected"}.`, `Keywords in the top 10: ${currentTopTen?.toLocaleString() ?? "not connected"}.`, `${activities.length} client-visible activity record${activities.length === 1 ? "" : "s"}.`], risks: ["GBP calls are available; revenue attribution is not connected.", "Live provider sync health is not connected."], nextActions: ["Review service-page metrics and assign conversion improvements where needed.", "Connect provider sources before using the report for performance commitments.", "Compare keyword movement with completed activities in the next reporting cycle."] },
     crm: { lifecycle: [{ label: "Visibility", status: "AVAILABLE", source: "GA4 · GSC · rank source", detail: "Organic sessions, impressions, and top-10 coverage are visible." }, { label: "Local engagement", status: "PARTIAL", source: "GBP", detail: "Calls are visible; location views, clicks, directions, and reviews are pending." }, { label: "Business outcome", status: "NOT_CONNECTED", source: "CRM · revenue", detail: "Verified booked revenue and outcome attribution are planned for a later phase." }], availableNow: ["Branded client report and PDF-ready presentation", "SEO visibility trends and source-aware comparisons", "Shared goals with progress bars and achievement highlights", "Client-visible activity and evidence-based recommendations"], nextConnections: ["Booked outcomes, revenue, and attribution", "Provider sync health and freshness history"] },
