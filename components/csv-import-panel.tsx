@@ -1,7 +1,7 @@
 "use client";
 
-import { Download, FileUp, Loader2, Upload, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { CalendarRange, CheckCircle2, FileSpreadsheet, FileUp, Loader2, ShieldCheck, Upload, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 
 type PreviewRow = {
@@ -37,7 +37,21 @@ type ImportSummary = {
 
 type Phase = "idle" | "previewing" | "importing" | "done" | "error";
 
-export function CsvImportPanel({ clientId }: { clientId: string }) {
+type ImportScreen = "overview" | "analytics" | "website" | "gbp" | "all";
+
+const SCREEN_COPY: Record<ImportScreen, { label: string; description: string; fields: string[] }> = {
+  overview: { label: "Overview", description: "Summary cards and cross-channel highlights.", fields: ["Organic sessions", "Search visibility", "GBP actions"] },
+  analytics: { label: "Analytics", description: "Google Analytics 4 cards and monthly rows.", fields: ["Users", "Sessions", "Views", "Events", "Conversions"] },
+  website: { label: "Website GSC", description: "Organic traffic, Search Console, and keyword visibility.", fields: ["Organic sessions", "Clicks", "Impressions", "CTR", "Position", "Top 10 keywords"] },
+  gbp: { label: "GBP", description: "Google Business Profile Search and Maps performance.", fields: ["Calls", "Profile views", "Website clicks", "Directions", "Reviews"] },
+  all: { label: "All reporting screens", description: "Every supported field across the client portal.", fields: ["All available metrics"] },
+};
+
+export function CsvImportPanel({ clientId, screen = "all" }: { clientId: string; screen?: ImportScreen }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeScreen: ImportScreen = screen !== "all" ? screen : pathname.includes("/analytics") ? "analytics" : pathname.includes("/gbp") ? "gbp" : pathname.includes("/website-seo") ? "website" : pathname === "/portal" ? "overview" : searchParams.get("step") === "gbp" ? "gbp" : searchParams.get("step") === "website" ? "website" : "all";
+  const screenCopy = SCREEN_COPY[activeScreen];
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -59,8 +73,9 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
   }, []);
 
   const handleFile = useCallback(async (selectedFile: File) => {
-    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
-      setErrorMessage("Please select a .csv file.");
+    const fileName = selectedFile.name.toLowerCase();
+    if (!fileName.endsWith(".xlsx")) {
+      setErrorMessage("Please select an Excel workbook (.xlsx).");
       setPhase("error");
       return;
     }
@@ -74,7 +89,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch(`/api/admin/clients/${clientId}/import-csv?dry_run=1`, {
+      const response = await fetch(`/api/admin/clients/${clientId}/import-csv?dry_run=1&screen=${activeScreen}`, {
         method: "POST",
         body: formData,
       });
@@ -86,7 +101,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
           setValidationErrors(data.validationErrors);
           setErrorMessage(`${data.validationErrors.length} validation error${data.validationErrors.length !== 1 ? "s" : ""} found.`);
         } else {
-          setErrorMessage(data.error ?? "Failed to validate the CSV file.");
+          setErrorMessage(data.error ?? "Failed to validate the Excel workbook.");
         }
         setPhase("error");
         return;
@@ -97,7 +112,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       setErrorMessage("Could not connect to the server.");
       setPhase("error");
     }
-  }, [clientId]);
+  }, [activeScreen, clientId]);
 
   const handleImport = useCallback(async () => {
     if (!file) return;
@@ -108,7 +123,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`/api/admin/clients/${clientId}/import-csv`, {
+      const response = await fetch(`/api/admin/clients/${clientId}/import-csv?screen=${activeScreen}`, {
         method: "POST",
         body: formData,
       });
@@ -128,7 +143,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       setErrorMessage("Could not connect to the server.");
       setPhase("error");
     }
-  }, [clientId, file, router]);
+  }, [activeScreen, clientId, file, router]);
 
   const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -147,21 +162,29 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
   }, []);
 
   return (
-    <section id="csv-import" className="card panel csv-import-panel">
+    <section id="csv-import" className="card panel csv-import-panel csv-import-panel-premium">
       <div className="panel-heading">
         <div>
-          <h2>Import CSV metrics</h2>
-          <p>Upload a CSV file to populate dashboard metric values for this client in bulk.</p>
+          <div className="csv-import-kicker"><span className="csv-import-kicker-dot" /> Screen-by-screen import</div>
+          <h2>Import {screenCopy.label} data</h2>
+          <p>{screenCopy.description} Upload only the fields for this screen, review the values, then import.</p>
         </div>
-        <Upload size={18} color="#f26b38" />
+        <div className="csv-import-heading-icon"><Upload size={18} /></div>
       </div>
 
-      {/* Template download */}
+      <div className="csv-import-scope">
+        <div className="csv-import-scope-icon"><ShieldCheck size={16} /></div>
+        <div><strong>{screenCopy.label} fields only</strong><span>{screenCopy.fields.join(" · ")}</span></div>
+          <span className="csv-import-scope-badge">{activeScreen === "all" ? "Full catalog" : "Focused screen"}</span>
+      </div>
+
       <div className="csv-import-template">
-        <a href={`/api/admin/clients/${clientId}/import-csv/template`} download className="button csv-import-download">
-          <Download size={14} /> Download CSV template
-        </a>
-        <span className="csv-import-hint">Pre-filled with all 24 metric keys and the current month.</span>
+        <div className="csv-import-template-copy"><CalendarRange size={15} /><span><strong>Two reporting periods included</strong><small>Fill the previous month and current month to unlock comparisons on the client screen.</small></span></div>
+        <div className="csv-import-template-actions">
+          <a href={`/api/admin/clients/${clientId}/import-csv/template?screen=${activeScreen}&include_previous=1&format=xlsx`} download className="button csv-import-download csv-import-excel">
+            <FileSpreadsheet size={14} /> Download Excel template
+          </a>
+        </div>
       </div>
 
       {/* Upload area */}
@@ -174,9 +197,9 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
             onDragLeave={handleDragLeave}
           >
             <FileUp size={24} />
-            <p>Drag a CSV file here, or <button type="button" className="csv-import-browse" onClick={() => fileInputRef.current?.click()}>browse</button></p>
-            <span>Accepts .csv files up to 2 MB · max 500 rows per import</span>
-            <input ref={fileInputRef} type="file" accept=".csv,text/csv" hidden onChange={(event) => { const selectedFile = event.target.files?.[0]; if (selectedFile) void handleFile(selectedFile); }} />
+            <p>Drag an Excel workbook here, or <button type="button" className="csv-import-browse" onClick={() => fileInputRef.current?.click()}>browse</button></p>
+            <span>Accepts .xlsx up to 2 MB · max 500 rows per import</span>
+            <input ref={fileInputRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={(event) => { const selectedFile = event.target.files?.[0]; if (selectedFile) void handleFile(selectedFile); }} />
           </div>
 
           {errorMessage && (
@@ -200,14 +223,14 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       {phase === "previewing" && preview.length > 0 && (
         <div className="csv-import-preview">
           <div className="csv-import-preview-heading">
-            <strong>{preview.length} row{preview.length !== 1 ? "s" : ""} ready to import</strong>
-            <span>{file?.name}</span>
+            <strong>{preview.length} row{preview.length !== 1 ? "s" : ""} ready to review</strong>
+            <span>{screenCopy.label} · {file?.name}</span>
           </div>
           <div className="csv-import-table-wrap">
             <table className="csv-import-table">
               <thead>
                 <tr>
-                  <th>Metric key</th>
+                  <th>Metric field</th>
                   <th>Period</th>
                   <th>Value</th>
                   <th>Source</th>
@@ -230,7 +253,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
           </div>
           <div className="csv-import-actions">
             <button type="button" className="button primary" onClick={handleImport}>
-              <Upload size={14} /> Import {preview.length} row{preview.length !== 1 ? "s" : ""}
+              <CheckCircle2 size={14} /> Confirm import
             </button>
             <button type="button" className="button" onClick={reset}>
               <X size={14} /> Cancel
@@ -242,7 +265,7 @@ export function CsvImportPanel({ clientId }: { clientId: string }) {
       {phase === "previewing" && preview.length === 0 && (
         <div className="csv-import-loading">
           <Loader2 size={20} className="spin" />
-          <p>Validating {file?.name ?? "CSV file"}…</p>
+          <p>Validating {file?.name ?? "Excel workbook"}…</p>
         </div>
       )}
 

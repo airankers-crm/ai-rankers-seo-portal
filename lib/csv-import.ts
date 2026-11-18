@@ -1,11 +1,52 @@
 import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import * as XLSX from "xlsx";
 import { GOOGLE_METRIC_DEFINITIONS } from "./google/provision";
 
 type Database = PrismaClient | Prisma.TransactionClient;
 
 const VALID_SOURCES = ["MANUAL", "GSC", "GA4", "GBP", "DATAFORSEO"] as const;
 type ValidSource = (typeof VALID_SOURCES)[number];
+
+export type ImportScreen = "overview" | "analytics" | "website" | "gbp" | "all";
+
+export const IMPORT_SCREEN_CONFIG: Record<ImportScreen, { label: string; description: string; metricKeys: string[] }> = {
+  overview: {
+    label: "Overview",
+    description: "The client overview cards and summary trends.",
+    metricKeys: ["ga4-organic-sessions", "gsc-clicks", "gsc-impressions", "gsc-ctr", "gsc-position", "kw-top10", "gbp-calls", "gbp-views", "gbp-website-clicks", "gbp-directions", "gbp-reviews"],
+  },
+  analytics: {
+    label: "Analytics",
+    description: "All Google Analytics 4 cards and monthly rows.",
+    metricKeys: GOOGLE_METRIC_DEFINITIONS.filter((definition) => definition.source === "GA4").map((definition) => definition.key),
+  },
+  website: {
+    label: "Website GSC",
+    description: "Organic traffic, Search Console visibility, and top-10 keyword fields.",
+    metricKeys: ["ga4-organic-sessions", "gsc-clicks", "gsc-impressions", "gsc-ctr", "gsc-position", "kw-top10"],
+  },
+  gbp: {
+    label: "GBP",
+    description: "Google Business Profile Search and Maps performance fields.",
+    metricKeys: ["gbp-calls", "gbp-views", "gbp-website-clicks", "gbp-directions", "gbp-reviews"],
+  },
+  all: {
+    label: "All reporting screens",
+    description: "Every supported metric across the client portal.",
+    metricKeys: [],
+  },
+};
+
+export function normalizeImportScreen(value?: string | null): ImportScreen {
+  if (value === "gsc" || value === "website-seo") return "website";
+  if (value === "overview" || value === "analytics" || value === "website" || value === "gbp" || value === "all") return value;
+  return "all";
+}
+
+function metricAllowedForScreen(metricKey: string, screen: ImportScreen) {
+  return screen === "all" || IMPORT_SCREEN_CONFIG[screen].metricKeys.includes(metricKey);
+}
 
 /** Every metric key the portal can display, with its default metadata. */
 export const ALL_METRIC_DEFINITIONS = [
@@ -108,7 +149,8 @@ const HEADER_ALIASES: Record<string, string> = {
   notes: "note",
 };
 
-export function parseCsv(text: string): { rows: CsvRow[]; errors: CsvRowError[] } {
+export function parseCsv(text: string, options: { screen?: ImportScreen } = {}): { rows: CsvRow[]; errors: CsvRowError[] } {
+  const screen = normalizeImportScreen(options.screen);
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const headerLineIndex = lines.findIndex((line) => line.trim().length > 0);
   if (headerLineIndex === -1) return { rows: [], errors: [{ line: 1, field: "file", message: "The CSV must have a header row and at least one data row." }] };
@@ -147,6 +189,10 @@ export function parseCsv(text: string): { rows: CsvRow[]; errors: CsvRowError[] 
 
     if (!metricKey) { errors.push({ line: lineNumber, field: "metric_key", message: "Metric key is required." }); continue; }
     const definition = METRIC_BY_KEY.get(metricKey);
+    if (definition && !metricAllowedForScreen(metricKey, screen)) {
+      errors.push({ line: lineNumber, field: "metric_key", message: metricKey + " is not part of the " + IMPORT_SCREEN_CONFIG[screen].label + " import. Download the " + IMPORT_SCREEN_CONFIG[screen].label + " template for this screen." });
+      continue;
+    }
     if (!definition) { errors.push({ line: lineNumber, field: "metric_key", message: `Unknown metric key: ${metricKey}. Download a current template or use a supported metric key.` }); continue; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(periodStart)) { errors.push({ line: lineNumber, field: "period_start", message: "Period start must be YYYY-MM-DD." }); continue; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(periodEnd)) { errors.push({ line: lineNumber, field: "period_end", message: "Period end must be YYYY-MM-DD." }); continue; }
@@ -175,6 +221,27 @@ export function parseCsv(text: string): { rows: CsvRow[]; errors: CsvRowError[] 
   }
 
   return { rows, errors };
+}
+
+/** Parse every data worksheet in an Excel workbook using the same validation as CSV. */
+export function parseXlsx(buffer: ArrayBuffer | Uint8Array, options: { screen?: ImportScreen } = {}): { rows: CsvRow[]; errors: CsvRowError[] } {
+  try {
+    const workbook = XLSX.read(buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer), { type: "array", cellDates: false, raw: false });
+    const dataSheets = workbook.SheetNames.filter((sheetName) => sheetName.toLowerCase() !== "instructions");
+    if (!dataSheets.length) return { rows: [], errors: [{ line: 1, field: "file", message: "The Excel workbook must contain at least one data worksheet." }] };
+    const results = dataSheets.map((sheetName) => parseCsv(XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName], { blankrows: false }), options));
+    return {
+      rows: results.flatMap((result) => result.rows),
+      errors: results.flatMap((result) => result.errors),
+    };
+  } catch {
+    return { rows: [], errors: [{ line: 1, field: "file", message: "The Excel workbook could not be read. Use a valid .xlsx file." }] };
+  }
+}
+
+export async function parseImportFile(fileName: string, buffer: ArrayBuffer, options: { screen?: ImportScreen } = {}) {
+  if (fileName.toLowerCase().endsWith(".xlsx")) return parseXlsx(buffer, options);
+  return { rows: [], errors: [{ line: 1, field: "file", message: "Only .xlsx Excel workbooks are supported." }] };
 }
 
 function parseDateOnly(value: string, endOfDay: boolean): Date | null {
@@ -329,12 +396,40 @@ function currentMonthEnd() {
   return `${lastDay.getUTCFullYear()}-${String(lastDay.getUTCMonth() + 1).padStart(2, "0")}-${String(lastDay.getUTCDate()).padStart(2, "0")}`;
 }
 
-export function generateCsvTemplate(): string {
+function monthWindow(offset: number) {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
+  return {
+    start: start.getUTCFullYear() + "-" + String(start.getUTCMonth() + 1).padStart(2, "0") + "-01",
+    end: end.getUTCFullYear() + "-" + String(end.getUTCMonth() + 1).padStart(2, "0") + "-" + String(end.getUTCDate()).padStart(2, "0"),
+  };
+}
+
+export function generateCsvTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): string {
   const header = "metric_key,period_start,period_end,value,source,note";
-  const start = currentMonthStart();
-  const end = currentMonthEnd();
-  const rows = ALL_METRIC_DEFINITIONS.map((definition) =>
-    `${definition.key},${start},${end},,${definition.source},`
-  );
+  const definitions = screen === "all" ? ALL_METRIC_DEFINITIONS : ALL_METRIC_DEFINITIONS.filter((definition) => metricAllowedForScreen(definition.key, screen));
+  const windows = options.includePreviousPeriod ? [monthWindow(-1), monthWindow(0)] : [{ start: currentMonthStart(), end: currentMonthEnd() }];
+  const rows = windows.flatMap(({ start, end }) => definitions.map((definition) => definition.key + "," + start + "," + end + ",," + definition.source + ","));
   return [header, ...rows].join("\n");
+}
+
+export function generateXlsxTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): Uint8Array {
+  const workbook = XLSX.utils.book_new();
+  const screens: ImportScreen[] = screen === "all" ? ["overview", "analytics", "website", "gbp"] : [screen];
+  const instructionRows = [
+    ["AI Rankers import template"],
+    ["Selected scope", IMPORT_SCREEN_CONFIG[screen].label],
+    ["How to use", "Fill the value column on the screen tab you are importing, then upload this workbook."],
+    ["Periods", "The template includes the previous complete month and the current month so the client screen can show comparisons."],
+    ["Required columns", "metric_key, period_start, period_end, value"],
+    ["Optional columns", "source, note"],
+    ["Safety", "Imports are validated before writing. Existing manual overrides are preserved."],
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(instructionRows), "Instructions");
+  for (const currentScreen of screens) {
+    const rows = generateCsvTemplate(currentScreen, options).split("\n").map((line) => parseCsvLine(line));
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31));
+  }
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Uint8Array;
 }

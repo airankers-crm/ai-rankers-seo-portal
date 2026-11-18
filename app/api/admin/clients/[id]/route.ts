@@ -20,9 +20,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (body?.dataMode !== undefined && !requestedDataMode) {
     return NextResponse.json({ error: "Data mode must be MANAGED or GOOGLE_API." }, { status: 400 });
   }
-  if (requestedDataMode && access.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Only a Super Admin can change the client portal data source." }, { status: 403 });
-  }
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
     websiteUrl = parseSafeHttpUrl(body.websiteUrl.trim());

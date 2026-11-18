@@ -1,6 +1,7 @@
 import { prisma } from "@ai-rankers/db";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { AnalyticsDashboard, type AnalyticsMetric, type AnalyticsRow } from "../../../components/analytics-dashboard";
+import { CsvImportPanel } from "../../../components/csv-import-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -58,5 +59,10 @@ export default async function AnalyticsPage() {
     }
   }
 
-  return <AnalyticsDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />;
+  return (
+    <>
+      <AnalyticsDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />
+      {access.user?.role === "SUPER_ADMIN" && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} screen="analytics" /></div>}
+    </>
+  );
 }

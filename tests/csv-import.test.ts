@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL_METRIC_DEFINITIONS, generateCsvTemplate, parseCsv } from "../lib/csv-import";
+import { ALL_METRIC_DEFINITIONS, generateCsvTemplate, generateXlsxTemplate, parseCsv, parseXlsx } from "../lib/csv-import";
 
 describe("CSV metric import", () => {
   it("parses supported aliases, normalizes source, and preserves quoted notes", () => {
@@ -60,5 +60,24 @@ describe("CSV metric import", () => {
 
     expect(result.rows).toHaveLength(1);
     expect(result.errors).toEqual([{ line: 3, field: "metric_key", message: "Duplicate metric, period, and source row." }]);
+  });
+
+  it("keeps screen imports scoped to the selected catalog", () => {
+    const result = parseCsv([
+      "metric_key,period_start,period_end,value,source,note",
+      "ga4-sessions,2026-10-01,2026-10-31,1234,GA4,",
+    ].join("\n"), { screen: "website" });
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors[0]?.message).toContain("not part of the Website GSC import");
+  });
+
+  it("creates a focused Excel workbook with a separate instructions sheet", () => {
+    const workbook = generateXlsxTemplate("website", { includePreviousPeriod: true });
+    const result = parseXlsx(workbook, { screen: "website" });
+
+    expect(workbook.length).toBeGreaterThan(0);
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toEqual([]);
   });
 });

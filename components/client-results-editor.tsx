@@ -58,10 +58,25 @@ const GBP_METRIC_TEMPLATES = [
   { key: "gbp-reviews", name: "Reviews received", description: "New reviews received during the selected reporting window.", valueFormat: "INTEGER", source: "GBP" },
 ] as const;
 
-export type EditorView = "website" | "gbp" | "all";
+const ANALYTICS_METRIC_TEMPLATES = [
+  { key: "ga4-active-users", name: "Active users", description: "Unique users who visited the website during the reporting period.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-sessions", name: "Sessions", description: "Visits recorded by Google Analytics 4.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-organic-sessions", name: "Organic sessions", description: "Sessions attributed to unpaid organic search.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-views", name: "Page views", description: "Pages viewed across the website.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-engaged-sessions", name: "Engaged sessions", description: "Sessions that met the GA4 engagement criteria.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-engagement-rate", name: "Engagement rate", description: "The percentage of sessions that were engaged.", valueFormat: "PERCENT", source: "GA4" },
+  { key: "ga4-event-count", name: "Event count", description: "The total number of events recorded by Google Analytics 4.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-key-events", name: "Key events", description: "Configured conversion events recorded by Google Analytics 4.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-phone-clicks", name: "Phone clicks", description: "Clicks on tracked phone links.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-form-submissions", name: "Form submissions", description: "Contact-form submissions recorded as GA4 events.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "ga4-quote-requests", name: "Quote requests", description: "Quote-request events configured as GA4 conversions.", valueFormat: "INTEGER", source: "GA4" },
+] as const;
+
+export type EditorView = "website" | "analytics" | "gbp" | "all";
 
 function metricView(metric: ResultMetric): Exclude<EditorView, "all"> | "other" {
   if (metric.key.startsWith("gbp-") || metric.sectionKind === "GBP") return "gbp";
+  if (metric.key.startsWith("ga4-")) return "analytics";
   if (metric.key === "ga4-organic-sessions" || metric.key === "gsc-impressions" || metric.key === "kw-top10" || metric.key.startsWith("ga4-channel-") || metric.sectionKind === "WEBSITE") return "website";
   return "other";
 }
@@ -119,7 +134,7 @@ function draftsMatch(left: MetricDraft, right: MetricDraft) {
 
 export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections, initialView = "all" }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[]; initialView?: EditorView }) {
   const [metrics, setMetrics] = useState(initialMetrics);
-  const defaultView = initialMetrics.some((metric) => metricView(metric) === "website") ? "website" : "gbp";
+  const defaultView: EditorView = initialMetrics.some((metric) => metricView(metric) === "website") ? "website" : initialMetrics.some((metric) => metricView(metric) === "analytics") ? "analytics" : "gbp";
   const [activeView, setActiveView] = useState<EditorView>(initialView ?? defaultView);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<MetricDraft | null>(null);
@@ -132,17 +147,18 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   const websiteSection = sections.find((section) => section.kind === "WEBSITE");
   const gbpSection = sections.find((section) => section.kind === "GBP");
-  const websiteMetrics = metrics.filter((metric) => metricView(metric) === "website");
+  const websiteMetrics = metrics.filter((metric) => metricView(metric) === "website" || metric.key === "ga4-organic-sessions");
+  const analyticsMetrics = metrics.filter((metric) => metricView(metric) === "analytics");
   const gbpMetrics = metrics.filter((metric) => metricView(metric) === "gbp");
-  const filteredMetrics = activeView === "all" ? metrics : metrics.filter((metric) => metricView(metric) === activeView);
+  const filteredMetrics = activeView === "all" ? metrics : activeView === "website" ? websiteMetrics : metrics.filter((metric) => metricView(metric) === activeView);
   const availableTemplates = useMemo(() => {
-    const templates = activeView === "website" ? WEBSITE_METRIC_TEMPLATES : activeView === "gbp" ? GBP_METRIC_TEMPLATES : [];
+    const templates = activeView === "website" ? WEBSITE_METRIC_TEMPLATES : activeView === "analytics" ? ANALYTICS_METRIC_TEMPLATES : activeView === "gbp" ? GBP_METRIC_TEMPLATES : [];
     return templates.filter((template) => !metrics.some((metric) => metric.key === template.key));
   }, [activeView, metrics]);
-  const addSection = activeView === "website" ? websiteSection : activeView === "gbp" ? gbpSection : null;
-  const activeViewLabel = activeView === "website" ? "Website GSC" : activeView === "gbp" ? "GBP performance" : "All results";
-  const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=draft` : `/admin/clients/${clientId}/preview/gbp?mode=draft`;
-  const activePortal = activeView === "website" ? "/portal/website-seo" : "/portal/gbp";
+  const addSection = activeView === "website" || activeView === "analytics" ? websiteSection : activeView === "gbp" ? gbpSection : null;
+  const activeViewLabel = activeView === "website" ? "Website GSC" : activeView === "analytics" ? "Analytics" : activeView === "gbp" ? "GBP performance" : "All results";
+  const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=draft` : activeView === "analytics" ? "/portal/analytics" : `/admin/clients/${clientId}/preview/gbp?mode=draft`;
+  const activePortal = activeView === "website" ? "/portal/website-seo" : activeView === "analytics" ? "/portal/analytics" : "/portal/gbp";
   const activeMetric = editingId ? metrics.find((metric) => metric.id === editingId) ?? null : null;
   const isDirty = Boolean(activeMetric && draft && !draftsMatch(draft, draftFor(activeMetric)));
 
@@ -225,11 +241,12 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   return <section className="card panel client-results-editor" aria-labelledby="client-results-title">
     <div className="panel-heading">
-      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website GSC and GBP performance results separately, then publish only when each report is approved.</p></div>
+      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website GSC, Analytics, and GBP performance results separately, then publish only when each report is approved.</p></div>
       <div className="results-heading-icon"><Gauge size={18} /></div>
     </div>
     <div className="results-editor-tabs" role="tablist" aria-label="Client performance editors">
       <button className={activeView === "website" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "website"} onClick={() => { setActiveView("website"); setAdding(false); setEditingId(null); setDraft(null); }}>Website GSC <span>{websiteMetrics.length}</span></button>
+      <button className={activeView === "analytics" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setAdding(false); setEditingId(null); setDraft(null); }}>Analytics <span>{analyticsMetrics.length}</span></button>
       <button className={activeView === "gbp" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "gbp"} onClick={() => { setActiveView("gbp"); setAdding(false); setEditingId(null); setDraft(null); }}>GBP performance <span>{gbpMetrics.length}</span></button>
       <button className={activeView === "all" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "all"} onClick={() => { setActiveView("all"); setAdding(false); setEditingId(null); setDraft(null); }}>All results <span>{metrics.length}</span></button>
     </div>
