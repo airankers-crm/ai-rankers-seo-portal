@@ -25,7 +25,6 @@ Live GA4 and GBP provider reporting remains an external integration dependency. 
 | `/portal/reports` | Pass | Report filters, search, published reports and detail links |
 | `/portal/reports/[id]` | Pass | Published report detail route |
 | `/portal/settings` | Pass | Business information, connection state, profile, notifications, security, workspace access |
-| `/portal/leads` | Pass by design | Compatibility redirect to `/portal` |
 | `/portal/messages` | Pass by design | Compatibility redirect to `/portal/feedback` |
 
 ## Functional QA

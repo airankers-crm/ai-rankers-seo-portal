@@ -16,7 +16,6 @@ const publicRoutes = [
   "/api/auth/redirect",
   "/api/health/db",
   "/api/cron/google-sync",
-  "/api/webhooks/metform",
 ];
 
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -36,8 +35,7 @@ export default function proxy(request: NextRequest) {
 
   // Auth provider callbacks own their own request validation. All application
   // mutations must prove they originated from this portal to reduce CSRF risk.
-  const isMetformWebhook = pathname.startsWith("/api/webhooks/metform/");
-  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/") && !isMetformWebhook && stateChangingMethods.has(request.method) && !isSameOriginRequest(request)) {
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/") && stateChangingMethods.has(request.method) && !isSameOriginRequest(request)) {
     return NextResponse.json({ error: "This request must originate from the client portal." }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 

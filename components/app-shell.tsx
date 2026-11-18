@@ -14,7 +14,6 @@ import {
   ChevronDown,
   CircleHelp,
   FileText,
-  Inbox,
   Layers3,
   LayoutDashboard,
   MessageCircle,
@@ -75,7 +74,6 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { label: "Workspace overview", href: "/admin", icon: LayoutDashboard },
       { label: "Clients", href: "/admin/clients", icon: UsersRound },
-      { label: "Leads", href: "/admin/leads", icon: Inbox },
     ],
   },
   {
