@@ -31,6 +31,25 @@ const SECTION_DEFAULTS = {
   GBP: { name: "GBP Performance", position: 2 },
 } as const;
 
+const WEBSITE_GSC_METRIC_DEFINITIONS = [
+  ...GOOGLE_METRIC_DEFINITIONS.filter((definition) => ["ga4-organic-sessions", "gsc-clicks", "gsc-impressions", "gsc-ctr", "gsc-position"].includes(definition.key)),
+  { key: "kw-top10", name: "Keywords in top 10", description: "Tracked keywords currently appearing within the first ten organic results.", source: "DATAFORSEO" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "RANK" as const },
+] as const;
+
+export async function provisionWebsiteGscMetrics(clientId: string, database?: Database) {
+  database ??= (await import("@ai-rankers/db")).prisma;
+  const existing = await database.section.findFirst({ where: { clientId, kind: "WEBSITE" }, select: { id: true } });
+  const section = existing ?? await database.section.create({ data: { clientId, kind: "WEBSITE", ...SECTION_DEFAULTS.WEBSITE, isVisible: true, isDraft: false }, select: { id: true } });
+
+  for (const definition of WEBSITE_GSC_METRIC_DEFINITIONS) {
+    await database.metric.upsert({
+      where: { clientId_key: { clientId, key: definition.key } },
+      update: definition.source === "GSC" ? { sectionId: section.id } : {},
+      create: { clientId, sectionId: section.id, key: definition.key, name: definition.name, description: definition.description, source: definition.source, displayType: definition.displayType, valueFormat: definition.valueFormat, isVisible: true, isDraft: false },
+    });
+  }
+}
+
 export async function provisionGoogleMetrics(clientId: string, database?: Database) {
   database ??= (await import("@ai-rankers/db")).prisma;
   const sections = new Map<string, { id: string }>();

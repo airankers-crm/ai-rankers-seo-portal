@@ -46,7 +46,10 @@ type MetricDraft = {
 
 const WEBSITE_METRIC_TEMPLATES = [
   { key: "ga4-organic-sessions", name: "Organic traffic", description: "Sessions attributed to organic search in the selected reporting window.", valueFormat: "INTEGER", source: "GA4" },
+  { key: "gsc-clicks", name: "Search clicks", description: "Search result clicks recorded by Google Search Console.", valueFormat: "INTEGER", source: "GSC" },
   { key: "gsc-impressions", name: "Search impressions", description: "Search results impressions recorded by Google Search Console.", valueFormat: "INTEGER", source: "GSC" },
+  { key: "gsc-ctr", name: "Search CTR", description: "The percentage of Search Console impressions that became clicks.", valueFormat: "PERCENT", source: "GSC" },
+  { key: "gsc-position", name: "Average position", description: "The Search Console average position weighted by impressions.", valueFormat: "DECIMAL", source: "GSC" },
   { key: "kw-top10", name: "Keywords in top 10", description: "Tracked keywords currently appearing within the first ten organic results.", valueFormat: "RANK", source: "DATAFORSEO" },
 ] as const;
 
@@ -77,7 +80,7 @@ export type EditorView = "website" | "analytics" | "gbp" | "all";
 function metricView(metric: ResultMetric): Exclude<EditorView, "all"> | "other" {
   if (metric.key.startsWith("gbp-") || metric.sectionKind === "GBP") return "gbp";
   if (metric.key.startsWith("ga4-")) return "analytics";
-  if (metric.key === "ga4-organic-sessions" || metric.key === "gsc-impressions" || metric.key === "kw-top10" || metric.key.startsWith("ga4-channel-") || metric.sectionKind === "WEBSITE") return "website";
+  if (metric.key === "ga4-organic-sessions" || metric.key.startsWith("gsc-") || metric.key === "kw-top10" || metric.key.startsWith("ga4-channel-") || metric.sectionKind === "WEBSITE") return "website";
   return "other";
 }
 
@@ -132,7 +135,7 @@ function draftsMatch(left: MetricDraft, right: MetricDraft) {
   return left.valueId === right.valueId && left.name === right.name && left.description === right.description && left.value === right.value && left.periodStart === right.periodStart && left.periodEnd === right.periodEnd && left.note === right.note && left.publish === right.publish && left.isVisible === right.isVisible;
 }
 
-export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections, initialView = "all" }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[]; initialView?: EditorView }) {
+export function ClientResultsEditor({ clientId, metrics: initialMetrics, sections, initialView = "all", showTabs = true }: { clientId: string; metrics: ResultMetric[]; sections: ResultSection[]; initialView?: EditorView; showTabs?: boolean }) {
   const [metrics, setMetrics] = useState(initialMetrics);
   const defaultView: EditorView = initialMetrics.some((metric) => metricView(metric) === "website") ? "website" : initialMetrics.some((metric) => metricView(metric) === "analytics") ? "analytics" : "gbp";
   const [activeView, setActiveView] = useState<EditorView>(initialView ?? defaultView);
@@ -241,15 +244,15 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   return <section className="card panel client-results-editor" aria-labelledby="client-results-title">
     <div className="panel-heading">
-      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website GSC, Analytics, and GBP performance results separately, then publish only when each report is approved.</p></div>
+      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">{showTabs ? "Performance editors" : `${activeViewLabel} editor`}</h2><p>{showTabs ? "Edit Website GSC, Analytics, and GBP performance results separately, then publish only when each report is approved." : `Edit each ${activeViewLabel} result independently, then publish only when this client-facing screen is approved.`}</p></div>
       <div className="results-heading-icon"><Gauge size={18} /></div>
     </div>
-    <div className="results-editor-tabs" role="tablist" aria-label="Client performance editors">
+    {showTabs && <div className="results-editor-tabs" role="tablist" aria-label="Client performance editors">
       <button className={activeView === "website" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "website"} onClick={() => { setActiveView("website"); setAdding(false); setEditingId(null); setDraft(null); }}>Website GSC <span>{websiteMetrics.length}</span></button>
       <button className={activeView === "analytics" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setAdding(false); setEditingId(null); setDraft(null); }}>Analytics <span>{analyticsMetrics.length}</span></button>
       <button className={activeView === "gbp" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "gbp"} onClick={() => { setActiveView("gbp"); setAdding(false); setEditingId(null); setDraft(null); }}>GBP performance <span>{gbpMetrics.length}</span></button>
       <button className={activeView === "all" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "all"} onClick={() => { setActiveView("all"); setAdding(false); setEditingId(null); setDraft(null); }}>All results <span>{metrics.length}</span></button>
-    </div>
+    </div>}
     <div className="results-editor-toolbar">
       <div className="results-editor-summary"><strong>{filteredMetrics.filter((metric) => !metric.isDraft && metric.isVisible).length}</strong><span>published in {activeViewLabel}</span><i /> <strong>{filteredMetrics.filter((metric) => metric.isDraft).length}</strong><span>draft results</span></div>
       <div className="results-editor-actions"><a className="button" href={activePreview} target="_blank" rel="noreferrer"><Eye size={14} /> Preview draft</a><a className="button" href={activePortal} target="_blank" rel="noreferrer">View live portal</a>{availableTemplates.length > 0 && addSection ? <button className="button" type="button" onClick={() => { setAdding((current) => !current); setEditingId(null); setDraft(null); setError(""); }}><Plus size={14} /> Add {activeViewLabel} metric</button> : null}</div>
@@ -267,8 +270,9 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
       <div className="results-metric-list">
         {filteredMetrics.map((metric) => {
           const latest = metric.values[0];
+          const sectionLabel = activeView === "website" ? "Website GSC" : activeView === "analytics" ? "Analytics" : activeView === "gbp" ? "GBP performance" : metric.sectionName;
           return <article className={`result-metric-card${editingId === metric.id ? " active" : ""}`} key={metric.id}>
-            <div className="result-metric-card-top"><span className="result-section-tag">{metric.sectionName}</span><span className={`status ${metric.isDraft ? "progress" : "complete"}`}>{metric.isDraft ? "Draft" : "Published"}</span></div>
+            <div className="result-metric-card-top"><span className="result-section-tag">{sectionLabel}</span><span className={`status ${metric.isDraft ? "progress" : "complete"}`}>{metric.isDraft ? "Draft" : "Published"}</span></div>
             <div className="result-metric-title-row"><div><h3>{metric.name}</h3><p>{metric.description || "No client-facing definition yet."}</p></div><span className="result-source">{metric.source}</span></div>
             <div className="result-metric-value-row"><div><span>Latest result</span><strong>{formatMetricValue(latest?.value, metric.valueFormat)}</strong></div><div><span>Reporting period</span><strong>{latest ? formatPeriodLabel(latest.periodStart) : "Not entered"}</strong></div></div>
             <div className="result-metric-card-foot"><span>{metric.isVisible ? <><Eye size={12} /> Visible to client</> : <><Eye size={12} /> Hidden from client</>}</span><button className="table-action" type="button" onClick={() => beginEdit(metric)}><Edit3 size={13} /> Edit result</button></div>

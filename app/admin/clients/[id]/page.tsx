@@ -12,6 +12,7 @@ import { ClientPublishControls } from "../../../../components/client-publish-con
 import { ClientDataSourceToggle } from "../../../../components/client-data-source-toggle";
 import { ClientBusinessProfileStep, ClientReviewStep, ClientSetupWizard, ClientSourceChecklist, ClientSourceToolbar, getClientSetupStep } from "../../../../components/client-setup-wizard";
 import { requireAdminAccess } from "../../../../lib/auth/access";
+import { provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
   const { id } = await params;
   const query = await searchParams;
   const currentStep = getClientSetupStep(query?.step ?? (query?.section === "website" ? "website" : query?.section === "analytics" ? "analytics" : query?.section === "gbp" ? "gbp" : undefined));
+  if (currentStep === "website") {
+    const clientExists = await prisma.client.findUnique({ where: { id }, select: { id: true } });
+    if (!clientExists) notFound();
+    await provisionWebsiteGscMetrics(id);
+  }
   const client = await prisma.client.findUnique({
     where: { id },
     include: {
@@ -90,17 +96,17 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
   </> : currentStep === "business" ? <ClientBusinessProfileStep businessName={client.businessName} websiteUrl={client.websiteUrl} /> : currentStep === "website" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="website" />}
     <ClientSourceChecklist source="Website SEO" description="Prepare verified website-search results for the client. Connect or record approved values in the editor, then leave them as drafts until the review step." />
-    <ClientResultsEditor clientId={client.id} initialView="website" sections={editorSections} metrics={editorMetrics} />
+    <ClientResultsEditor clientId={client.id} initialView="website" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="website" />}
   </div> : currentStep === "analytics" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="analytics" />}
     <ClientSourceChecklist source="Analytics" description="Prepare approved Google Analytics results for the client. Edit each card independently and keep imported values in draft until the analytics presentation is approved." />
-    <ClientResultsEditor clientId={client.id} initialView="analytics" sections={editorSections} metrics={editorMetrics} />
+    <ClientResultsEditor clientId={client.id} initialView="analytics" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="analytics" />}
   </div> : currentStep === "gbp" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="gbp" />}
     <ClientSourceChecklist source="Google Business Profile" description="Prepare verified Search and Maps results for the client. Review the source and reporting period before anything is included in a published portal version." />
-    <ClientResultsEditor clientId={client.id} initialView="gbp" sections={editorSections} metrics={editorMetrics} />
+    <ClientResultsEditor clientId={client.id} initialView="gbp" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="gbp" />}
   </div> : currentStep === "sections" ? <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft, presentation: section.presentation }))} /> : currentStep === "review" ? <ClientReviewStep clientId={client.id} businessName={client.businessName} sectionCount={client.sections.length} metricCount={client.metrics.length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} /> : currentStep === "publish" ? <ClientPublishControls clientId={client.id} versions={client.versions.map((version) => ({ id: version.id, version: version.version, label: version.label, publishedAt: version.publishedAt.toISOString() }))} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} /> : <section className="card panel setup-invite-card"><div className="panel-heading"><div><p className="eyebrow">Step 9</p><h2>Invite the client</h2><p>Only invite the real customer email after the portal has been reviewed and published.</p></div><UsersRound size={18} color="#148f83" /></div><ClientInvitationForm clientId={client.id} /></section>;
 
