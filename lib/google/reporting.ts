@@ -46,6 +46,22 @@ export type GoogleRealtimeResult = {
   warnings: string[];
 };
 
+export type GoogleGa4TrendSummary = {
+  activeUsers: number;
+  sessions: number;
+  eventCount: number;
+  keyEvents: number;
+  views: number;
+};
+
+export type GoogleGa4TrendPoint = GoogleGa4TrendSummary & { date: string };
+
+export type GoogleGa4TrendResult = {
+  current: { points: GoogleGa4TrendPoint[]; summary: GoogleGa4TrendSummary };
+  comparison: { points: GoogleGa4TrendPoint[]; summary: GoogleGa4TrendSummary } | null;
+  warnings: string[];
+};
+
 type GscResponse = {
   rows?: Array<{ keys?: string[]; clicks?: number; impressions?: number }>;
 };
@@ -104,6 +120,27 @@ function toPoints(buckets: Map<string, { periodStart: Date; periodEnd: Date; val
 function numberValue(value: string | number | undefined) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function emptyGa4TrendSummary(): GoogleGa4TrendSummary {
+  return { activeUsers: 0, sessions: 0, eventCount: 0, keyEvents: 0, views: 0 };
+}
+
+function trendDateKeys(window: GoogleSyncWindow) {
+  const dates: string[] = [];
+  for (let cursor = new Date(window.start); cursor <= window.end; cursor = new Date(cursor.getTime() + DAY_MS)) dates.push(toDateString(cursor));
+  return dates;
+}
+
+function trendSummaryFromRow(row?: { metricValues?: Array<{ value?: string }> }): GoogleGa4TrendSummary {
+  const values = row?.metricValues ?? [];
+  return { activeUsers: numberValue(values[0]?.value), sessions: numberValue(values[1]?.value), eventCount: numberValue(values[2]?.value), keyEvents: numberValue(values[3]?.value), views: numberValue(values[4]?.value) };
+}
+
+function trendPointFromRow(row: { dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }): GoogleGa4TrendPoint | null {
+  const date = row.dimensionValues?.[0]?.value ?? "";
+  if (date.length !== 8) return null;
+  return { date: `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`, ...trendSummaryFromRow(row) };
 }
 
 function propertyResource(propertyId: string) {
@@ -194,6 +231,24 @@ export async function fetchGa4Metrics(accessToken: string, propertyId: string, w
     points: [...bucketsByMetric.entries()].flatMap(([key, buckets]) => toPoints(buckets, key, "GA4")),
     warnings: [],
   };
+}
+
+async function fetchGa4TrendWindow(accessToken: string, propertyId: string, window: GoogleSyncWindow) {
+  const dateRange = { startDate: toDateString(window.start), endDate: toDateString(window.end) };
+  const metrics = ["activeUsers", "sessions", "eventCount", "keyEvents", "screenPageViews"].map((name) => ({ name }));
+  const [daily, summary] = await Promise.all([
+    runGa4Report(accessToken, propertyId, { dateRanges: [dateRange], dimensions: [{ name: "date" }], metrics, orderBys: [{ dimension: { dimensionName: "date" } }], keepEmptyRows: true, limit: 5000 }),
+    runGa4Report(accessToken, propertyId, { dateRanges: [dateRange], metrics, keepEmptyRows: true }),
+  ]);
+  const byDate = new Map((daily.rows ?? []).map(trendPointFromRow).filter((point): point is GoogleGa4TrendPoint => Boolean(point)).map((point) => [point.date, point]));
+  const zero = emptyGa4TrendSummary();
+  const points = trendDateKeys(window).map((date) => ({ date, ...(byDate.get(date) ?? zero) }));
+  return { points, summary: trendSummaryFromRow(summary.rows?.[0]) };
+}
+
+export async function fetchGa4Trend(accessToken: string, propertyId: string, current: GoogleSyncWindow, comparison?: GoogleSyncWindow): Promise<GoogleGa4TrendResult> {
+  const [currentResult, comparisonResult] = await Promise.all([fetchGa4TrendWindow(accessToken, propertyId, current), comparison ? fetchGa4TrendWindow(accessToken, propertyId, comparison) : Promise.resolve(null)]);
+  return { current: currentResult, comparison: comparisonResult, warnings: [] };
 }
 
 function listRows(response: RealtimeResponse, metricIndex = 0) {

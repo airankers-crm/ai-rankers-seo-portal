@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchGa4Metrics, fetchGa4Realtime, fetchGscMetrics, getGoogleSyncWindow } from "../lib/google/reporting";
+import { fetchGa4Metrics, fetchGa4Realtime, fetchGa4Trend, fetchGscMetrics, getGoogleSyncWindow } from "../lib/google/reporting";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -70,5 +70,21 @@ describe("GA4 reporting", () => {
     expect(result.devices).toEqual([{ label: "Home", value: 3 }]);
     expect(result.warnings).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(10);
+  });
+
+  it("returns a daily trend and range summary for the Analytics chart", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { dimensions?: Array<{ name: string }> };
+      if (body.dimensions?.[0]?.name === "date") return new Response(JSON.stringify({ rows: [{ dimensionValues: [{ value: "20261117" }], metricValues: [{ value: "10" }, { value: "12" }, { value: "20" }, { value: "1" }, { value: "49" }] }] }), { status: 200 });
+      return new Response(JSON.stringify({ rows: [{ metricValues: [{ value: "10" }, { value: "12" }, { value: "20" }, { value: "1" }, { value: "49" }] }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchGa4Trend("token", "properties/123", { start: new Date("2026-11-17T00:00:00.000Z"), end: new Date("2026-11-17T00:00:00.000Z") });
+
+    expect(result.current.points).toEqual([{ date: "2026-11-17", activeUsers: 10, sessions: 12, eventCount: 20, keyEvents: 1, views: 49 }]);
+    expect(result.current.summary).toEqual({ activeUsers: 10, sessions: 12, eventCount: 20, keyEvents: 1, views: 49 });
+    expect(result.comparison).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

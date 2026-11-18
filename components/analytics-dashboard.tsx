@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, type MouseEvent } from "react";
-import { ArrowRight, CheckCircle2, Clock3, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { CheckCircle2, Clock3, UsersRound } from "lucide-react";
 import { AppShell } from "./app-shell";
 import { AnalyticsRealtime } from "./analytics-realtime";
 import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
@@ -34,6 +33,10 @@ export type AnalyticsRow = {
 };
 
 type AnalyticsViewKey = "activeUsers" | "sessions" | "organicSessions" | "views" | "engagedSessions" | "engagementRate" | "eventCount" | "keyEvents" | "phoneClicks" | "formSubmissions" | "quoteRequests";
+type AnalyticsTrendSummary = { activeUsers: number; sessions: number; eventCount: number; keyEvents: number; views: number };
+type AnalyticsTrendPoint = AnalyticsTrendSummary & { date: string };
+type AnalyticsTrendResult = { current: { points: AnalyticsTrendPoint[]; summary: AnalyticsTrendSummary }; comparison: { points: AnalyticsTrendPoint[]; summary: AnalyticsTrendSummary } | null; warnings: string[] };
+type AnalyticsTrendStatus = "idle" | "loading" | "ready" | "empty" | "error";
 type DateRangeKey = "custom" | "today" | "yesterday" | "last-3-days" | "last-1-week" | "last-3-weeks" | "last-1-month" | "last-6-months" | "last-1-year";
 type CompareKey = "none" | "previous-period" | "previous-year";
 
@@ -128,10 +131,71 @@ function rowsInRange(rows: AnalyticsRow[], start: Date, end: Date) {
   return rows.filter((row) => row.periodStart.slice(0, 10) >= startKey && row.periodStart.slice(0, 10) <= endKey);
 }
 
+function comparisonDateWindow(start: Date, end: Date, compare: CompareKey) {
+  if (compare === "none") return null;
+  if (compare === "previous-year") {
+    const comparisonStart = new Date(start);
+    const comparisonEnd = new Date(end);
+    comparisonStart.setFullYear(comparisonStart.getFullYear() - 1);
+    comparisonEnd.setFullYear(comparisonEnd.getFullYear() - 1);
+    return { start: comparisonStart, end: comparisonEnd };
+  }
+  const span = end.getTime() - start.getTime();
+  const comparisonEnd = new Date(start.getTime() - 86_400_000);
+  return { start: new Date(comparisonEnd.getTime() - span), end: comparisonEnd };
+}
+
+function queryDate(date: Date) {
+  return dateKey(date);
+}
+
+function liveSummaryValueForPoint(key: AnalyticsViewKey, point: AnalyticsTrendPoint) {
+  if (key === "activeUsers") return point.activeUsers;
+  if (key === "sessions") return point.sessions;
+  if (key === "eventCount") return point.eventCount;
+  if (key === "keyEvents") return point.keyEvents;
+  if (key === "views") return point.views;
+  return null;
+}
+
 export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics, rows }: { clientName: string; brandMark: string; brandAccent: string; metrics: AnalyticsMetric[]; rows: AnalyticsRow[] }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(getDefaultDateRange);
+  const [trendResult, setTrendResult] = useState<AnalyticsTrendResult | null>(null);
+  const [trendStatus, setTrendStatus] = useState<AnalyticsTrendStatus>("idle");
   const range = dateRangeKey(dateRange);
   const compare: CompareKey = dateRange.compare === "Previous period" ? "previous-period" : dateRange.compare === "Previous year" ? "previous-year" : "none";
+  const comparisonWindow = useMemo(() => comparisonDateWindow(dateRange.start, dateRange.end, compare), [compare, dateRange.end, dateRange.start]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const initialLoad = window.setTimeout(() => {
+      setTrendStatus("loading");
+      const params = new URLSearchParams({ start: queryDate(dateRange.start), end: queryDate(dateRange.end) });
+      if (comparisonWindow) {
+        params.set("comparisonStart", queryDate(comparisonWindow.start));
+        params.set("comparisonEnd", queryDate(comparisonWindow.end));
+      }
+      void fetch(`/api/portal/analytics/trend?${params.toString()}`, { cache: "no-store", signal: controller.signal }).then(async (response) => {
+        if (response.status === 409) {
+          setTrendResult(null);
+          setTrendStatus("empty");
+          return;
+        }
+        if (!response.ok) throw new Error("Analytics trend request failed");
+        const payload = await response.json() as { data?: AnalyticsTrendResult | null };
+        setTrendResult(payload.data ?? null);
+        setTrendStatus(payload.data ? "ready" : "empty");
+      }).catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setTrendStatus("error");
+      });
+    }, 0);
+    return () => {
+      window.clearTimeout(initialLoad);
+      controller.abort();
+    };
+  }, [comparisonWindow, dateRange.end, dateRange.start]);
+
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const connectedMetricCount = metrics.filter((metric) => metric.value !== null).length;
   const hasReportingData = connectedMetricCount > 0 || rows.length > 0;
@@ -159,18 +223,39 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     if (key === "engagementRate") return values.reduce((total, value) => total + value, 0) / values.length;
     return values[values.length - 1] ?? 0;
   };
+  const liveSummaryValue = (key: AnalyticsViewKey) => {
+    const summary = trendResult?.current.summary;
+    if (!summary) return null;
+    if (key === "activeUsers") return summary.activeUsers;
+    if (key === "sessions") return summary.sessions;
+    if (key === "eventCount") return summary.eventCount;
+    if (key === "keyEvents") return summary.keyEvents;
+    if (key === "views") return summary.views;
+    return null;
+  };
   const valueFor = (key: AnalyticsViewKey) => {
     if (visibleRows.length > 0) return valueForRows(key, visibleRows);
+    const liveValue = trendStatus === "ready" ? liveSummaryValue(key) : null;
+    if (liveValue !== null) return liveValue;
     if (rows.length > 0) return 0;
     return metricMap.get(key)?.value ?? 0;
   };
-  const rawTrendSource = visibleRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
+  const liveTrendPoints = trendStatus === "ready" ? trendResult?.current.points ?? [] : [];
+  const fallbackTrendValues = visibleRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
+  const rawTrendSource = liveTrendPoints.length ? liveTrendPoints.map((point) => point.sessions) : fallbackTrendValues;
   const rawTrendValues = rawTrendSource.length === 1 ? [rawTrendSource[0], rawTrendSource[0]] : rawTrendSource.length > 1 ? rawTrendSource : Array.from({ length: 6 }, () => 0);
   const trendValues = normalizeSeries(rawTrendValues);
-  const trendLabels = visibleRows.length === 1 ? [visibleRows[0].periodLabel, ""] : visibleRows.length > 1 ? visibleRows.map((row) => row.periodLabel) : labelsForRange(range);
-  const rawComparison = comparisonRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
+  const liveTrendLabels = liveTrendPoints.map((point) => new Date(`${point.date}T00:00:00.000Z`).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+  const fallbackTrendLabels = visibleRows.map((row) => row.periodLabel);
+  const trendLabels = rawTrendSource.length === 1 ? [liveTrendLabels[0] ?? fallbackTrendLabels[0] ?? "Start", ""] : rawTrendSource.length > 1 ? (liveTrendLabels.length ? liveTrendLabels : fallbackTrendLabels) : labelsForRange(range);
+  const rawComparisonPoints = trendStatus === "ready" ? trendResult?.comparison?.points ?? [] : [];
+  const rawComparison = rawComparisonPoints.length ? rawComparisonPoints.map((point) => point.sessions) : comparisonRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
   const comparisonValues = rawComparison.length ? normalizeSeries(rawComparison.length === 1 ? [rawComparison[0], rawComparison[0]] : rawComparison) : undefined;
   const sparkline = (key: AnalyticsViewKey) => {
+    if (liveTrendPoints.length) {
+      const values = liveTrendPoints.map((point) => liveSummaryValueForPoint(key, point)).filter((value): value is number => value !== null);
+      return values.length ? normalizeSeries(values.length === 1 ? [values[0], values[0], values[0], values[0]] : values) : zeroBars;
+    }
     const values = visibleRows.map((row) => row[key]).filter((value): value is number => value !== null);
     return values.length ? normalizeSeries(values.length === 1 ? [values[0], values[0], values[0], values[0]] : values) : zeroBars;
   };
@@ -179,10 +264,9 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Analytics" shellVariant="analytics">
     <div className="content analytics-reference" aria-label="Google Analytics 4 performance">
-      <div className="analytics-reference-heading"><div><span className="analytics-reference-accent" /><h1>Website analytics</h1><p>Understand what visitors do after they arrive.</p></div><div className="analytics-reference-heading-actions"><span className={`analytics-reference-connected${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {hasReportingData ? "GA4 data available" : "GA4 awaiting sync"}</span><DateRangePicker value={dateRange} onApply={setDateRange} /><span className="analytics-reference-updated">{latestPeriod ? `Latest published period · ${latestPeriod}` : "No GA4 values published"}</span></div></div>
-      <section className={`analytics-reference-status${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={20} /> : <Clock3 size={20} />}<strong>{hasReportingData ? `${connectedMetricCount} of ${metrics.length} analytics fields have published data` : "Website analytics are awaiting the first verified sync"}</strong><Link href="/portal/analytics/details">View details <ArrowRight size={14} /></Link></section>
+      <div className="analytics-reference-heading"><div><span className="analytics-reference-accent" /><h1>Website analytics</h1><p>Understand what visitors do after they arrive.</p></div><div className="analytics-reference-heading-actions"><span className={`analytics-reference-connected${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {hasReportingData ? "GA4 data available" : "GA4 awaiting sync"}</span><span className="analytics-reference-updated">{latestPeriod ? `Latest published period · ${latestPeriod}` : "No GA4 values published"}</span></div></div>
       <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Event count", valueFor("eventCount"), "blue", "eventCount"], ["Key events", valueFor("keyEvents"), "orange", "keyEvents"], ["Views", valueFor("views"), "teal", "views"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
-      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2>{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}</div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><span className="analytics-reference-chart-note">{visibleRows.length > 0 ? `${visibleRows.length} reporting period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span></section><AnalyticsRealtime /></div>
+      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2>{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}</div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><div className="analytics-reference-chart-footer"><span className="analytics-reference-chart-note">{trendStatus === "loading" ? "Loading daily GA4 data…" : trendStatus === "ready" ? `${rawTrendSource.length} daily point${rawTrendSource.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : visibleRows.length > 0 ? `${visibleRows.length} published period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span><DateRangePicker value={dateRange} onApply={setDateRange} /></div></section><AnalyticsRealtime /></div>
       <p className="analytics-reference-footnote">Historical cards use published GA4 rows. Realtime lists use the GA4 Realtime API. Acquisition, page, and conversion widgets are not shown until their corresponding GA4 reports are connected.</p>
     </div>
   </AppShell>;
