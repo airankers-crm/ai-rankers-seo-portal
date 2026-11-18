@@ -1,7 +1,6 @@
 export type PortalPreferences = {
   reportUpdates: boolean;
   taskUpdates: boolean;
-  teamMessages: boolean;
   compactLayout: boolean;
   reduceMotion: boolean;
 };
@@ -9,7 +8,6 @@ export type PortalPreferences = {
 export const defaultPortalPreferences: PortalPreferences = {
   reportUpdates: true,
   taskUpdates: true,
-  teamMessages: true,
   compactLayout: false,
   reduceMotion: false,
 };
