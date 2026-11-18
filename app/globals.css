@@ -2273,7 +2273,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
 .overview-heading h1 { margin: 2px 0 0; color: var(--navy); font-family: "Manrope", sans-serif; font-size: clamp(28px, 3vw, 40px); letter-spacing: -.055em; line-height: 1.08; }
 .overview-heading p:not(.eyebrow) { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.overview-heading-meta { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
 .freshness-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px; border: 1px solid #d8e9dc; border-radius: 10px; color: #168447; background: #f0fbf1; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .freshness-pill .dot, .workspace-status .dot { width: 7px; height: 7px; background: #23a55a; }
 .overview-filter-bar { display: flex; align-items: center; gap: 20px; margin-bottom: 14px; padding: 12px 14px; border-color: #e1e5ef; box-shadow: 0 5px 18px rgba(18,36,63,.04); }
@@ -2474,7 +2473,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 @media (max-width: 720px) {
   .overview-dashboard { padding-top: 20px; }
   .overview-heading { display: grid; gap: 12px; }
-  .overview-heading-meta { justify-content: space-between; padding-top: 0; }
   .overview-filter-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-search-field, .overview-reset-button { grid-column: 1 / -1; }
   .overview-kpi-grid, .overview-secondary-grid, .overview-bottom-grid { grid-template-columns: minmax(0, 1fr); }
@@ -2898,7 +2896,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 
   .portal-shell .overview-dashboard { padding-top: 20px; }
   .portal-shell .overview-heading { display: grid; gap: 12px; }
-  .portal-shell .overview-heading-meta { justify-content: space-between; padding-top: 0; }
   .portal-shell .overview-filter-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .portal-shell .overview-search-field,
   .portal-shell .overview-reset-button { grid-column: 1 / -1; }

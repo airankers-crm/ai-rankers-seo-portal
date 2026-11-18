@@ -104,9 +104,6 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
             <h1>SEO performance</h1>
             <p>{clientName} · November 2026 · Organic search and local SEO metrics.</p>
           </div>
-          <div className="heading-actions">
-            <button className="button" onClick={() => window.print()}><Download size={14} /> Print summary</button>
-          </div>
         </div>
 
         <section className="card executive-hero" id="summary" aria-labelledby="executive-summary-title">
