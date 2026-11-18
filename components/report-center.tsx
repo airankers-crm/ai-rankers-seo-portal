@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, Download, ExternalLink, FileText, Filter, Layers3, MapPin, RefreshCw, Search } from "lucide-react";
 import { AppShell } from "./app-shell";
 import type { ReportStatus } from "../lib/reports/types";
@@ -64,6 +64,12 @@ type ReportFilters = {
 const defaultFilters: ReportFilters = { kind: "MONTHLY", service: "ALL", period: "ALL", status: "ALL", query: "" };
 
 export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { clientName: string; brandMark: string; brandAccent: string; reports: ReportListItem[] }) {
+  useEffect(() => {
+    void fetch("/api/portal/reports/read", { method: "POST" })
+      .then(() => window.dispatchEvent(new Event("portal-report-seen")))
+      .catch(() => undefined);
+  }, []);
+
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
   const periodOptions = useMemo(

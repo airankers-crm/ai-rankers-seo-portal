@@ -178,6 +178,7 @@ model User {
   chatGroupsCreated ChatGroup[]         @relation("ChatGroupCreator")
   chatMessages      ChatMessage[]       @relation("ChatMessageSender")
   googleOAuthStates GoogleOAuthState[]
+  reportReads       ReportRead[]
 }
 
 model Client {
@@ -483,11 +484,24 @@ model Report {
   sentAt           DateTime?
   isVisible        Boolean      @default(true)
   client           Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reads            ReportRead[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
   @@index([clientId, createdAt])
   @@index([clientId, status, updatedAt])
+}
+
+model ReportRead {
+  reportId String
+  userId   String
+  seenAt   DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, userId])
+  @@index([userId, seenAt])
 }
 
 model ReportTemplate {
