@@ -1,5 +1,4 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@ai-rankers/db";
 
 type Database = PrismaClient | Prisma.TransactionClient;
 
@@ -30,7 +29,8 @@ const SECTION_DEFAULTS = {
   GBP: { name: "GBP Performance", position: 2 },
 } as const;
 
-export async function provisionGoogleMetrics(clientId: string, database: Database = prisma) {
+export async function provisionGoogleMetrics(clientId: string, database?: Database) {
+  database ??= (await import("@ai-rankers/db")).prisma;
   const sections = new Map<string, { id: string }>();
   for (const kind of ["OVERVIEW", "WEBSITE", "GBP"] as const) {
     const existing = await database.section.findFirst({ where: { clientId, kind }, select: { id: true } });
@@ -71,7 +71,8 @@ export async function writeGoogleMetricValue(input: {
   value: number;
   source: "GA4" | "GSC" | "GBP";
   note?: string | null;
-}, database: Database = prisma) {
+}, database?: Database) {
+  database ??= (await import("@ai-rankers/db")).prisma;
   const metric = await database.metric.findUnique({ where: { clientId_key: { clientId: input.clientId, key: input.key } }, select: { id: true } });
   if (!metric) return "missing_metric" as const;
 

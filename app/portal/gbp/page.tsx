@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { defaultGbpPresentation, GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow, type GbpPresentationSettings } from "../../../components/gbp-performance-dashboard";
+import { CsvImportPanel } from "../../../components/csv-import-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -60,5 +61,12 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
   const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
 
-  return <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />;
+  const isSuperAdmin = access.user?.role === "SUPER_ADMIN";
+
+  return (
+    <>
+      <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />
+      {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} /></div>}
+    </>
+  );
 }

@@ -2,6 +2,7 @@ import { prisma } from "@ai-rankers/db";
 import { unstable_cache } from "next/cache";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { WebsiteSeoDashboard, type WebsiteSeoChannel, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
+import { CsvImportPanel } from "../../../components/csv-import-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -67,5 +68,12 @@ export default async function WebsiteSeoPage() {
     ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
     : undefined;
 
-  return <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={sectionIsPublished} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />;
+  const isSuperAdmin = access.user?.role === "SUPER_ADMIN";
+
+  return (
+    <>
+      <WebsiteSeoDashboard clientName={client.businessName} sectionName={section?.name ?? "Website SEO"} isSectionPublished={sectionIsPublished} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} />
+      {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} /></div>}
+    </>
+  );
 }

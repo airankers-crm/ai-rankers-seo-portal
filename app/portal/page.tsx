@@ -4,6 +4,7 @@ import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
 import { requirePortalAccess } from "../../lib/auth/access";
 import type { PortalGoal } from "../../components/goal-highlights";
 import { unstable_cache } from "next/cache";
+import { CsvImportPanel } from "../../components/csv-import-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -60,5 +61,12 @@ export default async function PortalPage() {
   const latestUpdatedAt = metrics.reduce((latest, metric) => new Date(metric.updatedAt) > latest ? new Date(metric.updatedAt) : latest, new Date(0)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const goals: PortalGoal[] = goalRecords;
 
-  return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, metrics: { organicTraffic, impressions, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />;
+  const isSuperAdmin = access.user?.role === "SUPER_ADMIN";
+
+  return (
+    <>
+      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, metrics: { organicTraffic, impressions, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
+      {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} /></div>}
+    </>
+  );
 }
