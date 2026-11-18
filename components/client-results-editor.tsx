@@ -140,7 +140,7 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
     return templates.filter((template) => !metrics.some((metric) => metric.key === template.key));
   }, [activeView, metrics]);
   const addSection = activeView === "website" ? websiteSection : activeView === "gbp" ? gbpSection : null;
-  const activeViewLabel = activeView === "website" ? "Website SEO" : activeView === "gbp" ? "GBP performance" : "All results";
+  const activeViewLabel = activeView === "website" ? "Website GSC" : activeView === "gbp" ? "GBP performance" : "All results";
   const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=draft` : `/admin/clients/${clientId}/preview/gbp?mode=draft`;
   const activePortal = activeView === "website" ? "/portal/website-seo" : "/portal/gbp";
   const activeMetric = editingId ? metrics.find((metric) => metric.id === editingId) ?? null : null;
@@ -225,11 +225,11 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
 
   return <section className="card panel client-results-editor" aria-labelledby="client-results-title">
     <div className="panel-heading">
-      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website SEO and GBP performance results separately, then publish only when each report is approved.</p></div>
+      <div><p className="eyebrow">Client presentation</p><h2 id="client-results-title">Performance editors</h2><p>Edit Website GSC and GBP performance results separately, then publish only when each report is approved.</p></div>
       <div className="results-heading-icon"><Gauge size={18} /></div>
     </div>
     <div className="results-editor-tabs" role="tablist" aria-label="Client performance editors">
-      <button className={activeView === "website" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "website"} onClick={() => { setActiveView("website"); setAdding(false); setEditingId(null); setDraft(null); }}>Website SEO <span>{websiteMetrics.length}</span></button>
+      <button className={activeView === "website" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "website"} onClick={() => { setActiveView("website"); setAdding(false); setEditingId(null); setDraft(null); }}>Website GSC <span>{websiteMetrics.length}</span></button>
       <button className={activeView === "gbp" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "gbp"} onClick={() => { setActiveView("gbp"); setAdding(false); setEditingId(null); setDraft(null); }}>GBP performance <span>{gbpMetrics.length}</span></button>
       <button className={activeView === "all" ? "active" : ""} type="button" role="tab" aria-selected={activeView === "all"} onClick={() => { setActiveView("all"); setAdding(false); setEditingId(null); setDraft(null); }}>All results <span>{metrics.length}</span></button>
     </div>

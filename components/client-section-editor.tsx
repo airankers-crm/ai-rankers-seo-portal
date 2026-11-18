@@ -15,7 +15,7 @@ type PortalSection = {
 };
 
 const sectionLabels: Record<string, string> = {
-  WEBSITE: "Website SEO",
+  WEBSITE: "Website GSC",
   GBP: "GBP performance",
   OVERVIEW: "Portal overview",
   CUSTOM: "Custom section",
@@ -60,7 +60,7 @@ export function ClientSectionEditor({ clientId, sections: initialSections }: { c
   }
 
   return <section className="card panel client-section-editor" aria-labelledby="client-sections-title">
-    <div className="panel-heading"><div><p className="eyebrow">Portal presentation</p><h2 id="client-sections-title">Published client sections</h2><p>Control the client-facing Website SEO and GBP page labels and publishing state.</p></div><Layers3 size={18} color="#6f3fb5" /></div>
+    <div className="panel-heading"><div><p className="eyebrow">Portal presentation</p><h2 id="client-sections-title">Published client sections</h2><p>Control the client-facing Website GSC and GBP page labels and publishing state.</p></div><Layers3 size={18} color="#6f3fb5" /></div>
     {message && <p className="save-status section-feedback" role="status"><CheckCircle2 size={14} /> {message}</p>}
     {error && <p className="auth-error section-feedback" role="alert">{error}</p>}
     <div className="client-section-list">{sections.map((section) => <article className="client-section-row" key={section.id}>

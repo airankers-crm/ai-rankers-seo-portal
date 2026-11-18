@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 export const CLIENT_SETUP_STEPS = [
   { id: "details", label: "Workspace details", shortLabel: "Details" },
   { id: "business", label: "Business profile", shortLabel: "Business" },
-  { id: "website", label: "Website SEO", shortLabel: "Website" },
+  { id: "website", label: "Website GSC", shortLabel: "Website GSC" },
   { id: "gbp", label: "Google Business Profile", shortLabel: "GBP" },
   { id: "sections", label: "Portal sections", shortLabel: "Sections" },
   { id: "review", label: "Review & preview", shortLabel: "Review" },
@@ -70,9 +70,10 @@ export function ClientBusinessProfileStep({ businessName, websiteUrl }: { busine
   </section>;
 }
 
-export function ClientSourceChecklist({ source, description }: { source: "Website SEO" | "Google Business Profile"; description: string }) {
-  return <aside className="setup-source-card" aria-label={`${source} setup guidance`}>
-    <div className="setup-source-card-heading"><span className="setup-source-icon">✓</span><div><strong>{source}</strong><span>Connection checkpoint</span></div></div>
+export function ClientSourceChecklist({ source, description }: { source: "Website SEO" | "Website GSC" | "Google Business Profile"; description: string }) {
+  const displaySource = source === "Website SEO" ? "Website GSC" : source;
+  return <aside className="setup-source-card" aria-label={`${displaySource} setup guidance`}>
+    <div className="setup-source-card-heading"><span className="setup-source-icon">✓</span><div><strong>{displaySource}</strong><span>Connection checkpoint</span></div></div>
     <p>{description}</p>
     <div className="setup-checklist"><span><Check size={13} /> Correct client property selected</span><span><Check size={13} /> Data remains admin-only while in draft</span><span><Check size={13} /> Results will be reviewed before publishing</span></div>
   </aside>;
@@ -82,6 +83,6 @@ export function ClientReviewStep({ clientId, businessName, sectionCount, metricC
   return <section className="card panel setup-review-card" aria-labelledby="setup-review-title">
     <div className="panel-heading"><div><p className="eyebrow">Final review</p><h2 id="setup-review-title">Review the client presentation</h2><p>Check the draft before release. Nothing on this page makes the portal visible to the client.</p></div><span className="setup-card-number">06</span></div>
     <div className="review-summary"><div><strong>{businessName}</strong><span>Client workspace</span></div><div><strong>{sectionCount}</strong><span>Portal sections</span></div><div><strong>{metricCount}</strong><span>Total metrics</span></div><div><strong>{draftSectionCount + draftMetricCount}</strong><span>Items still in draft</span></div></div>
-    <div className="review-checklist"><div><Check size={15} /><span><strong>Website SEO preview</strong><small>Review the client-facing layout and approved search results.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/website-seo?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>GBP performance preview</strong><small>Review the Google Search and Maps presentation.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/gbp?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>Release safety</strong><small>The client sees published data only. Draft metrics and sections remain hidden.</small></span><span className="status progress">Draft-safe</span></div></div>
+    <div className="review-checklist"><div><Check size={15} /><span><strong>Website GSC preview</strong><small>Review the client-facing layout and approved Search Console results.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/website-seo?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>GBP performance preview</strong><small>Review the Google Search and Maps presentation.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/gbp?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>Release safety</strong><small>The client sees published data only. Draft metrics and sections remain hidden.</small></span><span className="status progress">Draft-safe</span></div></div>
   </section>;
 }

@@ -131,7 +131,7 @@ export function PortalDashboard({ databaseData }: { databaseData?: PortalDatabas
           <a href="#summary">Summary</a>
           <a href="#performance">Performance</a>
           <a href="#goals">Goals</a>
-          <a href="#website">Website SEO</a>
+          <a href="#website">Website GSC</a>
           <a href="#gbp">Local SEO</a>
           <a href="#activities">Activities</a>
           <a href="#reports">Reports</a>

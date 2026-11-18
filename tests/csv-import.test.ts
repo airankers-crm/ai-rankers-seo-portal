@@ -24,8 +24,8 @@ describe("CSV metric import", () => {
     const template = generateCsvTemplate();
     const result = parseCsv(template);
 
-    expect(ALL_METRIC_DEFINITIONS).toHaveLength(24);
-    expect(template.split("\n")).toHaveLength(25);
+    expect(ALL_METRIC_DEFINITIONS).toHaveLength(26);
+    expect(template.split("\n")).toHaveLength(27);
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([]);
   });

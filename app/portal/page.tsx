@@ -49,7 +49,10 @@ export default async function PortalPage() {
   };
 
   const organicTraffic = mapMetric("ga4-organic-sessions");
+  const searchClicks = mapMetric("gsc-clicks");
   const impressions = mapMetric("gsc-impressions");
+  const searchCtr = mapMetric("gsc-ctr");
+  const averagePosition = mapMetric("gsc-position");
   const topTen = mapMetric("kw-top10");
   const calls = mapMetric("gbp-calls");
   const gbpViews = mapMetric("gbp-views");
@@ -65,7 +68,7 @@ export default async function PortalPage() {
 
   return (
     <>
-      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, metrics: { organicTraffic, impressions, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
+      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, metrics: { organicTraffic, searchClicks, impressions, searchCtr, averagePosition, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
       {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} /></div>}
     </>
   );

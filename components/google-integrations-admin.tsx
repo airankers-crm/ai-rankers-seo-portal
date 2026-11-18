@@ -33,8 +33,9 @@ function statusLabel(status: string) {
 }
 
 export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: IntegrationRow[]; queryMessage?: string | null }) {
+  const [clientRows, setClientRows] = useState(clients);
   const [selectedId, setSelectedId] = useState(clients[0]?.id ?? "");
-  const selected = useMemo(() => clients.find((client) => client.id === selectedId) ?? null, [clients, selectedId]);
+  const selected = useMemo(() => clientRows.find((client) => client.id === selectedId) ?? null, [clientRows, selectedId]);
   const [resources, setResources] = useState<Resources | null>(null);
   const [ga4PropertyId, setGa4PropertyId] = useState(selected?.ga4PropertyId ?? "");
   const [gscSiteUrl, setGscSiteUrl] = useState(selected?.gscSiteUrl ?? "");
@@ -44,7 +45,7 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
   const [message, setMessage] = useState(queryMessage ?? "");
 
   function selectClient(clientId: string) {
-    const next = clients.find((client) => client.id === clientId);
+    const next = clientRows.find((client) => client.id === clientId);
     setSelectedId(clientId);
     setResources(null);
     setGa4PropertyId(next?.ga4PropertyId ?? "");
@@ -94,6 +95,7 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
       const response = await fetch("/api/integrations/google/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: selected.id }) });
       const payload = await response.json() as { summary?: { status: string; rowsWritten: number; warningCount: number }; error?: string };
       if (!response.ok || !payload.summary) throw new Error(payload.error ?? "Google sync could not be completed.");
+      setClientRows((current) => current.map((client) => client.id === selected.id ? { ...client, lastSyncedAt: new Date().toISOString(), lastErrorMessage: null } : client));
       setMessage(`${payload.summary.status === "SUCCEEDED" ? "Google data synced" : "Google sync completed with warnings"}: ${payload.summary.rowsWritten} values written${payload.summary.warningCount ? `, ${payload.summary.warningCount} warning(s)` : ""}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Google sync could not be completed.");

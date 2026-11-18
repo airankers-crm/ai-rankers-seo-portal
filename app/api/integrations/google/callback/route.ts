@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       });
       await provisionGoogleMetrics(stateRecord.clientId, transaction);
       await transaction.auditLog.create({ data: { clientId: stateRecord.clientId, actorId: access.user!.id, action: "GOOGLE_INTEGRATION_CONNECTED", entityType: "GoogleIntegration", after: { googleAccountEmail: identity.email ?? null } } });
-    });
+    }, { maxWait: 10_000, timeout: 30_000 });
 
     return redirectToAdmin(requestUrl, { connected: "1", clientId: stateRecord.clientId });
   } catch (error) {

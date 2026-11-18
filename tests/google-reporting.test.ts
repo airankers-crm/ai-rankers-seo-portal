@@ -14,9 +14,9 @@ describe("Google reporting window", () => {
 describe("Search Console reporting", () => {
   it("aggregates daily rows into monthly metric values", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [
-      { keys: ["2026-01-03"], clicks: 4, impressions: 20 },
-      { keys: ["2026-01-28"], clicks: 6, impressions: 30 },
-      { keys: ["2026-02-02"], clicks: 2, impressions: 10 },
+      { keys: ["2026-01-03"], clicks: 4, impressions: 20, ctr: 0.2, position: 8 },
+      { keys: ["2026-01-28"], clicks: 6, impressions: 30, ctr: 0.2, position: 4 },
+      { keys: ["2026-02-02"], clicks: 2, impressions: 10, ctr: 0.2, position: 3 },
     ] }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -28,6 +28,8 @@ describe("Search Console reporting", () => {
     expect(result.warnings).toEqual([]);
     expect(result.points.filter((point) => point.key === "gsc-clicks").map((point) => point.value)).toEqual([10, 2]);
     expect(result.points.filter((point) => point.key === "gsc-impressions").map((point) => point.value)).toEqual([50, 10]);
+    expect(result.points.filter((point) => point.key === "gsc-ctr").map((point) => point.value)).toEqual([20, 20]);
+    expect(result.points.filter((point) => point.key === "gsc-position").map((point) => point.value)).toEqual([5.6, 3]);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 });

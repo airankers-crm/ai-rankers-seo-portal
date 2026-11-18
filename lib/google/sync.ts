@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@ai-rankers/db";
-import type { Prisma } from "@prisma/client";
-import { provisionGoogleMetrics, writeGoogleMetricValue } from "./provision";
+import { Prisma } from "@prisma/client";
+import { provisionGoogleMetrics } from "./provision";
 import { fetchGa4Metrics, fetchGbpMetrics, fetchGscMetrics, getGoogleSyncWindow, type GoogleMetricPoint, type GoogleProviderResult } from "./reporting";
 import { GoogleOAuthError } from "./oauth";
 import { getGoogleAccessToken } from "./tokens";
@@ -78,12 +79,76 @@ async function loadProviderResults(accessToken: string, integration: { ga4Proper
 
 async function writePoints(clientId: string, points: GoogleMetricPoint[], database: Prisma.TransactionClient) {
   const counts = { written: 0, skipped: 0, overridden: 0 };
+
+  if (!points.length) return counts;
+
+  // Resolve the metric definitions and existing values in two reads. The old
+  // per-point metric lookup + value lookup + upsert pattern exceeded the
+  // transaction timeout once Search Console was enabled alongside GA4/GBP.
+  const keys = [...new Set(points.map((point) => point.key))];
+  const metrics = await database.metric.findMany({
+    where: { clientId, key: { in: keys } },
+    select: { id: true, key: true },
+  });
+  const metricByKey = new Map(metrics.map((metric) => [metric.key, metric.id]));
+
+  const metricIds = metrics.map((metric) => metric.id);
+  const sources = [...new Set(points.map((point) => point.source))];
+  const existingValues = metricIds.length
+    ? await database.metricValue.findMany({
+      where: { metricId: { in: metricIds }, source: { in: sources } },
+      select: { metricId: true, periodStart: true, periodEnd: true, source: true, isOverride: true },
+    })
+    : [];
+  const existingByKey = new Map(existingValues.map((value) => [
+    `${value.metricId}|${value.periodStart.toISOString()}|${value.periodEnd.toISOString()}|${value.source}`,
+    value,
+  ]));
+
+  const rows: Prisma.Sql[] = [];
   for (const point of points) {
-    const result = await writeGoogleMetricValue({ clientId, ...point }, database);
-    if (result === "created" || result === "updated") counts.written += 1;
-    if (result === "missing_metric") counts.skipped += 1;
-    if (result === "overridden") counts.overridden += 1;
+    const metricId = metricByKey.get(point.key);
+    if (!metricId) {
+      counts.skipped += 1;
+      continue;
+    }
+
+    const valueKey = `${metricId}|${point.periodStart.toISOString()}|${point.periodEnd.toISOString()}|${point.source}`;
+    const existing = existingByKey.get(valueKey);
+    if (existing?.isOverride) {
+      counts.overridden += 1;
+      continue;
+    }
+
+    counts.written += 1;
+    rows.push(Prisma.sql`(
+      ${randomUUID()},
+      ${metricId},
+      ${point.periodStart},
+      ${point.periodEnd},
+      ${point.value},
+      CAST(${point.source} AS "DataSource"),
+      ${null},
+      false,
+      NOW(),
+      NOW()
+    )`);
   }
+
+  if (rows.length) {
+    await database.$executeRaw(Prisma.sql`
+      INSERT INTO "MetricValue"
+        ("id", "metricId", "periodStart", "periodEnd", "value", "source", "note", "isOverride", "createdAt", "updatedAt")
+      VALUES ${Prisma.join(rows)}
+      ON CONFLICT ("metricId", "periodStart", "periodEnd", "source") DO UPDATE
+      SET "value" = EXCLUDED."value",
+          "note" = EXCLUDED."note",
+          "isOverride" = false,
+          "updatedAt" = NOW()
+      WHERE "MetricValue"."isOverride" = false
+    `);
+  }
+
   return counts;
 }
 

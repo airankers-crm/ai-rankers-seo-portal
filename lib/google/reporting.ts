@@ -63,7 +63,7 @@ export type GoogleGa4TrendResult = {
 };
 
 type GscResponse = {
-  rows?: Array<{ keys?: string[]; clicks?: number; impressions?: number }>;
+  rows?: Array<{ keys?: string[]; clicks?: number; impressions?: number; ctr?: number; position?: number }>;
 };
 
 type GbpResponse = {
@@ -319,15 +319,37 @@ export async function fetchGscMetrics(accessToken: string, siteUrl: string, wind
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ startDate: toDateString(window.start), endDate: toDateString(new Date(window.end.getTime() - DAY_MS)), dimensions: ["date"], type: "web", dataState: "final", rowLimit: 25_000 }),
   });
-  const impressions = createBuckets(window);
-  const clicks = createBuckets(window);
+  const buckets = new Map([...createBuckets(window)].map(([key, bucket]) => [key, {
+    periodStart: bucket.periodStart,
+    periodEnd: bucket.periodEnd,
+    clicks: 0,
+    impressions: 0,
+    positionWeightedTotal: 0,
+    positionWeight: 0,
+  }]));
   for (const row of response.rows ?? []) {
     const date = row.keys?.[0] ? new Date(`${row.keys[0]}T00:00:00.000Z`) : null;
     if (!date || Number.isNaN(date.getTime())) continue;
-    impressions.get(monthKey(date))!.value += numberValue(row.impressions);
-    clicks.get(monthKey(date))!.value += numberValue(row.clicks);
+    const bucket = buckets.get(monthKey(date));
+    if (!bucket) continue;
+    const impressions = numberValue(row.impressions);
+    bucket.impressions += impressions;
+    bucket.clicks += numberValue(row.clicks);
+    if (impressions > 0 && row.position !== undefined && Number.isFinite(row.position)) {
+      bucket.positionWeightedTotal += row.position * impressions;
+      bucket.positionWeight += impressions;
+    }
   }
-  return { points: [...toPoints(impressions, "gsc-impressions", "GSC"), ...toPoints(clicks, "gsc-clicks", "GSC")], warnings: [] };
+  const monthly = [...buckets.values()];
+  return {
+    points: [
+      ...monthly.map((bucket) => ({ key: "gsc-impressions", periodStart: bucket.periodStart, periodEnd: bucket.periodEnd, value: bucket.impressions, source: "GSC" as const })),
+      ...monthly.map((bucket) => ({ key: "gsc-clicks", periodStart: bucket.periodStart, periodEnd: bucket.periodEnd, value: bucket.clicks, source: "GSC" as const })),
+      ...monthly.map((bucket) => ({ key: "gsc-ctr", periodStart: bucket.periodStart, periodEnd: bucket.periodEnd, value: bucket.impressions > 0 ? (bucket.clicks / bucket.impressions) * 100 : 0, source: "GSC" as const })),
+      ...monthly.map((bucket) => ({ key: "gsc-position", periodStart: bucket.periodStart, periodEnd: bucket.periodEnd, value: bucket.positionWeight > 0 ? bucket.positionWeightedTotal / bucket.positionWeight : 0, source: "GSC" as const })),
+    ],
+    warnings: [],
+  };
 }
 
 function gbpDateParts(date: Date) {

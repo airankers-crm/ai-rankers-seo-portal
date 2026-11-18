@@ -65,7 +65,7 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
         <label>Reporting timezone<select value={timezone} onChange={(event) => setTimezone(event.target.value)}><option>America/New_York</option><option>America/Chicago</option><option>America/Denver</option><option>America/Los_Angeles</option><option>Europe/London</option><option>Asia/Singapore</option></select></label>
       </div>
       <div className="service-options">
-        <label className="service-option"><input type="checkbox" checked={hasWebsiteSeo} onChange={(event) => setHasWebsiteSeo(event.target.checked)} /><span><strong>Website SEO</strong><small>Technical, content, and organic search performance</small></span></label>
+        <label className="service-option"><input type="checkbox" checked={hasWebsiteSeo} onChange={(event) => setHasWebsiteSeo(event.target.checked)} /><span><strong>Website GSC</strong><small>Google Search Console visibility and organic search performance</small></span></label>
         <label className="service-option"><input type="checkbox" checked={hasGbpSeo} onChange={(event) => setHasGbpSeo(event.target.checked)} /><span><strong>GBP SEO</strong><small>Local visibility, profile health, and calls</small></span></label>
       </div>
       <div className="form-actions"><span className="save-status">{error || status}</span><button className="button primary" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save project settings"}</button></div>

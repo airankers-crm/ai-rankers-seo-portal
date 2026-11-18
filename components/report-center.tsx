@@ -8,6 +8,10 @@ import type { ReportStatus } from "../lib/reports/types";
 
 export type ReportService = "Website SEO" | "GBP performance";
 
+function reportServiceLabel(service: ReportService) {
+  return service === "Website SEO" ? "Website GSC" : service;
+}
+
 export type ReportListItem = {
   id: string;
   title: string;
@@ -98,7 +102,7 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
         <div className="report-filter-heading"><Filter size={17} /><h2 id="report-filter-title">Filter reports</h2></div>
         <div className="report-filter-grid">
           <label className="report-filter-field"><span>Report type</span><select value={draftFilters.kind} onChange={(event) => updateDraft("kind", event.target.value as ReportFilters["kind"])}><option value="MONTHLY">Monthly reports</option><option value="ALL">All reports</option></select></label>
-          <label className="report-filter-field"><span>Service</span><select value={draftFilters.service} onChange={(event) => updateDraft("service", event.target.value as ReportFilters["service"])}><option value="ALL">All services</option><option value="Website SEO">Website SEO</option><option value="GBP performance">GBP performance</option></select></label>
+          <label className="report-filter-field"><span>Service</span><select value={draftFilters.service} onChange={(event) => updateDraft("service", event.target.value as ReportFilters["service"])}><option value="ALL">All services</option><option value="Website SEO">Website GSC</option><option value="GBP performance">GBP performance</option></select></label>
           <label className="report-filter-field"><span>Reporting period</span><select value={draftFilters.period} onChange={(event) => updateDraft("period", event.target.value)}><option value="ALL">All months</option>{periodOptions.map((period) => <option key={period} value={period}>{period}</option>)}</select></label>
           <label className="report-filter-field"><span>Status</span><select value={draftFilters.status} onChange={(event) => updateDraft("status", event.target.value as ReportFilters["status"])}><option value="ALL">All client-visible</option><option value="PUBLISHED">Published</option><option value="SENT">Sent</option></select></label>
           <label className="report-filter-search"><span>Search reports</span><div><Search size={15} /><input value={draftFilters.query} onChange={(event) => updateDraft("query", event.target.value)} placeholder="Search reports..." aria-label="Search reports" /></div></label>
@@ -113,7 +117,7 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
         return <article className="card report-list-card" key={report.id}>
           <div className={"report-list-icon report-service-icon-" + serviceSlug}>{report.service === "GBP performance" ? <MapPin size={18} /> : <BarChart3 size={18} />}</div>
           <div className="report-list-main">
-            <div className="report-list-top"><span className={"report-service-pill report-service-pill-" + serviceSlug}>{report.service}</span><div className="report-list-badges"><span className={"report-status " + statusClass}><CheckCircle2 size={12} /> {statusLabel(report.status)}</span><span className="report-coverage-pill"><Layers3 size={12} /> Source coverage included</span></div></div>
+            <div className="report-list-top"><span className={"report-service-pill report-service-pill-" + serviceSlug}>{reportServiceLabel(report.service)}</span><div className="report-list-badges"><span className={"report-status " + statusClass}><CheckCircle2 size={12} /> {statusLabel(report.status)}</span><span className="report-coverage-pill"><Layers3 size={12} /> Source coverage included</span></div></div>
             <h3>{report.title}</h3>
             <div className="report-list-meta"><span><CalendarDays size={12} /> Period: {report.periodLabel}</span><span>Published: {formatDate(report.publishedAt)}</span><span>Comparison: {comparisonLabel(report.periodLabel)}</span></div>
           </div>

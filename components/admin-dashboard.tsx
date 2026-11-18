@@ -16,7 +16,7 @@ function AgencyPulse({ clients, summary }: { clients: DemoClient[]; summary: Adm
     { label: "Active client workspaces", value: clients.filter((client) => client.status === "Active").length, icon: UsersRound, tone: "teal" as const, state: "Live records", note: "Active workspaces in this agency" },
     { label: "Published this month", value: summary.publishedThisMonth, icon: FileCheck2, tone: "orange" as const, state: summary.publishedThisMonth ? "Tracked" : "No activity", note: summary.publishedThisMonth ? "Dashboard versions published" : "No versions published this month" },
     { label: "Needs review", value: needsReview, icon: TriangleAlert, tone: "purple" as const, state: needsReview ? "Review queue" : "Clear", note: "Draft sections or paused workspaces" },
-    { label: "Visible services", value: serviceCount, icon: Layers3, tone: "blue" as const, state: serviceCount ? "Configured" : "Not configured", note: "Website SEO and GBP programs" },
+    { label: "Visible services", value: serviceCount, icon: Layers3, tone: "blue" as const, state: serviceCount ? "Configured" : "Not configured", note: "Website GSC and GBP programs" },
   ], [clients, needsReview, serviceCount, summary.publishedThisMonth]);
 
   return <section className="card panel agency-pulse" aria-labelledby="agency-pulse-title">
@@ -39,7 +39,7 @@ function AgencyPulse({ clients, summary }: { clients: DemoClient[]; summary: Adm
 
 function AdminWorkflow({ previewClient }: { previewClient: DemoClient }) {
   const actions = [
-    { label: "Manage client portal", detail: "Edit Website SEO and GBP results", href: `/admin/clients/${previewClient.id}`, icon: PencilLine, tone: "orange" },
+    { label: "Manage client portal", detail: "Edit Website GSC and GBP results", href: `/admin/clients/${previewClient.id}`, icon: PencilLine, tone: "orange" },
     { label: "Open team communication", detail: "Review client groups and support messages", href: "/admin/messages", icon: MessageCircle, tone: "teal" },
     { label: "Add client workspace", detail: "Create an isolated reporting workspace", href: "/admin/clients/new", icon: Plus, tone: "purple" },
   ] as const;

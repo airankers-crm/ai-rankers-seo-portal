@@ -14,8 +14,10 @@ export const GOOGLE_METRIC_DEFINITIONS = [
   { key: "ga4-phone-clicks", name: "Phone clicks", description: "Clicks on tracked phone links.", source: "GA4" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
   { key: "ga4-form-submissions", name: "Form submissions", description: "Contact-form submissions recorded as GA4 events.", source: "GA4" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
   { key: "ga4-quote-requests", name: "Quote requests", description: "Quote-request events configured as GA4 conversions.", source: "GA4" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
-  { key: "gsc-impressions", name: "Search impressions", description: "Search result impressions recorded by Google Search Console.", source: "GSC" as const, section: "OVERVIEW" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
-  { key: "gsc-clicks", name: "Search clicks", description: "Search result clicks recorded by Google Search Console.", source: "GSC" as const, section: "OVERVIEW" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
+  { key: "gsc-impressions", name: "Search impressions", description: "Search result impressions recorded by Google Search Console.", source: "GSC" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
+  { key: "gsc-clicks", name: "Search clicks", description: "Search result clicks recorded by Google Search Console.", source: "GSC" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
+  { key: "gsc-ctr", name: "Search CTR", description: "The percentage of Search Console impressions that became clicks.", source: "GSC" as const, section: "WEBSITE" as const, displayType: "PERCENT_CARD" as const, valueFormat: "PERCENT" as const },
+  { key: "gsc-position", name: "Average position", description: "The Search Console average position weighted by impressions.", source: "GSC" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "DECIMAL" as const },
   { key: "gbp-views", name: "Profile views", description: "Google Business Profile views from Search and Maps.", source: "GBP" as const, section: "GBP" as const, displayType: "LINE_CHART" as const, valueFormat: "INTEGER" as const },
   { key: "gbp-calls", name: "GBP calls", description: "Calls attributed to the Google Business Profile.", source: "GBP" as const, section: "GBP" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
   { key: "gbp-website-clicks", name: "Website clicks", description: "Website actions attributed to the Google Business Profile.", source: "GBP" as const, section: "GBP" as const, displayType: "NUMBER_CARD" as const, valueFormat: "INTEGER" as const },
@@ -25,7 +27,7 @@ export const GOOGLE_METRIC_DEFINITIONS = [
 
 const SECTION_DEFAULTS = {
   OVERVIEW: { name: "Overview", position: 0 },
-  WEBSITE: { name: "Website SEO", position: 1 },
+  WEBSITE: { name: "Website GSC", position: 1 },
   GBP: { name: "GBP Performance", position: 2 },
 } as const;
 
@@ -46,7 +48,7 @@ export async function provisionGoogleMetrics(clientId: string, database?: Databa
     if (!section) continue;
     await database.metric.upsert({
       where: { clientId_key: { clientId, key: definition.key } },
-      update: {},
+      update: definition.source === "GSC" ? { sectionId: section.id } : {},
       create: {
         clientId,
         sectionId: section.id,

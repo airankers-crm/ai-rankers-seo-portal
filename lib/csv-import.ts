@@ -22,7 +22,7 @@ const METRIC_BY_KEY = new Map<string, (typeof ALL_METRIC_DEFINITIONS)[number]>(A
 
 const SECTION_DEFAULTS: Record<string, { name: string; position: number }> = {
   OVERVIEW: { name: "Overview", position: 0 },
-  WEBSITE: { name: "Website SEO", position: 1 },
+  WEBSITE: { name: "Website GSC", position: 1 },
   GBP: { name: "GBP Performance", position: 2 },
 };
 
@@ -243,25 +243,24 @@ export async function importCsvRows(
   clientId: string,
   rows: CsvRow[],
   actorId: string,
+  transaction?: Prisma.TransactionClient,
 ): Promise<ImportSummary> {
-  const { prisma } = await import("@ai-rankers/db");
   const results: ImportRowResult[] = [];
   let created = 0;
   let updated = 0;
   let skipped = 0;
   let errorCount = 0;
 
-  // Process in a single transaction with a generous timeout for large imports
-  await prisma.$transaction(async (transaction) => {
+  const executeImport = async (transactionClient: Prisma.TransactionClient) => {
     for (const row of rows) {
       try {
-        const { metricId, source } = await ensureSectionAndMetric(clientId, row.metricKey, row.source as ValidSource | "", transaction);
+        const { metricId, source } = await ensureSectionAndMetric(clientId, row.metricKey, row.source as ValidSource | "", transactionClient);
         const periodStart = new Date(`${row.periodStart}T00:00:00.000Z`);
         const periodEnd = new Date(`${row.periodEnd}T23:59:59.999Z`);
         const numericValue = Number(row.value);
 
         // Check for existing manual override
-        const existing = await transaction.metricValue.findUnique({
+        const existing = await transactionClient.metricValue.findUnique({
           where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source } },
           select: { id: true, isOverride: true },
         });
@@ -272,7 +271,7 @@ export async function importCsvRows(
           continue;
         }
 
-        await transaction.metricValue.upsert({
+        await transactionClient.metricValue.upsert({
           where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source } },
           update: { value: new Prisma.Decimal(numericValue), note: row.note || null, isOverride: false },
           create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(numericValue), source, note: row.note || null },
@@ -290,7 +289,7 @@ export async function importCsvRows(
     }
 
     // Single audit log entry for the whole import
-    await transaction.auditLog.create({
+    await transactionClient.auditLog.create({
       data: {
         clientId,
         actorId,
@@ -300,7 +299,17 @@ export async function importCsvRows(
         after: { rowCount: rows.length, created, updated, skipped, errors: errorCount },
       },
     });
-  }, { timeout: 60_000 });
+  };
+
+  // Process in a single transaction with a generous timeout for large imports.
+  // The optional transaction is used by integration tests so their writes can
+  // be rolled back without changing a real client workspace.
+  if (transaction) {
+    await executeImport(transaction);
+  } else {
+    const { prisma } = await import("@ai-rankers/db");
+    await prisma.$transaction(executeImport, { timeout: 60_000 });
+  }
 
   return { total: rows.length, created, updated, skipped, errors: errorCount, rows: results };
 }

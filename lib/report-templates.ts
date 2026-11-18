@@ -26,10 +26,10 @@ export const defaultReportTemplates: ReportTemplateDefinition[] = [
   {
     key: "website-seo",
     category: "Website SEO",
-    title: "Website SEO performance",
-    description: "A clear search visibility report for organic growth, keyword movement, and landing-page performance.",
+    title: "Website GSC performance",
+    description: "A clear Google Search Console report for organic growth, keyword movement, and landing-page performance.",
     config: {
-      coverTitle: "Website SEO performance",
+      coverTitle: "Website GSC performance",
       coverDescription: "Organic sessions, Search Console visibility, keyword coverage, goals, and recommended actions.",
       sections: [
         { key: "summary", label: "Executive summary", description: "A concise readout of the reporting period.", visible: true },
