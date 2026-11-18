@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
-import { CheckCircle2, Clock3, UsersRound } from "lucide-react";
+import { CheckCircle2, Clock3, Table2, UsersRound } from "lucide-react";
 import { AppShell } from "./app-shell";
 import { AnalyticsRealtime } from "./analytics-realtime";
-import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
+import { DateRangePicker, getPresetRange, type DateRangeSelection } from "./date-range-picker";
 
 export type AnalyticsMetric = {
   key: string;
@@ -59,9 +59,20 @@ const compareOptions: Array<{ key: CompareKey; label: string }> = [
 const zeroBars = Array.from({ length: 12 }, () => 0);
 const sumMetricKeys = new Set<AnalyticsViewKey>(["sessions", "organicSessions", "views", "engagedSessions", "eventCount", "keyEvents", "phoneClicks", "formSubmissions", "quoteRequests"]);
 
+function getAnalyticsDefaultDateRange(): DateRangeSelection {
+  const preset = "Last 6 months" as const;
+  const { start, end } = getPresetRange(preset, new Date());
+  return { label: preset, start, end, compare: "None" };
+}
+
 function compact(value: number | null) {
-  if (value === null || value === undefined) return "0";
+  if (value === null || value === undefined) return "—";
   return value >= 1000 ? `${(value / 1000).toFixed(1)}K` : value.toLocaleString();
+}
+
+function analyticsTableValue(value: number | null, format: AnalyticsMetric["format"]) {
+  if (value === null || value === undefined) return "—";
+  return format === "PERCENT" ? `${value.toFixed(1)}%` : value.toLocaleString();
 }
 
 function MiniBars({ values = zeroBars }: { values?: number[] }) {
@@ -159,7 +170,7 @@ function liveSummaryValueForPoint(key: AnalyticsViewKey, point: AnalyticsTrendPo
 }
 
 export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics, rows }: { clientName: string; brandMark: string; brandAccent: string; metrics: AnalyticsMetric[]; rows: AnalyticsRow[] }) {
-  const [dateRange, setDateRange] = useState<DateRangeSelection>(getDefaultDateRange);
+  const [dateRange, setDateRange] = useState<DateRangeSelection>(getAnalyticsDefaultDateRange);
   const [trendResult, setTrendResult] = useState<AnalyticsTrendResult | null>(null);
   const [trendStatus, setTrendStatus] = useState<AnalyticsTrendStatus>("idle");
   const range = dateRangeKey(dateRange);
@@ -237,8 +248,8 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     if (visibleRows.length > 0) return valueForRows(key, visibleRows);
     const liveValue = trendStatus === "ready" ? liveSummaryValue(key) : null;
     if (liveValue !== null) return liveValue;
-    if (rows.length > 0) return 0;
-    return metricMap.get(key)?.value ?? 0;
+    if (rows.length > 0) return null;
+    return metricMap.get(key)?.value ?? null;
   };
   const liveTrendPoints = trendStatus === "ready" ? trendResult?.current.points ?? [] : [];
   const fallbackTrendValues = visibleRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
@@ -265,8 +276,9 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Analytics" shellVariant="analytics">
     <div className="content analytics-reference" aria-label="Google Analytics 4 performance">
       <div className="analytics-reference-heading"><div><span className="analytics-reference-accent" /><h1>Website analytics</h1><p>Understand what visitors do after they arrive.</p></div><div className="analytics-reference-heading-actions"><span className={`analytics-reference-connected${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {hasReportingData ? "GA4 data available" : "GA4 awaiting sync"}</span><span className="analytics-reference-updated">{latestPeriod ? `Latest published period · ${latestPeriod}` : "No GA4 values published"}</span></div></div>
-      <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Event count", valueFor("eventCount"), "blue", "eventCount"], ["Key events", valueFor("keyEvents"), "orange", "keyEvents"], ["Views", valueFor("views"), "teal", "views"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
+      <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Event count", valueFor("eventCount"), "blue", "eventCount"], ["Key events", valueFor("keyEvents"), "orange", "keyEvents"], ["Views", valueFor("views"), "teal", "views"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number | null)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
       <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2>{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}</div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><div className="analytics-reference-chart-footer"><span className="analytics-reference-chart-note">{trendStatus === "loading" ? "Loading daily GA4 data…" : trendStatus === "ready" ? `${rawTrendSource.length} daily point${rawTrendSource.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : visibleRows.length > 0 ? `${visibleRows.length} published period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span><DateRangePicker value={dateRange} onApply={setDateRange} /></div></section><AnalyticsRealtime /></div>
+      <section className="analytics-reference-card analytics-reference-results-card" aria-labelledby="analytics-results-title"><div className="analytics-reference-card-heading"><div><h2 id="analytics-results-title">Results by month</h2><p>Latest six-month reporting window · stored GA4 data</p></div><Table2 size={18} aria-hidden="true" /></div><div className="analytics-reference-table-wrap"><table className="analytics-reference-results-table"><thead><tr><th>Month</th><th>Active users</th><th>Sessions</th><th>Organic sessions</th><th>Views</th><th>Engaged sessions</th><th>Engagement rate</th><th>Events</th><th>Key events</th></tr></thead><tbody>{visibleRows.length ? visibleRows.map((row, index) => <tr className={index === visibleRows.length - 1 ? "is-latest" : undefined} key={row.periodStart}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest period" : "Historical period"}</span></td><td>{analyticsTableValue(row.activeUsers, "INTEGER")}</td><td>{analyticsTableValue(row.sessions, "INTEGER")}</td><td>{analyticsTableValue(row.organicSessions, "INTEGER")}</td><td>{analyticsTableValue(row.views, "INTEGER")}</td><td>{analyticsTableValue(row.engagedSessions, "INTEGER")}</td><td>{analyticsTableValue(row.engagementRate, "PERCENT")}</td><td>{analyticsTableValue(row.eventCount, "INTEGER")}</td><td>{analyticsTableValue(row.keyEvents, "INTEGER")}</td></tr>) : <tr><td colSpan={9}>No stored GA4 data for this range.</td></tr>}</tbody></table></div><div className="analytics-reference-table-foot"><span>Rows are read from the stored GA4 monthly reporting periods.</span><span>{visibleRows.length} period{visibleRows.length === 1 ? "" : "s"} · {selectedRange.label}</span></div></section>
       <p className="analytics-reference-footnote">Historical cards use published GA4 rows. Realtime lists use the GA4 Realtime API. Acquisition, page, and conversion widgets are not shown until their corresponding GA4 reports are connected.</p>
     </div>
   </AppShell>;

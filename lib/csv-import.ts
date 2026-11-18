@@ -261,7 +261,7 @@ export async function importCsvRows(
 
         // Check for existing manual override
         const existing = await transactionClient.metricValue.findUnique({
-          where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source } },
+          where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId, periodStart, periodEnd, source, dataOrigin: "MANAGED" } },
           select: { id: true, isOverride: true },
         });
 
@@ -272,9 +272,9 @@ export async function importCsvRows(
         }
 
         await transactionClient.metricValue.upsert({
-          where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source } },
-          update: { value: new Prisma.Decimal(numericValue), note: row.note || null, isOverride: false },
-          create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(numericValue), source, note: row.note || null },
+          where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId, periodStart, periodEnd, source, dataOrigin: "MANAGED" } },
+          update: { value: new Prisma.Decimal(numericValue), note: row.note || null, isOverride: false, dataOrigin: "MANAGED" },
+          create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(numericValue), source, note: row.note || null, dataOrigin: "MANAGED" },
         });
 
         const outcome = existing ? "updated" : "created";

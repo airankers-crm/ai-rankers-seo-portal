@@ -6,18 +6,21 @@ export const dynamic = "force-dynamic";
 
 export default async function AnalyticsDetailsPage() {
   const access = await requirePortalAccess();
-  const client = await prisma.client.findUnique({
+  const clientId = access.user?.clientId ?? "__no_client__";
+  const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+  const client = settings ? await prisma.client.findUnique({
     where: { id: access.user?.clientId ?? "__no_client__" },
     select: {
       businessName: true,
       brandMark: true,
       brandAccent: true,
+      dataMode: true,
       metrics: {
         where: { source: "GA4", isVisible: true, isDraft: false },
-        select: { key: true, values: { orderBy: { periodStart: "desc" }, take: 12, select: { periodStart: true, periodEnd: true } } },
+        select: { key: true, values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 12, select: { periodStart: true, periodEnd: true } } },
       },
     },
-  });
+  }) : null;
 
   const metricsWithValues = client?.metrics.filter((metric) => metric.values.length > 0) ?? [];
   const reportingPeriods = new Set(metricsWithValues.flatMap((metric) => metric.values.map((value) => value.periodStart.toISOString())));

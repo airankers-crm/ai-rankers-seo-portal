@@ -10,18 +10,21 @@ export const dynamic = "force-dynamic";
 
 function getCachedPortalData(clientId: string) {
   return unstable_cache(async () => {
+    const clientSettings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+    if (!clientSettings) return null;
     const [metrics, activityRecords, reportRecords, goalRecords] = await Promise.all([
-      prisma.metric.findMany({ where: { clientId, isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } }, orderBy: { position: "asc" } }),
+      prisma.metric.findMany({ where: { clientId, isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: clientSettings.dataMode }, orderBy: { periodStart: "desc" }, take: 6 } }, orderBy: { position: "asc" } }),
       prisma.activity.findMany({ where: { clientId, clientVisible: true }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.report.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.goal.findMany({
         where: { clientId, isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } },
-        include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } },
+        include: { metric: { include: { values: { where: { dataOrigin: clientSettings.dataMode }, orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } },
         orderBy: { endDate: "asc" },
       }),
     ]);
 
     return {
+      dataMode: clientSettings.dataMode,
       metrics: metrics.map((metric) => ({ key: metric.key, name: metric.name, source: metric.source, updatedAt: metric.updatedAt.toISOString(), values: metric.values.map((value) => ({ periodStart: value.periodStart.toISOString(), value: Number(value.value) })) })),
       activities: activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, completedAt: activity.completedAt?.toISOString() ?? null, status: activity.status })),
       reports: reportRecords.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel })),
@@ -39,7 +42,9 @@ export default async function PortalPage() {
 
   if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", metrics: {}, activities: [], reports: [], goals: [] }} />;
 
-  const { metrics, activities: activityRecords, reports: reportRecords, goals: goalRecords } = await getCachedPortalData(client.id);
+  const portalData = await getCachedPortalData(client.id);
+  if (!portalData) return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: "Not connected", metrics: {}, activities: [], reports: [], goals: [] }} />;
+  const { metrics, activities: activityRecords, reports: reportRecords, goals: goalRecords } = portalData;
 
   const metricByKey = new Map(metrics.map((metric) => [metric.key, metric]));
   const mapMetric = (key: string): DemoMetric | undefined => {

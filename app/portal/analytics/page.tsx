@@ -1,5 +1,4 @@
 import { prisma } from "@ai-rankers/db";
-import { unstable_cache } from "next/cache";
 import { requirePortalAccess } from "../../../lib/auth/access";
 import { AnalyticsDashboard, type AnalyticsMetric, type AnalyticsRow } from "../../../components/analytics-dashboard";
 
@@ -21,11 +20,13 @@ const metricConfig = [
 
 type MetricKey = typeof metricConfig[number]["viewKey"];
 
-function getCachedAnalyticsClient(clientId: string) {
-  return unstable_cache(() => prisma.client.findUnique({
+async function getAnalyticsClient(clientId: string) {
+  const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+  if (!settings) return null;
+  return prisma.client.findUnique({
     where: { id: clientId },
-    include: { metrics: { where: { source: "GA4", isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 12 } }, orderBy: { position: "asc" } } },
-  }), ["portal-analytics", clientId], { revalidate: 60, tags: [`portal-analytics:${clientId}`] })();
+    include: { metrics: { where: { source: "GA4", isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 12 } }, orderBy: { position: "asc" } } },
+  });
 }
 
 function formatPeriod(date: Date) {
@@ -35,7 +36,7 @@ function formatPeriod(date: Date) {
 export default async function AnalyticsPage() {
   const access = await requirePortalAccess();
   const clientId = access.user?.clientId;
-  const client = clientId ? await getCachedAnalyticsClient(clientId) : null;
+  const client = clientId ? await getAnalyticsClient(clientId) : null;
 
   if (!client) return <AnalyticsDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 

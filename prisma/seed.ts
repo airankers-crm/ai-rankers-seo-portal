@@ -83,7 +83,7 @@ async function main() {
     for (const [valueIndex, value] of definition.values.entries()) {
       const period = periods[valueIndex];
       await prisma.metricValue.upsert({
-        where: { metricId_periodStart_periodEnd_source: { metricId: metric.id, periodStart: period.start, periodEnd: period.end, source: definition.source } },
+        where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId: metric.id, periodStart: period.start, periodEnd: period.end, source: definition.source, dataOrigin: "MANAGED" } },
         update: { value: new Prisma.Decimal(value) },
         create: { metricId: metric.id, periodStart: period.start, periodEnd: period.end, value: new Prisma.Decimal(value), source: definition.source },
       });

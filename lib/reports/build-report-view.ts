@@ -24,15 +24,16 @@ function metricDirection(change: number | null, higherIsBetter: boolean) {
 }
 
 export async function buildReportView(clientId: string, reportId?: string, template?: ReportTemplateConfig): Promise<ReportViewModel | null> {
-  const client = await prisma.client.findUnique({
+  const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+  const client = settings ? await prisma.client.findUnique({
     where: { id: clientId },
     include: {
       reports: { where: reportId ? { id: reportId } : { isVisible: true }, orderBy: { createdAt: "desc" }, take: 1 },
-      metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } },
+      metrics: { where: { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } },
       activities: { where: { clientVisible: true }, orderBy: { createdAt: "desc" }, take: 8 },
-      goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
+      goals: { where: { isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } }, include: { metric: { include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } }, orderBy: { endDate: "asc" } },
     },
-  });
+  }) : null;
   const reportRecord = client?.reports[0];
   if (!client || !reportRecord) return null;
 

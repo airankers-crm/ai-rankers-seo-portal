@@ -8,10 +8,14 @@ import { CsvImportPanel } from "../../../components/csv-import-panel";
 export const dynamic = "force-dynamic";
 
 function getCachedGbpClient(clientId: string) {
-  return unstable_cache(() => prisma.client.findUnique({
-    where: { id: clientId },
-    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
-  }), ["portal-gbp", clientId], { revalidate: 60, tags: [`portal-gbp:${clientId}`] })();
+  return unstable_cache(async () => {
+    const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+    if (!settings) return null;
+    return prisma.client.findUnique({
+      where: { id: clientId },
+      include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
+    });
+  }, ["portal-gbp", clientId], { revalidate: 60, tags: [`portal-gbp:${clientId}`] })();
 }
 
 const metricConfig = [

@@ -89,11 +89,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     });
     const savedValue = selectedValue
-      ? await transaction.metricValue.update({ where: { id: selectedValue.id }, data: { periodStart, periodEnd, value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true } })
+      ? await transaction.metricValue.update({ where: { id: selectedValue.id }, data: { periodStart, periodEnd, value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true, dataOrigin: "MANAGED" } })
       : await transaction.metricValue.upsert({
-          where: { metricId_periodStart_periodEnd_source: { metricId, periodStart, periodEnd, source: existing.source } },
-          create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(valueText), source: existing.source, note: text(body?.note) || null, isOverride: true },
-          update: { value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true },
+          where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId, periodStart, periodEnd, source: existing.source, dataOrigin: "MANAGED" } },
+          create: { metricId, periodStart, periodEnd, value: new Prisma.Decimal(valueText), source: existing.source, note: text(body?.note) || null, isOverride: true, dataOrigin: "MANAGED" },
+          update: { value: new Prisma.Decimal(valueText), note: text(body?.note) || null, isOverride: true, dataOrigin: "MANAGED" },
         });
     await transaction.auditLog.create({
       data: {

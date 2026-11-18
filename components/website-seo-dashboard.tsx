@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, CheckCircle2, ChevronDown, Info, ListOrdered, MousePointerClick, Percent, Search, SlidersHorizontal, Table2, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, CheckCircle2, ChevronDown, ListOrdered, MousePointerClick, Percent, Search, SlidersHorizontal, Table2, TrendingUp } from "lucide-react";
 import { comparisonOptions, DateRangePicker, type ComparisonOption, type DateRangeSelection } from "./date-range-picker";
 import { AppShell } from "./app-shell";
 import { PortalFeedback } from "./portal-feedback";
@@ -26,21 +26,6 @@ export type WebsiteSeoRow = {
   position: number | null;
   topTen: number | null;
 };
-
-export type WebsiteSeoChannel = {
-  key: string;
-  label: string;
-  value: number;
-  color: string;
-};
-
-const presentationChannels: WebsiteSeoChannel[] = [
-  { key: "ga4-channel-organic", label: "Organic search", value: 8426, color: "#16a085" },
-  { key: "ga4-channel-direct", label: "Direct", value: 3210, color: "#2d6cdf" },
-  { key: "ga4-channel-referral", label: "Referral", value: 1680, color: "#8557d6" },
-  { key: "ga4-channel-email", label: "Email", value: 1145, color: "#f4b51d" },
-  { key: "ga4-channel-paid-social", label: "Paid social", value: 968, color: "#ec6b9b" },
-];
 
 type WebsiteMetricKey = "organicTraffic" | "searchClicks" | "impressions" | "ctr" | "position" | "topTen";
 
@@ -85,7 +70,7 @@ function initialRange(): DateRangeSelection {
 }
 
 function formatMetric(value: number | null, format: WebsiteSeoMetric["format"]) {
-  if (value === null) return "0";
+  if (value === null) return "—";
   if (format === "PERCENT") return `${value.toFixed(1)}%`;
   if (format === "CURRENCY") return `$${value.toLocaleString()}`;
   if (format === "DECIMAL") return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -93,7 +78,7 @@ function formatMetric(value: number | null, format: WebsiteSeoMetric["format"]) 
 }
 
 function compactMetric(value: number | null, format: WebsiteSeoMetric["format"]) {
-  if (value === null) return "0";
+  if (value === null) return "—";
   if (format === "INTEGER" && value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return formatMetric(value, format);
 }
@@ -133,21 +118,13 @@ function renderChange(change: number | null) {
   return `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
 }
 
-export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", brandMark, brandAccent, metrics, rows, channels, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; channels?: WebsiteSeoChannel[]; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
+export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", brandMark, brandAccent, metrics, rows, isDraftPreview = false, isSectionPublished = true }: { clientName: string; sectionName?: string; brandMark: string; brandAccent: string; metrics: WebsiteSeoMetric[]; rows: WebsiteSeoRow[]; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(initialRange);
   const [query, setQuery] = useState("");
-  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-  const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{ label: string; value: number; x: number; y: number } | null>(null);
   const [activeMetricKey, setActiveMetricKey] = useState<WebsiteMetricKey>("organicTraffic");
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const hasReportingData = rows.length > 0 || metrics.some((metric) => metric.value !== null);
-  const zeroChannels = presentationChannels.map((channel) => ({ ...channel, value: 0 }));
-  const acquisitionChannels = channels?.length ? channels : hasReportingData ? presentationChannels : zeroChannels;
-  const acquisitionTotal = acquisitionChannels.reduce((total, channel) => total + channel.value, 0);
-  const topChannel = acquisitionChannels.reduce<WebsiteSeoChannel | undefined>((top, channel) => !top || channel.value > top.value ? channel : top, undefined);
-  const activeChannel = acquisitionChannels.find((channel) => channel.key === (selectedChannel ?? topChannel?.key)) ?? topChannel;
-  const channelIsPreview = !channels?.length && hasReportingData;
 
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -175,25 +152,14 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", b
   const comparisonLabel = dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? dateRange.compare === "Previous year" ? "vs previous year" : "vs previous period" : "Comparison unavailable";
   const comparisonPeriodLabel = comparisonRow?.periodLabel ?? "the previous period";
   const insightComparison = dateRange.compare === "None" ? "No comparison" : comparisonAvailable ? `${renderChange(metricChange(latestRow?.organicTraffic ?? null, comparisonRow?.organicTraffic ?? null))} vs ${dateRange.compare === "Previous year" ? "previous year" : comparisonPeriodLabel}` : "No comparison available for the selected range";
-  const acquisitionGradient = acquisitionTotal > 0 ? `conic-gradient(${acquisitionChannels.reduce<{ stops: string[]; offset: number }>((result, channel) => { const start = result.offset; const end = start + (channel.value / acquisitionTotal) * 100; result.stops.push(`${channel.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`); result.offset = end; return result; }, { stops: [], offset: 0 }).stops.join(", ")})` : "conic-gradient(#e7edf4 0 100%)";
-  const zeroTableRow: WebsiteSeoRow = { periodStart: "empty", periodLabel: "No published data", organicTraffic: 0, searchClicks: 0, impressions: 0, ctr: 0, position: 0, topTen: 0 };
+  const zeroTableRow: WebsiteSeoRow = { periodStart: "empty", periodLabel: "No published data", organicTraffic: null, searchClicks: null, impressions: null, ctr: null, position: null, topTen: null };
+  const visibilityMetrics = [
+    { key: "searchClicks" as const, label: "Search clicks", format: "INTEGER" as const },
+    { key: "impressions" as const, label: "Search impressions", format: "INTEGER" as const },
+    { key: "ctr" as const, label: "Search CTR", format: "PERCENT" as const },
+    { key: "position" as const, label: "Average position", format: "DECIMAL" as const },
+  ];
   const tableRows = visibleRows.length > 0 ? visibleRows : query ? [] : [zeroTableRow];
-
-  const handleDonutMove = (event: MouseEvent<HTMLDivElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const center = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
-    const dx = event.clientX - center.x;
-    const dy = event.clientY - center.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (!acquisitionTotal || distance < bounds.width * 0.27) return;
-    const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
-    let offset = 0;
-    const channel = acquisitionChannels.find((item) => {
-      offset += (item.value / acquisitionTotal) * 360;
-      return angle <= offset;
-    });
-    setHoveredChannel(channel?.key ?? null);
-  };
 
   const handleChartMove = (event: MouseEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -210,8 +176,6 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", b
   function resetFilters() {
     setDateRange(initialRange());
     setQuery("");
-    setSelectedChannel(null);
-    setHoveredChannel(null);
     setActiveMetricKey("organicTraffic");
   }
 
@@ -230,7 +194,6 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", b
         <div className="website-seo-filter-controls">
           <label><span>Date range</span><DateRangePicker value={dateRange} onApply={setDateRange} /></label>
           <label><span>Compare</span><FilterDropdown label="Compare" value={dateRange.compare} options={comparisonOptions.map((option) => ({ value: option, label: option }))} onChange={(value) => setDateRange((current) => ({ ...current, compare: value as ComparisonOption }))} /></label>
-          <label><span>Channel focus</span><FilterDropdown label="Channel focus" value={selectedChannel ?? topChannel?.key ?? ""} displayValue={activeChannel?.label ?? "No channel"} options={acquisitionChannels.map((channel) => ({ value: channel.key, label: channel.label }))} onChange={setSelectedChannel} /></label>
           <label className="website-seo-search"><span className="sr-only">Search reporting periods</span><Search size={14} /><input aria-label="Search reporting periods" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search reporting periods" /></label>
           <button className="button website-seo-reset" type="button" onClick={resetFilters}>Reset</button>
         </div>
@@ -256,11 +219,11 @@ export function WebsiteSeoDashboard({ clientName, sectionName = "Website GSC", b
 
         <div className="website-seo-lower-grid"><section className="card website-seo-results-card" aria-labelledby="website-seo-results-title"><div className="website-seo-card-heading"><div><h2 id="website-seo-results-title">Results by month</h2><p>Latest six-month reporting window</p></div><Table2 size={18} color="#148f83" /></div><div className="website-seo-table-wrap"><table className="website-seo-table"><thead><tr><th>Month</th><th>Organic sessions</th><th>Search clicks</th><th>Search impressions</th><th>CTR</th><th>Avg. position</th><th>Top-10 keywords</th></tr></thead><tbody>{tableRows.length ? tableRows.map((row, index) => <tr key={row.periodStart} className={index === tableRows.length - 1 ? "is-latest" : undefined}><td><strong>{row.periodLabel}</strong><span>{row.periodLabel === "No published data" ? "Awaiting first sync" : index === tableRows.length - 1 ? "Latest period" : "Historical period"}</span></td><td>{formatMetric(row.organicTraffic, metricMap.get("organicTraffic")?.format ?? "INTEGER")}</td><td>{formatMetric(row.searchClicks, metricMap.get("searchClicks")?.format ?? "INTEGER")}</td><td>{formatMetric(row.impressions, metricMap.get("impressions")?.format ?? "INTEGER")}</td><td>{formatMetric(row.ctr, metricMap.get("ctr")?.format ?? "PERCENT")}</td><td>{formatMetric(row.position, metricMap.get("position")?.format ?? "DECIMAL")}</td><td>{formatMetric(row.topTen, metricMap.get("topTen")?.format ?? "RANK")}</td></tr>) : <tr><td colSpan={7}>No periods match this search.</td></tr>}</tbody></table></div><div className="website-seo-table-foot"><span><TrendingUp size={13} /> CTR is calculated from clicks ÷ impressions; position is impression-weighted.</span><span>{visibleRows.length} periods · {dateRange.label}</span></div></section>
 
-          <section className="card website-seo-acquisition-card" aria-labelledby="website-seo-acquisition-title"><div className="website-seo-card-heading"><h2 id="website-seo-acquisition-title">Acquisition channels</h2><span className="source-badge pending">{channelIsPreview ? "GA4 preview" : hasReportingData ? "GA4" : "Awaiting data"}</span></div><div className="website-seo-acquisition-layout"><div className="website-seo-donut-wrap"><div className="website-seo-donut" style={{ background: acquisitionGradient }} onMouseMove={handleDonutMove} onMouseLeave={() => setHoveredChannel(null)} role="img" aria-label={`${acquisitionTotal.toLocaleString()} ${channelIsPreview ? "preview " : ""}sessions by acquisition channel`}><div className="website-seo-donut-center"><strong>{(hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.value : acquisitionTotal)?.toLocaleString()}</strong><span>{hoveredChannel ? acquisitionChannels.find((channel) => channel.key === hoveredChannel)?.label : channelIsPreview ? "Preview sessions" : "Sessions"}</span></div></div></div><div className="website-seo-channel-list">{acquisitionChannels.map((channel) => { const share = acquisitionTotal ? (channel.value / acquisitionTotal) * 100 : 0; const active = (hoveredChannel ?? selectedChannel ?? activeChannel?.key) === channel.key; return <button type="button" className={`website-seo-channel-row${active ? " active" : ""}`} key={channel.key} onClick={() => setSelectedChannel(channel.key)} onMouseEnter={() => setHoveredChannel(channel.key)} onMouseLeave={() => setHoveredChannel(null)} aria-pressed={active}><span className="website-seo-channel-swatch" style={{ backgroundColor: channel.color }} /><strong>{channel.label}</strong><span>{share.toFixed(1)}%</span></button>; })}</div></div><p className="website-seo-acquisition-note"><Info size={13} /> {channelIsPreview ? "Presentation mix shown until GA4 channel attribution is connected." : hasReportingData ? "GA4 channel attribution is connected." : "0 sessions until GA4 channel attribution is connected."}</p></section></div>
+          <section className="card website-seo-visibility-card" aria-labelledby="website-seo-visibility-title"><div className="website-seo-card-heading"><div><h2 id="website-seo-visibility-title">Search Console visibility</h2><p>Actual metrics from the connected GSC property.</p></div><span className={`source-badge${metricMap.has("searchClicks") ? "" : " pending"}`}>GSC</span></div><div className="website-seo-visibility-grid">{visibilityMetrics.map((item) => <div className="website-seo-visibility-row" key={item.key}><span>{item.label}</span><strong>{formatMetric(latestRow?.[item.key] ?? null, item.format)}</strong><small>{latestRow?.periodLabel ?? "Awaiting first sync"}</small></div>)}</div><p className="website-seo-visibility-note">Search Console does not provide acquisition-channel splits. This card only shows values returned by Google for the selected property.</p></section></div>
 
       </>
 
-      <PortalFeedback pagePath="/portal/website-seo" pageLabel="Website GSC" context={{ dateRange: dateRange.label, selectedChannel: activeChannel?.label ?? null, search: query || null }} />
+      <PortalFeedback pagePath="/portal/website-seo" pageLabel="Website GSC" context={{ dateRange: dateRange.label, search: query || null }} />
     </div>
   </AppShell>;
 }

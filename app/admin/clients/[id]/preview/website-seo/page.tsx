@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@ai-rankers/db";
-import { WebsiteSeoDashboard, type WebsiteSeoChannel, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../../../../components/website-seo-dashboard";
+import { WebsiteSeoDashboard, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../../../../components/website-seo-dashboard";
 import { requireAdminAccess } from "../../../../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +14,6 @@ const metricConfig = [
   { key: "kw-top10", viewKey: "topTen", description: "Tracked keywords currently appearing within the first ten organic results." },
 ] as const;
 
-const channelConfig = [
-  { key: "ga4-channel-organic", label: "Organic search", color: "#F26B38" },
-  { key: "ga4-channel-direct", label: "Direct", color: "#12243F" },
-  { key: "ga4-channel-referral", label: "Referral", color: "#148F83" },
-  { key: "ga4-channel-email", label: "Email", color: "#6F3FB5" },
-  { key: "ga4-channel-paid-social", label: "Paid social", color: "#8E98A8" },
-] as const;
-
 function formatPeriod(date: Date) {
   return date.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" });
 }
@@ -30,10 +22,11 @@ export default async function AdminWebsiteSeoPreviewPage({ params, searchParams 
   await requireAdminAccess();
   const { id } = await params;
   const isDraftPreview = (await searchParams)?.mode === "draft";
-  const client = await prisma.client.findUnique({
+  const settings = await prisma.client.findUnique({ where: { id }, select: { dataMode: true } });
+  const client = settings ? await prisma.client.findUnique({
     where: { id },
-    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
-  });
+    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+  }) : null;
   if (!client) notFound();
 
   const metricMap = new Map(client.metrics.map((metric) => [metric.key, metric]));
@@ -56,11 +49,6 @@ export default async function AdminWebsiteSeoPreviewPage({ params, searchParams 
     }
   }
 
-  const latestChannelValues = channelConfig.map((config) => ({ config, metric: metricMap.get(config.key) })).map(({ config, metric }) => ({ config, value: metric?.values.at(-1) ? Number(metric.values.at(-1)!.value) : null }));
-  const channels: WebsiteSeoChannel[] | undefined = latestChannelValues.every(({ value }) => value !== null)
-    ? latestChannelValues.map(({ config, value }) => ({ key: config.key, label: config.label, color: config.color, value: value as number }))
-    : undefined;
-
   const section = client.sections[0];
-  return <WebsiteSeoDashboard clientName={client.businessName} sectionName="Website GSC" isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} channels={channels} isDraftPreview={isDraftPreview} />;
+  return <WebsiteSeoDashboard clientName={client.businessName} sectionName="Website GSC" isSectionPublished={isDraftPreview || Boolean(section?.isVisible && !section.isDraft)} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} isDraftPreview={isDraftPreview} />;
 }

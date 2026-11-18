@@ -87,6 +87,14 @@ enum DataSource {
   DATAFORSEO
 }
 
+// Controls which tenant-scoped value set the client portal reads. Managed
+// values include CSV imports and Super Admin edits; Google API values are
+// written by the provider sync worker.
+enum PortalDataMode {
+  MANAGED
+  GOOGLE_API
+}
+
 enum ActivityStatus {
   PLANNED
   IN_PROGRESS
@@ -154,63 +162,65 @@ enum ReportDeliveryStatus {
 }
 
 model User {
-  id              String             @id @default(cuid())
-  authUserId      String?            @unique
-  email           String             @unique
-  name            String
-  passwordHash    String?
-  role            Role
-  status          UserStatus         @default(INVITED)
-  clientId        String?
-  portalPreferences Json?
-  client          Client?            @relation(fields: [clientId], references: [id])
-  allClients      Boolean            @default(false)
-  assignedClients ClientAdmin[]
-  sentInvitations ClientInvitation[] @relation("InvitationSender")
-  createdGoals    Goal[]             @relation("GoalCreator")
-  goalAnnotations GoalAnnotation[]   @relation("GoalAnnotationCreator")
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  auditLogs       AuditLog[]
-  assignedTasks   Task[]             @relation("TaskAssignee")
-  requestedTasks  Task[]             @relation("TaskRequester")
+  id                  String             @id @default(cuid())
+  authUserId          String?            @unique
+  email               String             @unique
+  name                String
+  passwordHash        String?
+  role                Role
+  status              UserStatus         @default(INVITED)
+  clientId            String?
+  portalPreferences   Json?
+  client              Client?            @relation(fields: [clientId], references: [id])
+  allClients          Boolean            @default(false)
+  assignedClients     ClientAdmin[]
+  sentInvitations     ClientInvitation[] @relation("InvitationSender")
+  createdGoals        Goal[]             @relation("GoalCreator")
+  goalAnnotations     GoalAnnotation[]   @relation("GoalAnnotationCreator")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  auditLogs           AuditLog[]
+  assignedTasks       Task[]             @relation("TaskAssignee")
+  requestedTasks      Task[]             @relation("TaskRequester")
   feedbackSubmissions Feedback[]
-  googleOAuthStates GoogleOAuthState[]
+  googleOAuthStates   GoogleOAuthState[]
+  reportReads         ReportRead[]
 }
 
 model Client {
-  id            String             @id @default(cuid())
-  businessName  String
-  slug          String             @unique
-  brandMark     String?
-  brandAccent   String             @default("#F26B38")
-  websiteUrl    String?
-  contactEmail  String?
-  businessPhone String?
-  serviceArea   String?
-  businessHours String?
-  timezone      String             @default("America/New_York")
-  hasWebsiteSeo Boolean            @default(false)
-  hasGbpSeo     Boolean            @default(false)
-  status        ClientStatus       @default(ACTIVE)
-  users         User[]
-  admins        ClientAdmin[]
-  invitations   ClientInvitation[]
-  sections      Section[]
-  metrics       Metric[]
-  activities    Activity[]
-  reports       Report[]
+  id                        String                     @id @default(cuid())
+  businessName              String
+  slug                      String                     @unique
+  brandMark                 String?
+  brandAccent               String                     @default("#F26B38")
+  websiteUrl                String?
+  contactEmail              String?
+  businessPhone             String?
+  serviceArea               String?
+  businessHours             String?
+  timezone                  String                     @default("America/New_York")
+  hasWebsiteSeo             Boolean                    @default(false)
+  hasGbpSeo                 Boolean                    @default(false)
+  status                    ClientStatus               @default(ACTIVE)
+  dataMode                  PortalDataMode             @default(MANAGED)
+  users                     User[]
+  admins                    ClientAdmin[]
+  invitations               ClientInvitation[]
+  sections                  Section[]
+  metrics                   Metric[]
+  activities                Activity[]
+  reports                   Report[]
   reportTemplateAssignments ReportTemplateAssignment[]
-  versions      DashboardVersion[]
-  goals         Goal[]
-  auditLogs     AuditLog[]
-  tasks         Task[]
-  feedback      Feedback[]
-  googleIntegration GoogleIntegration?
-  integrationSyncRuns IntegrationSyncRun[]
-  googleOAuthStates GoogleOAuthState[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  versions                  DashboardVersion[]
+  goals                     Goal[]
+  auditLogs                 AuditLog[]
+  tasks                     Task[]
+  feedback                  Feedback[]
+  googleIntegration         GoogleIntegration?
+  integrationSyncRuns       IntegrationSyncRun[]
+  googleOAuthStates         GoogleOAuthState[]
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
 }
 
 model ClientAdmin {
@@ -243,18 +253,18 @@ model ClientInvitation {
 }
 
 model Section {
-  id        String      @id @default(cuid())
-  clientId  String
-  name      String
-  kind      SectionKind
-  position  Int         @default(0)
-  isVisible Boolean     @default(true)
-  isDraft   Boolean     @default(true)
-  client    Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  metrics   Metric[]
+  id           String           @id @default(cuid())
+  clientId     String
+  name         String
+  kind         SectionKind
+  position     Int              @default(0)
+  isVisible    Boolean          @default(true)
+  isDraft      Boolean          @default(true)
+  client       Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  metrics      Metric[]
   presentation GbpPresentation?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@index([clientId, position])
 }
@@ -350,11 +360,12 @@ model MetricValue {
   source      DataSource
   note        String?
   isOverride  Boolean    @default(false)
+  dataOrigin  PortalDataMode @default(MANAGED)
   metric      Metric     @relation(fields: [metricId], references: [id], onDelete: Cascade)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  @@unique([metricId, periodStart, periodEnd, source])
+  @@unique([metricId, periodStart, periodEnd, source, dataOrigin])
   @@index([metricId, periodStart])
 }
 
@@ -372,17 +383,17 @@ model DashboardVersion {
 }
 
 model Activity {
-  id          String         @id @default(cuid())
-  clientId    String
-  title       String
-  description String?
-  category    String
-  status      ActivityStatus @default(PLANNED)
-  clientVisible Boolean      @default(true)
-  completedAt DateTime?
-  client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  clientId      String
+  title         String
+  description   String?
+  category      String
+  status        ActivityStatus @default(PLANNED)
+  clientVisible Boolean        @default(true)
+  completedAt   DateTime?
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([clientId, status, createdAt])
 }
@@ -420,18 +431,18 @@ model Feedback {
   pagePath  String
   pageLabel String
   context   Json?
-  status    FeedbackStatus    @default(OPEN)
-  client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  user      User              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  status    FeedbackStatus   @default(OPEN)
+  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([clientId, status, createdAt])
   @@index([userId, createdAt])
 }
 
 model Report {
-  id               String       @id @default(cuid())
+  id               String               @id @default(cuid())
   clientId         String
   title            String
   type             String
@@ -440,76 +451,88 @@ model Report {
   originalFileName String?
   mimeType         String?
   sizeBytes        Int?
-  status           ReportStatus @default(PUBLISHED)
+  status           ReportStatus         @default(PUBLISHED)
   deliveryStatus   ReportDeliveryStatus @default(NOT_SENT)
   sentAt           DateTime?
-  isVisible        Boolean      @default(true)
-  client           Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  isVisible        Boolean              @default(true)
+  client           Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reads            ReportRead[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   @@index([clientId, createdAt])
   @@index([clientId, status, updatedAt])
 }
 
+model ReportRead {
+  reportId String
+  userId   String
+  seenAt   DateTime @default(now())
+  report   Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, userId])
+  @@index([userId, seenAt])
+}
+
 model ReportTemplate {
-  id          String                 @id @default(cuid())
-  key         String                 @unique
+  id          String                     @id @default(cuid())
+  key         String                     @unique
   title       String
   category    String
   description String
-  isActive    Boolean                @default(true)
+  isActive    Boolean                    @default(true)
   versions    ReportTemplateVersion[]
   assignments ReportTemplateAssignment[]
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
 }
 
 model ReportTemplateVersion {
-  id           String                      @id @default(cuid())
-  templateId   String
-  version      Int
-  label        String
-  status       ReportTemplateVersionStatus @default(DRAFT)
-  config       Json
-  publishedAt  DateTime?
-  template     ReportTemplate              @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  assignments  ReportTemplateAssignment[]
-  createdAt    DateTime                    @default(now())
-  updatedAt    DateTime                    @updatedAt
+  id          String                      @id @default(cuid())
+  templateId  String
+  version     Int
+  label       String
+  status      ReportTemplateVersionStatus @default(DRAFT)
+  config      Json
+  publishedAt DateTime?
+  template    ReportTemplate              @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  assignments ReportTemplateAssignment[]
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
 
   @@unique([templateId, version])
   @@index([templateId, status])
 }
 
 model ReportTemplateAssignment {
-  id        String               @id @default(cuid())
-  clientId  String
+  id         String                @id @default(cuid())
+  clientId   String
   templateId String
-  versionId String
-  service   String
-  client    Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template  ReportTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  version   ReportTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  assignedAt DateTime             @default(now())
-  updatedAt DateTime              @updatedAt
+  versionId  String
+  service    String
+  client     Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template   ReportTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version    ReportTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  assignedAt DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@unique([clientId, service])
   @@index([versionId])
 }
 
 model WorkspaceSettings {
-  id                       String   @id @default("default")
-  workspaceName            String   @default("The AI Rankers")
-  defaultTimezone          String   @default("America/Los_Angeles")
-  defaultReportingWindow   String   @default("6m")
-  portalVisibility         String   @default("published")
-  brandingMode             String   @default("default")
-  notifyClientFeedback     Boolean  @default(true)
-  notifyReportPublishing   Boolean  @default(true)
-  notifySyncWarnings       Boolean  @default(false)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                     String   @id @default("default")
+  workspaceName          String   @default("The AI Rankers")
+  defaultTimezone        String   @default("America/Los_Angeles")
+  defaultReportingWindow String   @default("6m")
+  portalVisibility       String   @default("published")
+  brandingMode           String   @default("default")
+  notifyClientFeedback   Boolean  @default(true)
+  notifyReportPublishing Boolean  @default(true)
+  notifySyncWarnings     Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model AuditLog {
@@ -530,12 +553,12 @@ model AuditLog {
 }
 
 model GoogleIntegration {
-  id                    String                   @id @default(cuid())
-  clientId              String                   @unique
-  status                GoogleIntegrationStatus  @default(DISCONNECTED)
+  id                    String                  @id @default(cuid())
+  clientId              String                  @unique
+  status                GoogleIntegrationStatus @default(DISCONNECTED)
   googleAccountEmail    String?
   googleSubject         String?
-  scopes                String[]                 @default([])
+  scopes                String[]                @default([])
   ga4PropertyId         String?
   gscSiteUrl            String?
   gbpAccountId          String?
@@ -549,32 +572,32 @@ model GoogleIntegration {
   lastErrorMessage      String?
   connectedAt           DateTime?
   disconnectedAt        DateTime?
-  client                Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client                Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   syncRuns              IntegrationSyncRun[]
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
 
-  @@index([status, lastSyncedAt])
   @@unique([id, clientId])
+  @@index([status, lastSyncedAt])
 }
 
 model IntegrationSyncRun {
-  id              String               @id @default(cuid())
-  integrationId   String
-  clientId        String
-  mode            IntegrationSyncMode
-  status          IntegrationSyncStatus @default(RUNNING)
-  startedAt       DateTime             @default(now())
-  completedAt     DateTime?
-  rowsFetched     Int                  @default(0)
-  rowsWritten     Int                  @default(0)
-  rowsSkipped     Int                  @default(0)
-  rowsOverridden  Int                  @default(0)
-  warningCount    Int                  @default(0)
-  errorMessage    String?
-  errorDetails    Json?
-  integration     GoogleIntegration   @relation(fields: [integrationId, clientId], references: [id, clientId], onDelete: Cascade)
-  client          Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id             String                @id @default(cuid())
+  integrationId  String
+  clientId       String
+  mode           IntegrationSyncMode
+  status         IntegrationSyncStatus @default(RUNNING)
+  startedAt      DateTime              @default(now())
+  completedAt    DateTime?
+  rowsFetched    Int                   @default(0)
+  rowsWritten    Int                   @default(0)
+  rowsSkipped    Int                   @default(0)
+  rowsOverridden Int                   @default(0)
+  warningCount   Int                   @default(0)
+  errorMessage   String?
+  errorDetails   Json?
+  integration    GoogleIntegration     @relation(fields: [integrationId, clientId], references: [id, clientId], onDelete: Cascade)
+  client         Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, startedAt])
   @@index([integrationId, startedAt])
@@ -582,17 +605,17 @@ model IntegrationSyncRun {
 }
 
 model GoogleOAuthState {
-  id                    String   @id @default(cuid())
-  stateHash             String   @unique
+  id                    String    @id @default(cuid())
+  stateHash             String    @unique
   clientId              String
   userId                String
   returnPath            String
   encryptedCodeVerifier String
   expiresAt             DateTime
   consumedAt            DateTime?
-  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt             DateTime @default(now())
+  client                Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime  @default(now())
 
   @@index([clientId, expiresAt])
   @@index([userId, expiresAt])

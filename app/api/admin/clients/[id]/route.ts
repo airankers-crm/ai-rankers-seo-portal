@@ -15,7 +15,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await prisma.client.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Client workspace not found." }, { status: 404 });
 
-  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; businessPhone?: string; serviceArea?: string; businessHours?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean } | null;
+  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; businessPhone?: string; serviceArea?: string; businessHours?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean; dataMode?: string } | null;
+  const requestedDataMode = body?.dataMode === "GOOGLE_API" || body?.dataMode === "MANAGED" ? body.dataMode : null;
+  if (body?.dataMode !== undefined && !requestedDataMode) {
+    return NextResponse.json({ error: "Data mode must be MANAGED or GOOGLE_API." }, { status: 400 });
+  }
+  if (requestedDataMode && access.user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only a Super Admin can change the client portal data source." }, { status: 403 });
+  }
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
     websiteUrl = parseSafeHttpUrl(body.websiteUrl.trim());
@@ -50,6 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       timezone: body?.timezone?.trim() || existing.timezone,
       hasWebsiteSeo: body?.hasWebsiteSeo ?? existing.hasWebsiteSeo,
       hasGbpSeo: body?.hasGbpSeo ?? existing.hasGbpSeo,
+      ...(requestedDataMode ? { dataMode: requestedDataMode } : {}),
     },
   });
 
@@ -60,7 +68,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       action: "CLIENT_SETTINGS_UPDATED",
       entityType: "Client",
       entityId: updated.id,
-      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, businessPhone: updated.businessPhone, serviceArea: updated.serviceArea, businessHours: updated.businessHours, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo },
+      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, businessPhone: updated.businessPhone, serviceArea: updated.serviceArea, businessHours: updated.businessHours, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo, ...(requestedDataMode ? { dataMode: updated.dataMode } : {}) },
     },
   });
 

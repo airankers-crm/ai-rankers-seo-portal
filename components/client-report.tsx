@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, CircleAlert, FileText, Flag, Info, Lightbulb, Printer, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { DateRangePicker, type DateRangeSelection } from "./date-range-picker";
 import { PortalFeedback } from "./portal-feedback";
@@ -34,6 +34,18 @@ function templateVisible(report: ReportViewModel, key: string) {
 }
 
 export function ClientReport({ report }: { report: ReportViewModel }) {
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/portal/reports/${encodeURIComponent(report.report.id)}/read`, { method: "POST" })
+      .then(() => {
+        if (active) window.dispatchEvent(new Event("portal-report-seen"));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [report.report.id]);
+
   const [dateRange, setDateRange] = useState<DateRangeSelection>(() => {
     const now = new Date();
     const start = new Date(now);

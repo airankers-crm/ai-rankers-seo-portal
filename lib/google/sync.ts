@@ -97,11 +97,11 @@ async function writePoints(clientId: string, points: GoogleMetricPoint[], databa
   const existingValues = metricIds.length
     ? await database.metricValue.findMany({
       where: { metricId: { in: metricIds }, source: { in: sources } },
-      select: { metricId: true, periodStart: true, periodEnd: true, source: true, isOverride: true },
+      select: { metricId: true, periodStart: true, periodEnd: true, source: true, dataOrigin: true, isOverride: true },
     })
     : [];
   const existingByKey = new Map(existingValues.map((value) => [
-    `${value.metricId}|${value.periodStart.toISOString()}|${value.periodEnd.toISOString()}|${value.source}`,
+    `${value.metricId}|${value.periodStart.toISOString()}|${value.periodEnd.toISOString()}|${value.source}|${value.dataOrigin}`,
     value,
   ]));
 
@@ -113,7 +113,7 @@ async function writePoints(clientId: string, points: GoogleMetricPoint[], databa
       continue;
     }
 
-    const valueKey = `${metricId}|${point.periodStart.toISOString()}|${point.periodEnd.toISOString()}|${point.source}`;
+    const valueKey = `${metricId}|${point.periodStart.toISOString()}|${point.periodEnd.toISOString()}|${point.source}|GOOGLE_API`;
     const existing = existingByKey.get(valueKey);
     if (existing?.isOverride) {
       counts.overridden += 1;
@@ -130,6 +130,7 @@ async function writePoints(clientId: string, points: GoogleMetricPoint[], databa
       CAST(${point.source} AS "DataSource"),
       ${null},
       false,
+      CAST('GOOGLE_API' AS "PortalDataMode"),
       NOW(),
       NOW()
     )`);
@@ -138,12 +139,13 @@ async function writePoints(clientId: string, points: GoogleMetricPoint[], databa
   if (rows.length) {
     await database.$executeRaw(Prisma.sql`
       INSERT INTO "MetricValue"
-        ("id", "metricId", "periodStart", "periodEnd", "value", "source", "note", "isOverride", "createdAt", "updatedAt")
+        ("id", "metricId", "periodStart", "periodEnd", "value", "source", "note", "isOverride", "dataOrigin", "createdAt", "updatedAt")
       VALUES ${Prisma.join(rows)}
-      ON CONFLICT ("metricId", "periodStart", "periodEnd", "source") DO UPDATE
+      ON CONFLICT ("metricId", "periodStart", "periodEnd", "source", "dataOrigin") DO UPDATE
       SET "value" = EXCLUDED."value",
           "note" = EXCLUDED."note",
           "isOverride" = false,
+          "dataOrigin" = EXCLUDED."dataOrigin",
           "updatedAt" = NOW()
       WHERE "MetricValue"."isOverride" = false
     `);

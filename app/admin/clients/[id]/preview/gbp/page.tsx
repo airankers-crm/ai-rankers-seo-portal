@@ -21,10 +21,11 @@ export default async function AdminGbpPreviewPage({ params, searchParams }: { pa
   await requireAdminAccess();
   const { id } = await params;
   const isDraftPreview = (await searchParams)?.mode === "draft";
-  const client = await prisma.client.findUnique({
+  const settings = await prisma.client.findUnique({ where: { id }, select: { dataMode: true } });
+  const client = settings ? await prisma.client.findUnique({
     where: { id },
-    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
-  });
+    include: { sections: { where: { kind: "GBP" }, include: { presentation: true } }, metrics: { where: isDraftPreview ? { isVisible: true } : { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "asc" } } }, orderBy: { position: "asc" } } },
+  }) : null;
   if (!client) notFound();
 
   const metricMap = new Map(client.metrics.map((metric) => [metric.key, metric]));

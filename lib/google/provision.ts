@@ -79,15 +79,15 @@ export async function writeGoogleMetricValue(input: {
   if (!metric) return "missing_metric" as const;
 
   const existing = await database.metricValue.findUnique({
-    where: { metricId_periodStart_periodEnd_source: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, source: input.source } },
+    where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, source: input.source, dataOrigin: "GOOGLE_API" } },
     select: { id: true, isOverride: true },
   });
   if (existing?.isOverride) return "overridden" as const;
 
   await database.metricValue.upsert({
-    where: { metricId_periodStart_periodEnd_source: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, source: input.source } },
-    update: { value: new Prisma.Decimal(input.value), note: input.note ?? null, isOverride: false },
-    create: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, value: new Prisma.Decimal(input.value), source: input.source, note: input.note ?? null },
+    where: { metricId_periodStart_periodEnd_source_dataOrigin: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, source: input.source, dataOrigin: "GOOGLE_API" } },
+    update: { value: new Prisma.Decimal(input.value), note: input.note ?? null, isOverride: false, dataOrigin: "GOOGLE_API" },
+    create: { metricId: metric.id, periodStart: input.periodStart, periodEnd: input.periodEnd, value: new Prisma.Decimal(input.value), source: input.source, note: input.note ?? null, dataOrigin: "GOOGLE_API" },
   });
   return existing ? "updated" as const : "created" as const;
 }

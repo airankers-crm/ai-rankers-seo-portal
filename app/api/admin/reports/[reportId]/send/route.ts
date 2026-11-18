@@ -15,6 +15,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
 
   const updated = await prisma.$transaction(async (transaction) => {
     const report = await transaction.report.update({ where: { id: reportId }, data: { status: "PUBLISHED", deliveryStatus: "SENT", isVisible: true, sentAt: new Date() }, include: { client: { select: { id: true, businessName: true, contactEmail: true } } } });
+    await transaction.reportRead.deleteMany({ where: { reportId } });
     await transaction.auditLog.create({
       data: {
         clientId: report.clientId,

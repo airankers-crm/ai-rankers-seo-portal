@@ -15,6 +15,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ repo
   if (!user && requiresProductionAuth()) return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   if (user && !isAdminRole(user.role) && (user.clientId !== report.clientId || !report.isVisible)) return NextResponse.json({ error: "You do not have access to this report." }, { status: 403 });
   if (!user && !report.isVisible) return NextResponse.json({ error: "This report is not available." }, { status: 403 });
+  if (user && !isAdminRole(user.role) && user.clientId === report.clientId && report.isVisible) {
+    await prisma.reportRead.upsert({
+      where: { reportId_userId: { reportId: report.id, userId: user.id } },
+      create: { reportId: report.id, userId: user.id },
+      update: { seenAt: new Date() },
+    });
+  }
 
   try {
     const stored = await readStoredReport(report.storageKey);
