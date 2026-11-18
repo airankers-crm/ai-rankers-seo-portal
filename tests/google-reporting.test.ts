@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchGscMetrics, getGoogleSyncWindow } from "../lib/google/reporting";
+import { fetchGa4Metrics, fetchGa4Realtime, fetchGscMetrics, getGoogleSyncWindow } from "../lib/google/reporting";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -29,5 +29,46 @@ describe("Search Console reporting", () => {
     expect(result.points.filter((point) => point.key === "gsc-clicks").map((point) => point.value)).toEqual([10, 2]);
     expect(result.points.filter((point) => point.key === "gsc-impressions").map((point) => point.value)).toEqual([50, 10]);
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+});
+
+describe("GA4 reporting", () => {
+  it("publishes event count and engagement rate alongside the existing summary metrics", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { dimensions?: Array<{ name: string }>; metrics?: Array<{ name: string }> };
+      const dimensions = body.dimensions?.map((dimension) => dimension.name) ?? [];
+      if (dimensions.includes("sessionDefaultChannelGroup")) return new Response(JSON.stringify({ rows: [{ dimensionValues: [{ value: "202601" }, { value: "Organic Search" }], metricValues: [{ value: "8" }] }] }), { status: 200 });
+      if (dimensions.includes("eventName")) return new Response(JSON.stringify({ rows: [{ dimensionValues: [{ value: "202601" }, { value: "phone_click" }], metricValues: [{ value: "3" }] }] }), { status: 200 });
+      return new Response(JSON.stringify({ rows: [{ dimensionValues: [{ value: "202601" }], metricValues: [{ value: "10" }, { value: "20" }, { value: "49" }, { value: "5" }, { value: "127" }, { value: "2" }] }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchGa4Metrics("token", "properties/123", { start: new Date("2026-01-01T00:00:00.000Z"), end: new Date("2026-03-01T00:00:00.000Z") });
+
+    expect(result.points.find((point) => point.key === "ga4-event-count" && point.periodStart.toISOString() === "2026-01-01T00:00:00.000Z")?.value).toBe(127);
+    expect(result.points.find((point) => point.key === "ga4-engagement-rate" && point.periodStart.toISOString() === "2026-01-01T00:00:00.000Z")?.value).toBe(0.25);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("maps realtime totals and dimensions without inventing rows", async () => {
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { dimensions?: Array<{ name: string }>; metrics?: Array<{ name: string }> };
+      const dimension = body.dimensions?.[0]?.name;
+      if (!dimension) return new Response(JSON.stringify({ rows: [{ metricValues: [{ value: "10" }, { value: "2" }] }] }), { status: 200 });
+      const label = dimension === "country" ? "United States" : dimension === "eventName" ? "page_view" : dimension === "minutesAgo" ? "1" : "Home";
+      const metric = body.metrics?.[0]?.name === "screenPageViews" ? "4" : "3";
+      return new Response(JSON.stringify({ rows: [{ dimensionValues: [{ value: label }], metricValues: [{ value: metric }] }] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchGa4Realtime("token", "properties/123");
+
+    expect(result.activeUsers30Minutes).toBe(10);
+    expect(result.activeUsers5Minutes).toBe(2);
+    expect(result.countries).toEqual([{ label: "United States", value: 3 }]);
+    expect(result.pages).toEqual([{ label: "Home", value: 4 }]);
+    expect(result.devices).toEqual([{ label: "Home", value: 3 }]);
+    expect(result.warnings).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 });

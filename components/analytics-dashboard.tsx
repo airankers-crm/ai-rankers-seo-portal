@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState, type MouseEvent } from "react";
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, FileInput, MapPin, Phone, Send, Target, UsersRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, UsersRound } from "lucide-react";
 import { AppShell } from "./app-shell";
+import { AnalyticsRealtime } from "./analytics-realtime";
 import { DateRangePicker, getDefaultDateRange, type DateRangeSelection } from "./date-range-picker";
 
 export type AnalyticsMetric = {
@@ -26,14 +26,14 @@ export type AnalyticsRow = {
   views: number | null;
   engagedSessions: number | null;
   engagementRate: number | null;
+  eventCount: number | null;
   keyEvents: number | null;
   phoneClicks: number | null;
   formSubmissions: number | null;
   quoteRequests: number | null;
 };
 
-export type AnalyticsLandingPage = { path: string; users: number | null; views: number | null; keyEvents: number | null };
-type AnalyticsViewKey = "activeUsers" | "sessions" | "organicSessions" | "views" | "engagedSessions" | "engagementRate" | "keyEvents" | "phoneClicks" | "formSubmissions" | "quoteRequests";
+type AnalyticsViewKey = "activeUsers" | "sessions" | "organicSessions" | "views" | "engagedSessions" | "engagementRate" | "eventCount" | "keyEvents" | "phoneClicks" | "formSubmissions" | "quoteRequests";
 type DateRangeKey = "custom" | "today" | "yesterday" | "last-3-days" | "last-1-week" | "last-3-weeks" | "last-1-month" | "last-6-months" | "last-1-year";
 type CompareKey = "none" | "previous-period" | "previous-year";
 
@@ -54,7 +54,7 @@ const compareOptions: Array<{ key: CompareKey; label: string }> = [
   { key: "previous-year", label: "Previous year" },
 ];
 const zeroBars = Array.from({ length: 12 }, () => 0);
-const sumMetricKeys = new Set<AnalyticsViewKey>(["sessions", "organicSessions", "views", "engagedSessions", "keyEvents", "phoneClicks", "formSubmissions", "quoteRequests"]);
+const sumMetricKeys = new Set<AnalyticsViewKey>(["sessions", "organicSessions", "views", "engagedSessions", "eventCount", "keyEvents", "phoneClicks", "formSubmissions", "quoteRequests"]);
 
 function compact(value: number | null) {
   if (value === null || value === undefined) return "0";
@@ -128,17 +128,12 @@ function rowsInRange(rows: AnalyticsRow[], start: Date, end: Date) {
   return rows.filter((row) => row.periodStart.slice(0, 10) >= startKey && row.periodStart.slice(0, 10) <= endKey);
 }
 
-function ReferenceTable({ title, rows, href }: { title: string; rows: string[][]; href?: string }) {
-  return <section className="analytics-reference-card analytics-reference-table-card"><h2>{title}</h2><div>{rows.map(([label, value]) => <p key={label}><span>{label}</span><strong>{value}</strong></p>)}</div>{href ? <Link href={href}>View details <ArrowRight size={14} /></Link> : <span className="analytics-reference-table-note">Populates from verified GA4 fields</span>}</section>;
-}
-
-export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics, rows, landingPages }: { clientName: string; brandMark: string; brandAccent: string; metrics: AnalyticsMetric[]; rows: AnalyticsRow[]; landingPages: AnalyticsLandingPage[] }) {
+export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics, rows }: { clientName: string; brandMark: string; brandAccent: string; metrics: AnalyticsMetric[]; rows: AnalyticsRow[] }) {
   const [dateRange, setDateRange] = useState<DateRangeSelection>(getDefaultDateRange);
   const range = dateRangeKey(dateRange);
   const compare: CompareKey = dateRange.compare === "Previous period" ? "previous-period" : dateRange.compare === "Previous year" ? "previous-year" : "none";
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const connectedMetricCount = metrics.filter((metric) => metric.value !== null).length;
-  const completeCoverage = connectedMetricCount === metrics.length && metrics.length > 0;
   const hasReportingData = connectedMetricCount > 0 || rows.length > 0;
   const selectedRange = dateRangeOptions.find((option) => option.key === range) ?? dateRangeOptions[6];
   const visibleRows = useMemo(() => rowsInRange(rows, dateRange.start, dateRange.end), [dateRange.end, dateRange.start, rows]);
@@ -180,34 +175,15 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     return values.length ? normalizeSeries(values.length === 1 ? [values[0], values[0], values[0], values[0]] : values) : zeroBars;
   };
 
-  const sessions = valueFor("sessions");
-  const organicSessions = valueFor("organicSessions");
-  const organicShare = sessions > 0 ? Math.round((organicSessions / sessions) * 100) : null;
-  const acquisitionRows = [["Organic Search", organicShare === null ? compact(organicSessions) : `${compact(organicSessions)} (${organicShare}%)`], ["Direct", "0"], ["Referral", "0"], ["Paid Search", "0"]];
-  const landingTotal = landingPages.reduce((sum, page) => sum + (page.views ?? 0), 0);
-  const landingRows = landingPages.length > 0
-    ? [...landingPages].sort((left, right) => (right.views ?? 0) - (left.views ?? 0)).slice(0, 4).map((page) => [page.path, landingTotal > 0 ? `${compact(page.views ?? 0)} (${Math.round(((page.views ?? 0) / landingTotal) * 100)}%)` : "0"])
-    : [["Page views", "0"], ["Active users", "0"], ["Key events", "0"], ["Engagement", "0"]];
-  const eventRows = [["Phone clicks", compact(valueFor("phoneClicks"))], ["Form submissions", compact(valueFor("formSubmissions"))], ["Quote requests", compact(valueFor("quoteRequests"))], ["Key events", compact(valueFor("keyEvents"))]];
-  const conversionRows: Array<[string, number, LucideIcon]> = [["Phone clicks", valueFor("phoneClicks"), Phone], ["Form submissions", valueFor("formSubmissions"), FileInput], ["Quote requests", valueFor("quoteRequests"), Send]];
-  const actionTrackingReady = conversionRows.some(([, value]) => value > 0);
   const latestPeriod = rows.at(-1)?.periodLabel;
-  const connectionRows = [
-    { label: "Published GA4 values", ready: hasReportingData, detail: hasReportingData ? `${connectedMetricCount} fields` : "Waiting" },
-    { label: "Complete summary coverage", ready: completeCoverage, detail: `${connectedMetricCount} of ${metrics.length}` },
-    { label: "Realtime reporting", ready: false, detail: "Not connected" },
-    { label: "Action-event reporting", ready: actionTrackingReady, detail: actionTrackingReady ? "Available" : "Setup required" },
-  ];
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Analytics" shellVariant="analytics">
     <div className="content analytics-reference" aria-label="Google Analytics 4 performance">
       <div className="analytics-reference-heading"><div><span className="analytics-reference-accent" /><h1>Website analytics</h1><p>Understand what visitors do after they arrive.</p></div><div className="analytics-reference-heading-actions"><span className={`analytics-reference-connected${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {hasReportingData ? "GA4 data available" : "GA4 awaiting sync"}</span><DateRangePicker value={dateRange} onApply={setDateRange} /><span className="analytics-reference-updated">{latestPeriod ? `Latest published period · ${latestPeriod}` : "No GA4 values published"}</span></div></div>
       <section className={`analytics-reference-status${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={20} /> : <Clock3 size={20} />}<strong>{hasReportingData ? `${connectedMetricCount} of ${metrics.length} analytics fields have published data` : "Website analytics are awaiting the first verified sync"}</strong><Link href="/portal/analytics/details">View details <ArrowRight size={14} /></Link></section>
-      <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Sessions", sessions, "blue", "sessions"], ["Organic sessions", organicSessions, "orange", "organicSessions"], ["Key events", valueFor("keyEvents"), "teal", "keyEvents"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
-      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2>{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}</div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><span className="analytics-reference-chart-note">{visibleRows.length > 0 ? `${visibleRows.length} reporting period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span></section><section className="analytics-reference-card analytics-reference-realtime"><h2>Realtime activity</h2><span className="analytics-reference-label">ACTIVE USERS IN LAST 30 MINUTES</span><b className="analytics-reference-realtime-number">0</b><span className="analytics-reference-label">ACTIVE USERS PER MINUTE</span><MiniBars values={zeroBars} /><div className="analytics-reference-realtime-row"><span>TOP COUNTRY</span><strong>—</strong></div><div className="analytics-reference-realtime-row"><span>TOP PAGE</span><strong>—</strong></div><p className="analytics-reference-realtime-note">Realtime GA4 reporting is not connected yet.</p></section></div>
-      <div className="analytics-reference-three-grid"><ReferenceTable title="Acquisition sources" rows={acquisitionRows} /><ReferenceTable title="Top pages" rows={landingRows} href="/portal/analytics/pages" /><ReferenceTable title="Event activity" rows={eventRows} /></div>
-      <div className="analytics-reference-bottom-grid"><section className="analytics-reference-card analytics-reference-conversions"><div className="analytics-reference-card-heading"><h2>Conversion actions</h2><span>{actionTrackingReady ? "Published data" : "Awaiting events"}</span></div>{conversionRows.map(([label, value, Icon]) => <div className="analytics-reference-conversion-row" key={label}><span><Icon size={16} /></span><strong>{label}</strong><b>{compact(value)}</b></div>)}<p className="analytics-reference-callout"><Target size={13} /> Event tracking must be configured in GA4 before these fields can populate.</p></section><section className="analytics-reference-card analytics-reference-health"><h2>Connection health</h2>{connectionRows.map(({ label, ready, detail }) => <p key={label}>{ready ? <CheckCircle2 size={15} /> : <AlertCircle size={15} className="attention" />}<span>{label}</span><strong>{detail}</strong></p>)}</section></div>
-      <p className="analytics-reference-footnote"><MapPin size={13} /> All values shown here come from published CRM metric rows. Missing fields remain 0 until the GA4 reporting API sync supplies them.</p>
+      <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Event count", valueFor("eventCount"), "blue", "eventCount"], ["Key events", valueFor("keyEvents"), "orange", "keyEvents"], ["Views", valueFor("views"), "teal", "views"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
+      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2>{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}</div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><span className="analytics-reference-chart-note">{visibleRows.length > 0 ? `${visibleRows.length} reporting period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span></section><AnalyticsRealtime /></div>
+      <p className="analytics-reference-footnote">Historical cards use published GA4 rows. Realtime lists use the GA4 Realtime API. Acquisition, page, and conversion widgets are not shown until their corresponding GA4 reports are connected.</p>
     </div>
   </AppShell>;
 }

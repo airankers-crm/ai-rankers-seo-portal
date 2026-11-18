@@ -34,7 +34,7 @@ export default async function AnalyticsDetailsPage() {
     brandMark={client?.brandMark ?? "CL"}
     brandAccent={client?.brandAccent ?? "#F26B38"}
     availableMetricCount={metricsWithValues.length}
-    expectedMetricCount={10}
+    expectedMetricCount={11}
     reportingPeriodCount={reportingPeriods.size}
     latestPeriodLabel={latestPeriod?.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) ?? null}
     trackedEvents={trackedEvents}

@@ -1,4 +1,4 @@
-import { googleApiFetch } from "./oauth";
+import { googleApiFetch, GoogleOAuthError } from "./oauth";
 
 export type GoogleSource = "GA4" | "GSC" | "GBP";
 
@@ -22,6 +22,28 @@ export type GoogleSyncWindow = {
 
 type ReportResponse = {
   rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>;
+};
+
+type RealtimeResponse = {
+  rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>;
+};
+
+export type GoogleRealtimeList = Array<{ label: string; value: number }>;
+
+export type GoogleRealtimeResult = {
+  capturedAt: string;
+  activeUsers30Minutes: number;
+  activeUsers5Minutes: number;
+  activeUsersPerMinute: Array<{ label: string; value: number }>;
+  countries: GoogleRealtimeList;
+  cities: GoogleRealtimeList;
+  pages: GoogleRealtimeList;
+  events: GoogleRealtimeList;
+  keyEvents: GoogleRealtimeList;
+  audiences: GoogleRealtimeList;
+  platforms: GoogleRealtimeList;
+  devices: GoogleRealtimeList;
+  warnings: string[];
 };
 
 type GscResponse = {
@@ -96,6 +118,14 @@ async function runGa4Report(accessToken: string, propertyId: string, body: Recor
   });
 }
 
+async function runGa4RealtimeReport(accessToken: string, propertyId: string, body: Record<string, unknown>) {
+  return googleApiFetch<RealtimeResponse>(`https://analyticsdata.googleapis.com/v1beta/${propertyResource(propertyId)}:runRealtimeReport`, accessToken, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 function ga4Filter(fieldName: string, value: string): Record<string, unknown> {
   return { filter: { fieldName, stringFilter: { matchType: "EXACT", value } } };
 }
@@ -110,7 +140,7 @@ export async function fetchGa4Metrics(accessToken: string, propertyId: string, w
   const base = await runGa4Report(accessToken, propertyId, {
     dateRanges: [dateRange],
     dimensions: [{ name: "yearMonth" }],
-    metrics: ["activeUsers", "sessions", "screenPageViews", "engagedSessions", "keyEvents"].map((name) => ({ name })),
+    metrics: ["activeUsers", "sessions", "screenPageViews", "engagedSessions", "eventCount", "keyEvents"].map((name) => ({ name })),
     keepEmptyRows: true,
   });
   const organic = await runGa4Report(accessToken, propertyId, {
@@ -129,19 +159,19 @@ export async function fetchGa4Metrics(accessToken: string, propertyId: string, w
   });
 
   const bucketsByMetric = new Map<string, ReturnType<typeof createBuckets>>();
-  for (const key of ["ga4-active-users", "ga4-sessions", "ga4-views", "ga4-engaged-sessions", "ga4-key-events", "ga4-organic-sessions", "ga4-phone-clicks", "ga4-form-submissions", "ga4-quote-requests"]) bucketsByMetric.set(key, createBuckets(window));
-  const engagementByMonth = createBuckets(window);
+  for (const key of ["ga4-active-users", "ga4-sessions", "ga4-views", "ga4-engaged-sessions", "ga4-event-count", "ga4-key-events", "ga4-organic-sessions", "ga4-phone-clicks", "ga4-form-submissions", "ga4-quote-requests", "ga4-engagement-rate"]) bucketsByMetric.set(key, createBuckets(window));
 
   for (const row of base.rows ?? []) {
     const yearMonth = row.dimensionValues?.[0]?.value ?? "";
     const start = yearMonth.length === 6 ? monthStart(Number(yearMonth.slice(0, 4)), Number(yearMonth.slice(4, 6)) - 1) : null;
-    const bucket = start ? engagementByMonth.get(monthKey(start)) : null;
+    const bucket = start ? bucketsByMetric.get("ga4-engagement-rate")?.get(monthKey(start)) : null;
     if (!bucket) continue;
     const values = row.metricValues ?? [];
-    const keys = ["ga4-active-users", "ga4-sessions", "ga4-views", "ga4-engaged-sessions", "ga4-key-events"];
+    const keys = ["ga4-active-users", "ga4-sessions", "ga4-views", "ga4-engaged-sessions", "ga4-event-count", "ga4-key-events"];
     keys.forEach((key, index) => { const target = bucketsByMetric.get(key)?.get(monthKey(start!)); if (target) target.value = numberValue(values[index]?.value); });
     const sessions = numberValue(values[1]?.value);
-    bucket.value = sessions ? numberValue(values[3]?.value) / sessions : 0;
+    const engagementTarget = bucketsByMetric.get("ga4-engagement-rate")?.get(monthKey(start!));
+    if (engagementTarget) engagementTarget.value = sessions ? numberValue(values[3]?.value) / sessions : 0;
   }
 
   for (const row of organic.rows ?? []) {
@@ -163,6 +193,67 @@ export async function fetchGa4Metrics(accessToken: string, propertyId: string, w
   return {
     points: [...bucketsByMetric.entries()].flatMap(([key, buckets]) => toPoints(buckets, key, "GA4")),
     warnings: [],
+  };
+}
+
+function listRows(response: RealtimeResponse, metricIndex = 0) {
+  return (response.rows ?? []).map((row) => ({ label: row.dimensionValues?.[0]?.value || "Unknown", value: numberValue(row.metricValues?.[metricIndex]?.value) })).filter((row) => row.value > 0).sort((left, right) => right.value - left.value);
+}
+
+async function realtimeByDimension(accessToken: string, propertyId: string, dimension: string, metric: string) {
+  return runGa4RealtimeReport(accessToken, propertyId, { dimensions: [{ name: dimension }], metrics: [{ name: metric }], limit: 10, orderBys: [{ metric: { metricName: metric }, desc: true }] });
+}
+
+function realtimeWarning(error: unknown) {
+  if (error instanceof GoogleOAuthError) return error.message;
+  return "Google Analytics could not return this realtime breakdown.";
+}
+
+async function safeRealtimeReport(accessToken: string, propertyId: string, dimension: string, metric: string) {
+  try {
+    return { response: await realtimeByDimension(accessToken, propertyId, dimension, metric), warning: null };
+  } catch (error) {
+    return { response: null, warning: realtimeWarning(error) };
+  }
+}
+
+export async function fetchGa4Realtime(accessToken: string, propertyId: string): Promise<GoogleRealtimeResult> {
+  const warnings: string[] = [];
+  const capturedAt = new Date().toISOString();
+  let summaryValues: number[] = [];
+  try {
+    const summary = await runGa4RealtimeReport(accessToken, propertyId, { metrics: [{ name: "activeUsers" }], minuteRanges: [{ startMinutesAgo: 29 }, { startMinutesAgo: 4 }] });
+    summaryValues = (summary.rows ?? []).flatMap((row) => (row.metricValues ?? []).map((value) => numberValue(value.value)));
+  } catch (error) {
+    warnings.push(realtimeWarning(error));
+  }
+
+  const [perMinute, country, city, page, event, keyEvent, audience, platform, device] = await Promise.all([
+    safeRealtimeReport(accessToken, propertyId, "minutesAgo", "activeUsers"),
+    safeRealtimeReport(accessToken, propertyId, "country", "activeUsers"),
+    safeRealtimeReport(accessToken, propertyId, "city", "activeUsers"),
+    safeRealtimeReport(accessToken, propertyId, "unifiedScreenName", "screenPageViews"),
+    safeRealtimeReport(accessToken, propertyId, "eventName", "eventCount"),
+    safeRealtimeReport(accessToken, propertyId, "eventName", "keyEvents"),
+    safeRealtimeReport(accessToken, propertyId, "audienceName", "activeUsers"),
+    safeRealtimeReport(accessToken, propertyId, "platform", "activeUsers"),
+    safeRealtimeReport(accessToken, propertyId, "deviceCategory", "activeUsers"),
+  ]);
+  for (const result of [perMinute, country, city, page, event, keyEvent, audience, platform, device]) if (result.warning) warnings.push(result.warning);
+  return {
+    capturedAt,
+    activeUsers30Minutes: summaryValues[0] ?? 0,
+    activeUsers5Minutes: summaryValues[1] ?? 0,
+    activeUsersPerMinute: perMinute.response ? listRows(perMinute.response).sort((left, right) => Number(left.label) - Number(right.label)) : [],
+    countries: country.response ? listRows(country.response) : [],
+    cities: city.response ? listRows(city.response) : [],
+    pages: page.response ? listRows(page.response) : [],
+    events: event.response ? listRows(event.response) : [],
+    keyEvents: keyEvent.response ? listRows(keyEvent.response) : [],
+    audiences: audience.response ? listRows(audience.response) : [],
+    platforms: platform.response ? listRows(platform.response) : [],
+    devices: device.response ? listRows(device.response) : [],
+    warnings: [...new Set(warnings)],
   };
 }
 

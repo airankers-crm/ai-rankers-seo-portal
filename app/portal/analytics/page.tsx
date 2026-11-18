@@ -9,9 +9,10 @@ const metricConfig = [
   { key: "ga4-active-users", viewKey: "activeUsers", label: "Active users", description: "Unique users who visited the website during the reporting period.", format: "INTEGER" as const },
   { key: "ga4-sessions", viewKey: "sessions", label: "Sessions", description: "Visits recorded by Google Analytics 4.", format: "INTEGER" as const },
   { key: "ga4-organic-sessions", viewKey: "organicSessions", label: "Organic sessions", description: "Sessions attributed to unpaid organic search.", format: "INTEGER" as const },
-  { key: "ga4-views", viewKey: "views", label: "Page views", description: "Pages viewed across the website.", format: "INTEGER" as const },
+  { key: "ga4-views", viewKey: "views", label: "Views", description: "Screens and pages viewed across the website.", format: "INTEGER" as const },
   { key: "ga4-engaged-sessions", viewKey: "engagedSessions", label: "Engaged sessions", description: "Sessions that met the GA4 engagement criteria.", format: "INTEGER" as const },
   { key: "ga4-engagement-rate", viewKey: "engagementRate", label: "Engagement rate", description: "The percentage of sessions that were engaged.", format: "PERCENT" as const },
+  { key: "ga4-event-count", viewKey: "eventCount", label: "Event count", description: "The total number of events recorded by Google Analytics 4.", format: "INTEGER" as const },
   { key: "ga4-key-events", viewKey: "keyEvents", label: "Key events", description: "Configured conversion events such as form submissions or phone clicks.", format: "INTEGER" as const },
   { key: "ga4-phone-clicks", viewKey: "phoneClicks", label: "Phone clicks", description: "Clicks on tracked phone links.", format: "INTEGER" as const },
   { key: "ga4-form-submissions", viewKey: "formSubmissions", label: "Form submissions", description: "Contact-form submissions recorded as GA4 events.", format: "INTEGER" as const },
@@ -36,7 +37,7 @@ export default async function AnalyticsPage() {
   const clientId = access.user?.clientId;
   const client = clientId ? await getCachedAnalyticsClient(clientId) : null;
 
-  if (!client) return <AnalyticsDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} landingPages={[]} />;
+  if (!client) return <AnalyticsDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 
   const metricMap = new Map(client.metrics.map((metric) => [metric.key, metric]));
   const metrics: AnalyticsMetric[] = metricConfig.map((config) => {
@@ -50,11 +51,11 @@ export default async function AnalyticsPage() {
   for (const config of metricConfig) {
     for (const value of [...(metricMap.get(config.key)?.values ?? [])].reverse()) {
       const periodStart = new Date(value.periodStart).toISOString();
-      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(new Date(value.periodStart)), activeUsers: null, sessions: null, organicSessions: null, views: null, engagedSessions: null, engagementRate: null, keyEvents: null, phoneClicks: null, formSubmissions: null, quoteRequests: null };
+      const existing = rowMap.get(periodStart) ?? { periodStart, periodLabel: formatPeriod(new Date(value.periodStart)), activeUsers: null, sessions: null, organicSessions: null, views: null, engagedSessions: null, engagementRate: null, eventCount: null, keyEvents: null, phoneClicks: null, formSubmissions: null, quoteRequests: null };
       existing[config.viewKey as MetricKey] = Number(value.value);
       rowMap.set(periodStart, existing);
     }
   }
 
-  return <AnalyticsDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} landingPages={[]} />;
+  return <AnalyticsDashboard clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={[...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart))} />;
 }
