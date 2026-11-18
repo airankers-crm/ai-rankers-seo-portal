@@ -99,6 +99,18 @@ export type ImportSummary = {
   rows: ImportRowResult[];
 };
 
+function importUnit(valueFormat: string) {
+  if (valueFormat === "PERCENT") return "%";
+  if (valueFormat === "DECIMAL") return "number";
+  if (valueFormat === "RANK") return "count";
+  return "whole number";
+}
+
+function csvCell(value: string | number | null) {
+  const text = value === null ? "" : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 // ---------------------------------------------------------------------------
 // CSV parsing
 // ---------------------------------------------------------------------------
@@ -149,6 +161,23 @@ const HEADER_ALIASES: Record<string, string> = {
   notes: "note",
 };
 
+function parseImportNumber(rawValue: string, valueFormat: string): { value: number | null; error: string | null } {
+  const trimmed = rawValue.trim().replace(/,/g, "");
+  const hasPercentSign = trimmed.endsWith("%");
+  const numericText = hasPercentSign ? trimmed.slice(0, -1).trim() : trimmed;
+  const numericValue = Number(numericText);
+  if (!numericText || !Number.isFinite(numericValue)) return { value: null, error: "Value must be a valid number." };
+
+  if (valueFormat === "PERCENT") {
+    if (!hasPercentSign && numericValue > 0 && numericValue < 1) return { value: null, error: "Enter CTR as percentage points, for example 1.7 for 1.7%, not decimal form such as 0.017." };
+    if (numericValue < 0 || numericValue > 100) return { value: null, error: "Percentage values must be between 0 and 100." };
+  }
+  if (["INTEGER", "RANK"].includes(valueFormat) && (!Number.isInteger(numericValue) || numericValue < 0)) return { value: null, error: "This field must be a non-negative whole number." };
+  if (valueFormat === "DECIMAL" && numericValue < 0) return { value: null, error: "This field must be zero or greater." };
+
+  return { value: numericValue, error: null };
+}
+
 export function parseCsv(text: string, options: { screen?: ImportScreen } = {}): { rows: CsvRow[]; errors: CsvRowError[] } {
   const screen = normalizeImportScreen(options.screen);
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
@@ -196,7 +225,8 @@ export function parseCsv(text: string, options: { screen?: ImportScreen } = {}):
     if (!definition) { errors.push({ line: lineNumber, field: "metric_key", message: `Unknown metric key: ${metricKey}. Download a current template or use a supported metric key.` }); continue; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(periodStart)) { errors.push({ line: lineNumber, field: "period_start", message: "Period start must be YYYY-MM-DD." }); continue; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(periodEnd)) { errors.push({ line: lineNumber, field: "period_end", message: "Period end must be YYYY-MM-DD." }); continue; }
-    if (!value || !Number.isFinite(Number(value))) { errors.push({ line: lineNumber, field: "value", message: "Value must be a valid number." }); continue; }
+    const parsedValue = parseImportNumber(value, definition.valueFormat);
+    if (parsedValue.error || parsedValue.value === null) { errors.push({ line: lineNumber, field: "value", message: parsedValue.error ?? "Value must be a valid number." }); continue; }
 
     const startDate = parseDateOnly(periodStart, false);
     const endDate = parseDateOnly(periodEnd, true);
@@ -217,7 +247,7 @@ export function parseCsv(text: string, options: { screen?: ImportScreen } = {}):
     }
     seenRows.add(duplicateKey);
 
-    rows.push({ line: lineNumber, metricKey, periodStart, periodEnd, value, source: effectiveSource, note });
+    rows.push({ line: lineNumber, metricKey, periodStart, periodEnd, value: String(parsedValue.value), source: effectiveSource, note });
   }
 
   return { rows, errors };
@@ -360,7 +390,7 @@ export async function importCsvRows(
       data: {
         clientId,
         actorId,
-        action: "CSV_METRICS_IMPORTED",
+        action: "EXCEL_METRICS_IMPORTED",
         entityType: "Client",
         entityId: clientId,
         after: { rowCount: rows.length, created, updated, skipped, errors: errorCount },
@@ -407,29 +437,59 @@ function monthWindow(offset: number) {
 }
 
 export function generateCsvTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): string {
-  const header = "metric_key,period_start,period_end,value,source,note";
-  const definitions = screen === "all" ? ALL_METRIC_DEFINITIONS : ALL_METRIC_DEFINITIONS.filter((definition) => metricAllowedForScreen(definition.key, screen));
+  const header = "metric_key,metric_name,period_start,period_end,value,source,unit,note";
+  const definitions = screen === "all"
+    ? ALL_METRIC_DEFINITIONS
+    : IMPORT_SCREEN_CONFIG[screen].metricKeys.map((key) => METRIC_BY_KEY.get(key)).filter((definition): definition is (typeof ALL_METRIC_DEFINITIONS)[number] => Boolean(definition));
   const windows = options.includePreviousPeriod ? [monthWindow(-1), monthWindow(0)] : [{ start: currentMonthStart(), end: currentMonthEnd() }];
-  const rows = windows.flatMap(({ start, end }) => definitions.map((definition) => definition.key + "," + start + "," + end + ",," + definition.source + ","));
+  const rows = windows.flatMap(({ start, end }) => definitions.map((definition) => [definition.key, definition.name, start, end, "", definition.source, importUnit(definition.valueFormat), ""].map(csvCell).join(",")));
   return [header, ...rows].join("\n");
 }
 
 export function generateXlsxTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): Uint8Array {
   const workbook = XLSX.utils.book_new();
   const screens: ImportScreen[] = screen === "all" ? ["overview", "analytics", "website", "gbp"] : [screen];
+  const selectedConfig = IMPORT_SCREEN_CONFIG[screen];
   const instructionRows = [
-    ["AI Rankers import template"],
-    ["Selected scope", IMPORT_SCREEN_CONFIG[screen].label],
-    ["How to use", "Fill the value column on the screen tab you are importing, then upload this workbook."],
-    ["Periods", "The template includes the previous complete month and the current month so the client screen can show comparisons."],
-    ["Required columns", "metric_key, period_start, period_end, value"],
-    ["Optional columns", "source, note"],
-    ["Safety", "Imports are validated before writing. Existing manual overrides are preserved."],
+    ["AI Rankers", "Client reporting import workbook"],
+    ["Selected scope", selectedConfig.label],
+    ["Purpose", selectedConfig.description],
+    ["Step 1", "Open the screen tab and enter values only in the blank value column."],
+    ["Step 2", "Keep metric_key, metric_name, period dates, source, and unit unchanged."],
+    ["Step 3", "Save the workbook as .xlsx and upload it from the matching admin screen."],
+    ["Step 4", "After a successful import, the client portal uses Managed DB data so the imported values are visible."],
+    ["Important", "Blank value rows are skipped. Use 1.7 for 1.7% CTR. Counts must be whole numbers; average position may use decimals."],
+    [],
+    ["Import contract", "Required", "What to enter", "Example"],
+    ["metric_key", "Yes", "System key. Do not edit.", "gsc-clicks"],
+    ["metric_name", "Reference", "Human-readable field name. Do not edit.", "Search clicks"],
+    ["period_start", "Yes", "First day of the reporting period in YYYY-MM-DD format.", "2026-11-01"],
+    ["period_end", "Yes", "Last day of the reporting period in YYYY-MM-DD format.", "2026-11-30"],
+    ["value", "Yes", "Enter the approved numeric result. This is the only required field you normally change.", "2100"],
+    ["source", "Reference", "Provider label. Do not edit.", "GSC"],
+    ["unit", "Reference", "Expected unit for the value.", "whole number"],
+    ["note", "Optional", "Optional context saved with the reporting value.", "November approved"],
+    [],
+    ["Website GSC field guide", "Source", "Unit", "Example", "Entry rule"],
+    ["Organic traffic", "GA4", "whole number", "8426", "Sessions attributed to organic search."],
+    ["Search clicks", "GSC", "whole number", "2100", "Search result clicks."],
+    ["Search impressions", "GSC", "whole number", "124800", "Search result impressions."],
+    ["Search CTR", "GSC", "%", "1.7", "Enter percentage points, not 0.017."],
+    ["Average position", "GSC", "number", "7.4", "Lower position is better; decimals are allowed."],
+    ["Keywords in top 10", "DATAFORSEO", "count", "68", "Tracked keywords ranking in positions 1–10."],
   ];
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(instructionRows), "Instructions");
+  const instructions = XLSX.utils.aoa_to_sheet(instructionRows);
+  instructions["!cols"] = [{ wch: 24 }, { wch: 92 }, { wch: 22 }, { wch: 22 }, { wch: 48 }];
+  instructions["!rows"] = [{ hpt: 26 }, { hpt: 22 }];
+  XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
   for (const currentScreen of screens) {
     const rows = generateCsvTemplate(currentScreen, options).split("\n").map((line) => parseCsvLine(line));
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31));
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    const dataRowCount = rows.length;
+    sheet["!cols"] = [{ wch: 26 }, { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 14 }, { wch: 42 }];
+    sheet["!rows"] = [{ hpt: 24 }];
+    sheet["!autofilter"] = { ref: `A1:H${dataRowCount}` };
+    XLSX.utils.book_append_sheet(workbook, sheet, IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31));
   }
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Uint8Array;
 }

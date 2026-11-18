@@ -42,7 +42,7 @@ type ImportScreen = "overview" | "analytics" | "website" | "gbp" | "all";
 const SCREEN_COPY: Record<ImportScreen, { label: string; description: string; fields: string[] }> = {
   overview: { label: "Overview", description: "Summary cards and cross-channel highlights.", fields: ["Organic sessions", "Search visibility", "GBP actions"] },
   analytics: { label: "Analytics", description: "Google Analytics 4 cards and monthly rows.", fields: ["Users", "Sessions", "Views", "Events", "Conversions"] },
-  website: { label: "Website GSC", description: "Organic traffic, Search Console, and keyword visibility.", fields: ["Organic sessions", "Clicks", "Impressions", "CTR", "Position", "Top 10 keywords"] },
+  website: { label: "Website GSC", description: "Organic traffic, Search Console, and keyword visibility.", fields: ["Organic traffic", "Search clicks", "Search impressions", "Search CTR", "Average position", "Top 10 keywords"] },
   gbp: { label: "GBP", description: "Google Business Profile Search and Maps performance.", fields: ["Calls", "Profile views", "Website clicks", "Directions", "Reviews"] },
   all: { label: "All reporting screens", description: "Every supported field across the client portal.", fields: ["All available metrics"] },
 };
@@ -174,7 +174,7 @@ export function CsvImportPanel({ clientId, screen = "all" }: { clientId: string;
 
       <div className="csv-import-scope">
         <div className="csv-import-scope-icon"><ShieldCheck size={16} /></div>
-        <div><strong>{screenCopy.label} fields only</strong><span>{screenCopy.fields.join(" · ")}</span></div>
+        <div><strong>{screenCopy.label} fields only</strong><span>{screenCopy.fields.join(" · ")} · Enter values in the value column</span></div>
           <span className="csv-import-scope-badge">{activeScreen === "all" ? "Full catalog" : "Focused screen"}</span>
       </div>
 
@@ -280,6 +280,7 @@ export function CsvImportPanel({ clientId, screen = "all" }: { clientId: string;
       {/* Results */}
       {phase === "done" && summary && (
         <div className="csv-import-results">
+          <p className="save-status"><CheckCircle2 size={14} /> Imported values are stored in Managed DB data, and the client portal now uses that source.</p>
           <div className="csv-import-summary-grid">
             <div className="csv-import-stat"><strong>{summary.created}</strong><span>Created</span></div>
             <div className="csv-import-stat"><strong>{summary.updated}</strong><span>Updated</span></div>

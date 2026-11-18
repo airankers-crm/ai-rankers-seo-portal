@@ -83,6 +83,7 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
       isOverride: value.isOverride,
     })),
   }));
+  const sourceToggleProps = { clientId: client.id, initialMode: client.dataMode, googleStatus: client.googleIntegration?.status ?? "DISCONNECTED", lastSyncedAt: client.googleIntegration?.lastSyncedAt?.toISOString() ?? null };
 
   const stepContent = currentStep === "details" ? <>
     <div className="dashboard-grid setup-first-grid">
@@ -91,20 +92,23 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
         <ClientSettingsForm client={{ id: client.id, brandMark: client.brandMark, brandAccent: client.brandAccent, websiteUrl: client.websiteUrl, contactEmail: client.contactEmail, businessPhone: client.businessPhone, serviceArea: client.serviceArea, businessHours: client.businessHours, timezone: client.timezone, hasWebsiteSeo: client.hasWebsiteSeo, hasGbpSeo: client.hasGbpSeo }} />
       </section>
       <section className="card panel setup-side-card"><div className="panel-heading"><div><h2>Setup at a glance</h2><p>Keep this workspace in draft while sources are connected.</p></div></div><div className="detail-list"><div className="detail-row"><Globe2 size={15} /><span>Website</span><strong>{client.websiteUrl || "Not added"}</strong></div><div className="detail-row"><Phone size={15} /><span>Phone</span><strong>{client.businessPhone || "Not added"}</strong></div><div className="detail-row"><MapPin size={15} /><span>Service area</span><strong>{client.serviceArea || "Not added"}</strong></div><div className="detail-row"><Clock3 size={15} /><span>Hours</span><strong>{client.businessHours || "Not added"}</strong></div><div className="detail-row"><Mail size={15} /><span>Contact email</span><strong>{client.contactEmail || "Not added"}</strong></div><div className="detail-row"><UsersRound size={15} /><span>Portal users</span><strong>{client._count.users}</strong></div><div className="detail-row"><FileText size={15} /><span>Reports</span><strong>{client._count.reports}</strong></div></div></section>
-      <ClientDataSourceToggle clientId={client.id} initialMode={client.dataMode} googleStatus={client.googleIntegration?.status ?? "DISCONNECTED"} lastSyncedAt={client.googleIntegration?.lastSyncedAt?.toISOString() ?? null} />
+      <ClientDataSourceToggle {...sourceToggleProps} />
     </div>
   </> : currentStep === "business" ? <ClientBusinessProfileStep businessName={client.businessName} websiteUrl={client.websiteUrl} /> : currentStep === "website" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="website" />}
+    <ClientDataSourceToggle {...sourceToggleProps} screenLabel="Website GSC" />
     <ClientSourceChecklist source="Website SEO" description="Prepare verified website-search results for the client. Connect or record approved values in the editor, then leave them as drafts until the review step." />
     <ClientResultsEditor clientId={client.id} initialView="website" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="website" />}
   </div> : currentStep === "analytics" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="analytics" />}
+    <ClientDataSourceToggle {...sourceToggleProps} screenLabel="Analytics" />
     <ClientSourceChecklist source="Analytics" description="Prepare approved Google Analytics results for the client. Edit each card independently and keep imported values in draft until the analytics presentation is approved." />
     <ClientResultsEditor clientId={client.id} initialView="analytics" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="analytics" />}
   </div> : currentStep === "gbp" ? <div className="setup-source-layout">
     {canImportCsv && <ClientSourceToolbar clientId={client.id} screen="gbp" />}
+    <ClientDataSourceToggle {...sourceToggleProps} screenLabel="GBP performance" />
     <ClientSourceChecklist source="Google Business Profile" description="Prepare verified Search and Maps results for the client. Review the source and reporting period before anything is included in a published portal version." />
     <ClientResultsEditor clientId={client.id} initialView="gbp" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="gbp" />}

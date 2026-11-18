@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../../../lib/auth/access";
 import { importCsvRows, normalizeImportScreen, parseXlsx } from "../../../../../../lib/csv-import";
 
@@ -15,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { id: clientId } = await params;
 
-  // Accept either multipart form (file upload) or raw text body
+  // This endpoint intentionally accepts Excel workbooks only.
   const contentType = request.headers.get("content-type") ?? "";
   let parsed: ReturnType<typeof parseXlsx>;
   const url = new URL(request.url);
@@ -63,7 +64,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Execute the import
   try {
     const summary = await importCsvRows(clientId, rows, access.user.id);
-    return NextResponse.json({ summary });
+    await prisma.client.update({ where: { id: clientId }, data: { dataMode: "MANAGED" } });
+    return NextResponse.json({ summary, dataMode: "MANAGED" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed.";
     return NextResponse.json({ error: message }, { status: 500 });

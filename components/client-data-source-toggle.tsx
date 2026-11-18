@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type DataMode = "MANAGED" | "GOOGLE_API";
 
-export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, lastSyncedAt }: { clientId: string; initialMode: DataMode; googleStatus: string; lastSyncedAt: string | null }) {
+export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, lastSyncedAt, screenLabel }: { clientId: string; initialMode: DataMode; googleStatus: string; lastSyncedAt: string | null; screenLabel?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<DataMode>(initialMode);
   const [pending, setPending] = useState(false);
@@ -41,7 +41,7 @@ export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, la
   return <section className="card panel client-data-source-card" aria-labelledby="client-data-source-title">
     <div className="client-data-source-heading">
       <div className="client-data-source-icon"><Database size={17} /></div>
-      <div><p className="eyebrow">Admin control</p><h2 id="client-data-source-title">Client portal data source</h2><p>Imported Excel values and admin edits stay in the managed database. Google values are synced into the same database with a separate origin, so the portal can show one source set at a time.</p></div>
+      <div><p className="eyebrow">Admin control{screenLabel ? ` · ${screenLabel}` : ""}</p><h2 id="client-data-source-title">Client portal data source</h2><p>Choose which stored values this client sees. Managed DB data includes Excel imports and admin edits. Google API data uses synced provider rows.</p></div>
     </div>
     <div className="client-data-source-toggle" role="group" aria-label="Choose the client portal data source">
       <button type="button" className={mode === "MANAGED" ? "active" : ""} onClick={() => void save("MANAGED")} disabled={pending} aria-pressed={mode === "MANAGED"}><Database size={15} /><span><strong>Managed DB data</strong><small>Excel imports + Admin edits</small></span>{mode === "MANAGED" ? <CheckCircle2 size={15} /> : null}</button>
