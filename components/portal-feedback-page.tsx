@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronRight, CircleAlert, Clock3, Database, FilePlus2, Headphones, MessageCircle, Paperclip, Save, Send, ShieldCheck } from "lucide-react";
 
 type RequestType = "QUESTION" | "ISSUE" | "REQUEST" | "DATA_UPDATE";
-type RecentRequest = { id: string; category: "ISSUE" | "QUESTION" | "REQUEST" | "PRAISE"; status: "OPEN" | "REVIEWED" | "RESOLVED"; message: string; createdAt: string };
+type RecentRequest = { id: string; category: "ISSUE" | "QUESTION" | "REQUEST" | "PRAISE"; status: "OPEN" | "REVIEWED" | "RESOLVED"; message: string; createdAt: string; latestReply: { message: string; createdAt: string; authorName: string } | null };
 
 const requestTypes: Array<{ value: RequestType; label: string; icon: typeof MessageCircle }> = [
   { value: "QUESTION", label: "Question", icon: MessageCircle },
@@ -155,7 +155,7 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
 
       <section className="card feedback-recent-card" aria-labelledby="recent-requests-title">
         <div className="feedback-card-heading"><div className="feedback-card-icon purple"><FilePlus2 size={19} /></div><div><h2 id="recent-requests-title">Your recent requests</h2><p>Follow up on questions sent from this workspace.</p></div></div>
-        {recentRequests.length > 0 ? <div className="feedback-recent-list">{recentRequests.map((request) => <div className="feedback-recent-row" key={request.id}><div className="feedback-recent-copy"><strong>{request.message.split("\n")[0].replace(/^Subject:\s*/, "") || requestLabel(request.category)}</strong><span>{formatDate(request.createdAt)} · {requestLabel(request.category)}</span></div><span className={`feedback-status ${statusClass(request.status)}`}><span />{statusLabel(request.status)}</span><ChevronRight size={15} className="feedback-recent-arrow" /></div>)}</div> : <div className="feedback-recent-empty"><CheckCircle2 size={17} /><div><strong>No requests yet</strong><span>Your submitted questions and updates will appear here.</span></div></div>}
+        {recentRequests.length > 0 ? <div className="feedback-recent-list">{recentRequests.map((request) => <div className="feedback-recent-row" key={request.id}><div className="feedback-recent-copy"><strong>{request.message.split("\n")[0].replace(/^Subject:\s*/, "") || requestLabel(request.category)}</strong><span>{formatDate(request.createdAt)} · {requestLabel(request.category)}</span>{request.latestReply ? <small className="feedback-recent-response">Team response: {request.latestReply.message}</small> : null}</div><span className={`feedback-status ${statusClass(request.status)}`}><span />{statusLabel(request.status)}</span><ChevronRight size={15} className="feedback-recent-arrow" /></div>)}</div> : <div className="feedback-recent-empty"><CheckCircle2 size={17} /><div><strong>No requests yet</strong><span>Your submitted questions and updates will appear here.</span></div></div>}
       </section>
 
       <div className="feedback-privacy-note"><ShieldCheck size={15} /><span>Your messages are private to this client workspace.</span></div>

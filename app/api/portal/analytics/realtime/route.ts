@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
-import { requirePortalAccess } from "../../../../../lib/auth/access";
+import { requirePortalService } from "../../../../../lib/auth/access";
 import { GoogleOAuthError } from "../../../../../lib/google/oauth";
 import { fetchGa4Realtime } from "../../../../../lib/google/reporting";
 import { getGoogleAccessToken } from "../../../../../lib/google/tokens";
@@ -8,7 +8,7 @@ import { getGoogleAccessToken } from "../../../../../lib/google/tokens";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("analytics");
   if (access.preview || !access.user?.clientId) {
     return NextResponse.json({ status: "PREVIEW", data: null }, { headers: { "Cache-Control": "private, no-store" } });
   }

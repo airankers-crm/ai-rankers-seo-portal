@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../lib/auth/access";
+import { getWorkspaceSettings } from "../../../../lib/admin-settings";
 import { parseSafeHttpUrl } from "../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
   const baseSlug = slugify(businessName);
   const existing = await prisma.client.count({ where: { slug: { startsWith: baseSlug } } });
   const slug = existing ? `${baseSlug}-${existing + 1}` : baseSlug;
+  const workspaceSettings = await getWorkspaceSettings();
 
   const client = await prisma.client.create({
     data: {
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
       slug,
       websiteUrl,
       contactEmail,
+      timezone: workspaceSettings.defaultTimezone,
       sections: {
         create: [
           { name: "Overview", kind: "OVERVIEW", position: 0 },

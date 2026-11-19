@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../../../lib/auth/access";
 import { importCsvRows, normalizeImportScreen, parseXlsx } from "../../../../../../lib/csv-import";
+import { revalidateClientPortal } from "../../../../../../lib/portal-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const summary = await importCsvRows(clientId, rows, access.user.id);
     await prisma.client.update({ where: { id: clientId }, data: { dataMode: "MANAGED" } });
+    revalidateClientPortal(clientId);
     return NextResponse.json({ summary, dataMode: "MANAGED" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Import failed.";

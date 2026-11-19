@@ -6,23 +6,32 @@ export const CLIENT_SETUP_STEPS = [
   { id: "details", label: "Workspace details", shortLabel: "Details" },
   { id: "business", label: "Business profile", shortLabel: "Business" },
   { id: "website", label: "Website GSC", shortLabel: "Website GSC" },
-  { id: "analytics", label: "Analytics", shortLabel: "Analytics" },
-  { id: "gbp", label: "Google Business Profile", shortLabel: "GBP" },
   { id: "sections", label: "Portal sections", shortLabel: "Sections" },
   { id: "review", label: "Review & preview", shortLabel: "Review" },
   { id: "publish", label: "Publish portal", shortLabel: "Publish" },
   { id: "invite", label: "Invite client", shortLabel: "Invite" },
 ] as const;
 
-export type ClientSetupStepId = (typeof CLIENT_SETUP_STEPS)[number]["id"];
+// These remain valid direct source-screen routes from Manage portal, but are
+// intentionally not part of the guided setup stepper.
+const HIDDEN_SOURCE_STEPS = [
+  { id: "analytics", label: "Analytics", shortLabel: "Analytics" },
+  { id: "gbp", label: "Google Business Profile", shortLabel: "GBP" },
+] as const;
+
+const ROUTABLE_CLIENT_STEPS = [...CLIENT_SETUP_STEPS, ...HIDDEN_SOURCE_STEPS] as const;
+
+export type ClientSetupStepId = (typeof ROUTABLE_CLIENT_STEPS)[number]["id"];
 
 export function getClientSetupStep(value?: string): ClientSetupStepId {
-  return CLIENT_SETUP_STEPS.some((step) => step.id === value) ? value as ClientSetupStepId : "details";
+  return ROUTABLE_CLIENT_STEPS.some((step) => step.id === value) ? value as ClientSetupStepId : "details";
 }
 
 export function ClientSetupWizard({ clientId, currentStep, children }: { clientId: string; currentStep: ClientSetupStepId; children: ReactNode }) {
-  const currentIndex = CLIENT_SETUP_STEPS.findIndex((step) => step.id === currentStep);
-  const previous = CLIENT_SETUP_STEPS[currentIndex - 1];
+  const currentStepDefinition = ROUTABLE_CLIENT_STEPS.find((step) => step.id === currentStep) ?? CLIENT_SETUP_STEPS[0];
+  const isHiddenSourceStep = HIDDEN_SOURCE_STEPS.some((step) => step.id === currentStep);
+  const currentIndex = isHiddenSourceStep ? CLIENT_SETUP_STEPS.findIndex((step) => step.id === "website") : CLIENT_SETUP_STEPS.findIndex((step) => step.id === currentStep);
+  const previous = isHiddenSourceStep ? CLIENT_SETUP_STEPS[currentIndex] : CLIENT_SETUP_STEPS[currentIndex - 1];
   const next = CLIENT_SETUP_STEPS[currentIndex + 1];
   const stepHref = (step: string) => `/admin/clients/${clientId}?step=${step}`;
 
@@ -30,15 +39,15 @@ export function ClientSetupWizard({ clientId, currentStep, children }: { clientI
     <div className="client-setup-intro">
       <div>
         <p className="eyebrow">Guided client setup</p>
-        <h2>{CLIENT_SETUP_STEPS[currentIndex].label}</h2>
+        <h2>{currentStepDefinition.label}</h2>
         <p>Complete one focused step at a time. Save each section as a draft, then publish only after the client presentation is approved.</p>
       </div>
-      <span className="setup-progress-label">Step {currentIndex + 1} of {CLIENT_SETUP_STEPS.length}</span>
+      <span className="setup-progress-label">{isHiddenSourceStep ? "Source screen" : `Step ${currentIndex + 1} of ${CLIENT_SETUP_STEPS.length}`}</span>
     </div>
     <nav className="client-setup-stepper" aria-label="Client setup steps">
       {CLIENT_SETUP_STEPS.map((step, index) => {
         const isCurrent = step.id === currentStep;
-        const isComplete = index < currentIndex;
+        const isComplete = index < currentIndex || (isHiddenSourceStep && index === currentIndex);
         return <span className={isCurrent ? "current" : isComplete ? "complete" : "upcoming"} key={step.id}>
           <Link href={stepHref(step.id)} aria-current={isCurrent ? "step" : undefined}>
             {isComplete ? <Check size={13} /> : <Circle size={13} />}
@@ -89,7 +98,7 @@ export function ClientSourceToolbar({ clientId, screen }: { clientId: string; sc
 
 export function ClientReviewStep({ clientId, businessName, sectionCount, metricCount, draftSectionCount, draftMetricCount }: { clientId: string; businessName: string; sectionCount: number; metricCount: number; draftSectionCount: number; draftMetricCount: number }) {
   return <section className="card panel setup-review-card" aria-labelledby="setup-review-title">
-    <div className="panel-heading"><div><p className="eyebrow">Final review</p><h2 id="setup-review-title">Review the client presentation</h2><p>Check the draft before release. Nothing on this page makes the portal visible to the client.</p></div><span className="setup-card-number">06</span></div>
+    <div className="panel-heading"><div><p className="eyebrow">Final review</p><h2 id="setup-review-title">Review the client presentation</h2><p>Check the draft before release. Nothing on this page makes the portal visible to the client.</p></div><span className="setup-card-number">05</span></div>
     <div className="review-summary"><div><strong>{businessName}</strong><span>Client workspace</span></div><div><strong>{sectionCount}</strong><span>Portal sections</span></div><div><strong>{metricCount}</strong><span>Total metrics</span></div><div><strong>{draftSectionCount + draftMetricCount}</strong><span>Items still in draft</span></div></div>
     <div className="review-checklist"><div><Check size={15} /><span><strong>Website GSC preview</strong><small>Review the client-facing layout and approved Search Console results.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/website-seo?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>Analytics preview</strong><small>Review the client-facing Google Analytics cards and trends.</small></span><Link className="button" href="/portal/analytics" target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>GBP performance preview</strong><small>Review the Google Search and Maps presentation.</small></span><Link className="button" href={`/admin/clients/${clientId}/preview/gbp?mode=draft`} target="_blank">Preview</Link></div><div><Check size={15} /><span><strong>Release safety</strong><small>The client sees published data only. Draft metrics and sections remain hidden.</small></span><span className="status progress">Draft-safe</span></div></div>
   </section>;

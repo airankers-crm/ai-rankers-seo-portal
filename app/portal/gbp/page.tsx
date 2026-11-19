@@ -1,7 +1,7 @@
 import { prisma } from "@ai-rankers/db";
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
-import { requirePortalAccess } from "../../../lib/auth/access";
+import { requirePortalService } from "../../../lib/auth/access";
 import { defaultGbpPresentation, GbpPerformanceDashboard, type GbpMetric, type GbpPeriodRow, type GbpPresentationSettings } from "../../../components/gbp-performance-dashboard";
 import { CsvImportPanel } from "../../../components/csv-import-panel";
 
@@ -31,7 +31,7 @@ function formatPeriod(date: Date) {
 }
 
 export default async function GbpPage({ searchParams }: { searchParams?: Promise<{ demo?: string }> }) {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("gbp");
   const params = await searchParams;
   if (params?.demo === "1") redirect("/portal/gbp");
   const clientId = access.user?.clientId;

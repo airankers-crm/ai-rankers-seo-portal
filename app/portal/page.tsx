@@ -5,6 +5,7 @@ import { requirePortalAccess } from "../../lib/auth/access";
 import type { PortalGoal } from "../../components/goal-highlights";
 import { unstable_cache } from "next/cache";
 import { CsvImportPanel } from "../../components/csv-import-panel";
+import { getWorkspaceSettings } from "../../lib/admin-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +36,16 @@ function getCachedPortalData(clientId: string) {
 
 export default async function PortalPage() {
   const access = await requirePortalAccess();
+  const workspaceSettings = await getWorkspaceSettings();
   const client = await prisma.client.findUnique({
     where: { id: access.user?.clientId ?? "__no_client__" },
     select: { id: true, businessName: true, brandMark: true, brandAccent: true },
   });
 
-  if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", metrics: {}, activities: [], reports: [], goals: [] }} />;
+  if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, activities: [], reports: [], goals: [] }} />;
 
   const portalData = await getCachedPortalData(client.id);
-  if (!portalData) return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: "Not connected", metrics: {}, activities: [], reports: [], goals: [] }} />;
+  if (!portalData) return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, activities: [], reports: [], goals: [] }} />;
   const { metrics, activities: activityRecords, reports: reportRecords, goals: goalRecords } = portalData;
 
   const metricByKey = new Map(metrics.map((metric) => [metric.key, metric]));
@@ -73,7 +75,7 @@ export default async function PortalPage() {
 
   return (
     <>
-      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, metrics: { organicTraffic, searchClicks, impressions, searchCtr, averagePosition, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
+      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: { organicTraffic, searchClicks, impressions, searchCtr, averagePosition, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
       {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} screen="overview" /></div>}
     </>
   );

@@ -1,11 +1,11 @@
 import { prisma } from "@ai-rankers/db";
-import { requirePortalAccess } from "../../../../lib/auth/access";
+import { requirePortalService } from "../../../../lib/auth/access";
 import { AnalyticsConnectionDetails } from "../../../../components/analytics-connection-details";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsDetailsPage() {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("analytics");
   const clientId = access.user?.clientId ?? "__no_client__";
   const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
   const client = settings ? await prisma.client.findUnique({

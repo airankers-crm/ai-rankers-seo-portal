@@ -13,6 +13,7 @@ type ClientSettings = {
   businessHours: string | null;
   timezone: string;
   hasWebsiteSeo: boolean;
+  hasAnalytics: boolean;
   hasGbpSeo: boolean;
 };
 
@@ -26,6 +27,7 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
   const [brandAccent, setBrandAccent] = useState(client.brandAccent);
   const [timezone, setTimezone] = useState(client.timezone);
   const [hasWebsiteSeo, setHasWebsiteSeo] = useState(client.hasWebsiteSeo);
+  const [hasAnalytics, setHasAnalytics] = useState(client.hasAnalytics);
   const [hasGbpSeo, setHasGbpSeo] = useState(client.hasGbpSeo);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
     const response = await fetch(`/api/admin/clients/${client.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ websiteUrl, contactEmail, businessPhone, serviceArea, businessHours, brandMark, brandAccent, timezone, hasWebsiteSeo, hasGbpSeo }),
+      body: JSON.stringify({ websiteUrl, contactEmail, businessPhone, serviceArea, businessHours, brandMark, brandAccent, timezone, hasWebsiteSeo, hasAnalytics, hasGbpSeo }),
     });
 
     if (!response.ok) {
@@ -66,6 +68,7 @@ export function ClientSettingsForm({ client }: { client: ClientSettings }) {
       </div>
       <div className="service-options">
         <label className="service-option"><input type="checkbox" checked={hasWebsiteSeo} onChange={(event) => setHasWebsiteSeo(event.target.checked)} /><span><strong>Website GSC</strong><small>Google Search Console visibility and organic search performance</small></span></label>
+        <label className="service-option"><input type="checkbox" checked={hasAnalytics} onChange={(event) => setHasAnalytics(event.target.checked)} /><span><strong>Analytics</strong><small>Google Analytics visitor, engagement, and conversion reporting</small></span></label>
         <label className="service-option"><input type="checkbox" checked={hasGbpSeo} onChange={(event) => setHasGbpSeo(event.target.checked)} /><span><strong>GBP SEO</strong><small>Local visibility, profile health, and calls</small></span></label>
       </div>
       <div className="form-actions"><span className="save-status">{error || status}</span><button className="button primary" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save project settings"}</button></div>

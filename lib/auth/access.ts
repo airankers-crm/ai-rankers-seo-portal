@@ -64,6 +64,19 @@ export async function requirePortalAccess() {
   return { user, preview: false };
 }
 
+export async function requirePortalService(service: "website" | "analytics" | "gbp") {
+  const access = await requirePortalAccess();
+  if (access.preview || !access.user?.clientId) return access;
+
+  const client = await prisma.client.findUnique({
+    where: { id: access.user.clientId },
+    select: { hasWebsiteSeo: true, hasAnalytics: true, hasGbpSeo: true },
+  });
+  const enabled = service === "website" ? client?.hasWebsiteSeo : service === "analytics" ? client?.hasAnalytics : client?.hasGbpSeo;
+  if (!enabled) redirect(`/portal?error=service_not_enabled&service=${service}`);
+  return access;
+}
+
 export async function requireAdminAccess() {
   if (!isAuthConfigured()) {
     if (requiresProductionAuth()) redirectForAuthFailure("admin", "configuration");

@@ -1,5 +1,5 @@
 import { prisma } from "@ai-rankers/db";
-import { requirePortalAccess } from "../../../lib/auth/access";
+import { requirePortalService } from "../../../lib/auth/access";
 import { AnalyticsDashboard, type AnalyticsMetric, type AnalyticsRow } from "../../../components/analytics-dashboard";
 import { CsvImportPanel } from "../../../components/csv-import-panel";
 
@@ -35,7 +35,7 @@ function formatPeriod(date: Date) {
 }
 
 export default async function AnalyticsPage() {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("analytics");
   const clientId = access.user?.clientId;
   const client = clientId ? await getAnalyticsClient(clientId) : null;
 

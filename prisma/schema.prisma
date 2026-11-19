@@ -161,6 +161,7 @@ model User {
   email               String             @unique
   name                String
   passwordHash        String?
+  portalPasswordUpdatedAt DateTime?
   role                Role
   status              UserStatus         @default(INVITED)
   clientId            String?
@@ -177,6 +178,7 @@ model User {
   assignedTasks       Task[]             @relation("TaskAssignee")
   requestedTasks      Task[]             @relation("TaskRequester")
   feedbackSubmissions Feedback[]
+  feedbackReplies     FeedbackReply[]    @relation("FeedbackReplyAuthor")
   googleOAuthStates   GoogleOAuthState[]
   reportReads         ReportRead[]
 }
@@ -193,8 +195,9 @@ model Client {
   serviceArea               String?
   businessHours             String?
   timezone                  String                     @default("America/New_York")
-  hasWebsiteSeo             Boolean                    @default(false)
-  hasGbpSeo                 Boolean                    @default(false)
+  hasWebsiteSeo             Boolean                    @default(true)
+  hasAnalytics              Boolean                    @default(true)
+  hasGbpSeo                 Boolean                    @default(true)
   status                    ClientStatus               @default(ACTIVE)
   dataMode                  PortalDataMode             @default(MANAGED)
   users                     User[]
@@ -425,6 +428,7 @@ model Feedback {
   pageLabel String
   context   Json?
   status    FeedbackStatus   @default(OPEN)
+  replies   FeedbackReply[]
   client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdAt DateTime         @default(now())
@@ -432,6 +436,19 @@ model Feedback {
 
   @@index([clientId, status, createdAt])
   @@index([userId, createdAt])
+}
+
+model FeedbackReply {
+  id         String   @id @default(cuid())
+  feedbackId String
+  authorId   String
+  message    String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author     User     @relation("FeedbackReplyAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([feedbackId, createdAt])
 }
 
 model Report {

@@ -12,7 +12,7 @@ import { TrendChart } from "./trend-chart";
 import type { PortalGoal } from "./goal-highlights";
 
 type PortalMetricSet = { organicTraffic?: DemoMetric; searchClicks?: DemoMetric; impressions?: DemoMetric; searchCtr?: DemoMetric; averagePosition?: DemoMetric; topTen?: DemoMetric; calls?: DemoMetric; gbpViews?: DemoMetric; gbpWebsiteClicks?: DemoMetric; gbpDirections?: DemoMetric; gbpReviews?: DemoMetric };
-export type PortalDatabaseData = { businessName: string; brandMark?: string | null; brandAccent?: string; lastUpdated?: string; metrics: PortalMetricSet; activities: DemoActivity[]; reports: DemoReport[]; goals?: PortalGoal[] };
+export type PortalDatabaseData = { businessName: string; brandMark?: string | null; brandAccent?: string; lastUpdated?: string; defaultReportingWindow?: string; metrics: PortalMetricSet; activities: DemoActivity[]; reports: DemoReport[]; goals?: PortalGoal[] };
 type MetricKey = keyof PortalMetricSet;
 type FilterState = { source: "All sources" | DemoMetric["source"]; channel: "All channels" | "Organic search" | "Local / GBP" };
 
@@ -31,7 +31,11 @@ const metricMeta: Array<{ key: MetricKey; source: DemoMetric["source"]; channel:
   { key: "gbpReviews", source: "GBP", channel: "Local / GBP" },
 ];
 
-function portalDateRange(): DateRangeSelection { const current = getDefaultDateRange(); return { ...current, label: "Last 6 months", start: new Date(current.end.getFullYear(), current.end.getMonth() - 5, 1) }; }
+function portalDateRange(window = "6m"): DateRangeSelection {
+  const current = getDefaultDateRange();
+  const months = window === "3m" ? 3 : window === "12m" ? 12 : 6;
+  return { ...current, label: `Last ${months} months`, start: new Date(current.end.getFullYear(), current.end.getMonth() - (months - 1), 1) };
+}
 function emptyMetric(id: string, label: string, source: DemoMetric["source"]): DemoMetric { return { id, label, value: 0, source, history: [] }; }
 function formatMetric(metric: DemoMetric | undefined, compact = false) { if (!metric) return "0"; if (metric.id === "gsc-ctr") return `${metric.value.toFixed(1)}%`; if (metric.id === "gsc-position") return metric.value.toFixed(1); return compact ? `${(metric.value / 1000).toFixed(1)}K` : metric.value.toLocaleString(); }
 function goalProgress(goal: PortalGoal) { if (goal.current === null || goal.target === 0) return 0; if (goal.condition === "LESS_THAN_OR_EQUAL") return goal.current <= goal.target ? 100 : Math.max(0, Math.min(100, (goal.target / goal.current) * 100)); return Math.max(0, Math.min(100, (goal.current / goal.target) * 100)); }
@@ -45,7 +49,7 @@ function OverviewMetricCard({ metric, tone, icon, compact = false }: { metric: D
 function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="overview-filter-field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
 
 export function PortalOverviewDashboard({ databaseData }: { databaseData?: PortalDatabaseData }) {
-  const [dateRange, setDateRange] = useState<DateRangeSelection>(portalDateRange);
+  const [dateRange, setDateRange] = useState<DateRangeSelection>(() => portalDateRange(databaseData?.defaultReportingWindow));
   const [filters, setFilters] = useState<FilterState>({ source: "All sources", channel: "All channels" });
   const [chartKey, setChartKey] = useState<MetricKey>("organicTraffic");
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,7 +89,7 @@ export function PortalOverviewDashboard({ databaseData }: { databaseData?: Porta
   const trafficTrend = metrics.organicTraffic ? getMetricTrend(metrics.organicTraffic) : 0;
   const localSignals = [{ label: "Profile views", value: formatMetric(metrics.gbpViews), icon: <MapPin size={14} /> }, { label: "Website clicks", value: formatMetric(metrics.gbpWebsiteClicks), icon: <ArrowRight size={14} /> }, { label: "Direction requests", value: formatMetric(metrics.gbpDirections), icon: <Gauge size={14} /> }];
 
-  function resetFilters() { setDateRange(portalDateRange()); setFilters({ source: "All sources", channel: "All channels" }); setSearchQuery(""); }
+  function resetFilters() { setDateRange(portalDateRange(databaseData?.defaultReportingWindow)); setFilters({ source: "All sources", channel: "All channels" }); setSearchQuery(""); }
 
   return <AppShell mode="portal" clientName={clientName} brandMark={brandMark} brandAccent={brandAccent} activeNav="Overview"><div className="content overview-dashboard">
     <div className="overview-heading"><div><p className="eyebrow">Client portal / Overview</p><h1>SEO performance overview</h1><p>{clientName} · A clear view of visibility, traffic, and local growth.</p></div></div>

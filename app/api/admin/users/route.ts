@@ -12,8 +12,8 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     orderBy: [{ status: "asc" }, { name: "asc" }],
-    select: { id: true, email: true, name: true, role: true, status: true, client: { select: { id: true, businessName: true } } },
+    select: { id: true, email: true, name: true, role: true, status: true, authUserId: true, portalPasswordUpdatedAt: true, client: { select: { id: true, businessName: true } } },
   });
 
-  return NextResponse.json({ users });
+  return NextResponse.json({ users: users.map(({ authUserId, portalPasswordUpdatedAt, ...user }) => ({ ...user, hasAuthAccount: Boolean(authUserId), portalPasswordUpdatedAt: portalPasswordUpdatedAt?.toISOString() ?? null })) });
 }

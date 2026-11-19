@@ -30,7 +30,7 @@ export default async function AdminPage() {
       id: client.id,
       businessName: client.businessName,
       initials: client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2),
-      services: [client.hasWebsiteSeo ? "Website SEO" : "", client.hasGbpSeo ? "GBP SEO" : ""].filter(Boolean),
+      services: [client.hasWebsiteSeo ? "Website GSC" : "", client.hasAnalytics ? "Analytics" : "", client.hasGbpSeo ? "GBP SEO" : ""].filter(Boolean),
       status: client.status === "ACTIVE" ? "Active" as const : "Paused" as const,
       lastPublished: latestVersion ? latestVersion.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not published",
       draftCount,

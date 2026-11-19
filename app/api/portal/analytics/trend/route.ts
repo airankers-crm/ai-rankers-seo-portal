@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
-import { requirePortalAccess } from "../../../../../lib/auth/access";
+import { requirePortalService } from "../../../../../lib/auth/access";
 import { GoogleOAuthError } from "../../../../../lib/google/oauth";
 import { fetchGa4Trend, type GoogleSyncWindow } from "../../../../../lib/google/reporting";
 import { getGoogleAccessToken } from "../../../../../lib/google/tokens";
@@ -54,7 +54,7 @@ async function readManagedTrend(clientId: string, window: GoogleSyncWindow): Pro
 }
 
 export async function GET(request: Request) {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("analytics");
   if (access.preview || !access.user?.clientId) return NextResponse.json({ status: "PREVIEW", data: null }, { headers: { "Cache-Control": "private, no-store" } });
 
   const params = new URL(request.url).searchParams;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../../lib/auth/access";
+import { revalidateClientPortal } from "../../../../../lib/portal-cache";
 import { parseSafeHttpUrl } from "../../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await prisma.client.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Client workspace not found." }, { status: 404 });
 
-  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; businessPhone?: string; serviceArea?: string; businessHours?: string; timezone?: string; hasWebsiteSeo?: boolean; hasGbpSeo?: boolean; dataMode?: string } | null;
+  const body = await request.json().catch(() => null) as { brandMark?: string; brandAccent?: string; websiteUrl?: string; contactEmail?: string; businessPhone?: string; serviceArea?: string; businessHours?: string; timezone?: string; hasWebsiteSeo?: boolean; hasAnalytics?: boolean; hasGbpSeo?: boolean; dataMode?: string } | null;
   const requestedDataMode = body?.dataMode === "GOOGLE_API" || body?.dataMode === "MANAGED" ? body.dataMode : null;
   if (body?.dataMode !== undefined && !requestedDataMode) {
     return NextResponse.json({ error: "Data mode must be MANAGED or GOOGLE_API." }, { status: 400 });
@@ -53,6 +54,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       brandAccent,
       timezone: body?.timezone?.trim() || existing.timezone,
       hasWebsiteSeo: body?.hasWebsiteSeo ?? existing.hasWebsiteSeo,
+      hasAnalytics: body?.hasAnalytics ?? existing.hasAnalytics,
       hasGbpSeo: body?.hasGbpSeo ?? existing.hasGbpSeo,
       ...(requestedDataMode ? { dataMode: requestedDataMode } : {}),
     },
@@ -65,9 +67,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       action: "CLIENT_SETTINGS_UPDATED",
       entityType: "Client",
       entityId: updated.id,
-      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, businessPhone: updated.businessPhone, serviceArea: updated.serviceArea, businessHours: updated.businessHours, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasGbpSeo: updated.hasGbpSeo, ...(requestedDataMode ? { dataMode: updated.dataMode } : {}) },
+      after: { brandMark: updated.brandMark, brandAccent: updated.brandAccent, websiteUrl: updated.websiteUrl, contactEmail: updated.contactEmail, businessPhone: updated.businessPhone, serviceArea: updated.serviceArea, businessHours: updated.businessHours, timezone: updated.timezone, hasWebsiteSeo: updated.hasWebsiteSeo, hasAnalytics: updated.hasAnalytics, hasGbpSeo: updated.hasGbpSeo, ...(requestedDataMode ? { dataMode: updated.dataMode } : {}) },
     },
   });
+
+  if (requestedDataMode) revalidateClientPortal(updated.id);
 
   return NextResponse.json({ id: updated.id, updatedAt: updated.updatedAt });
 }

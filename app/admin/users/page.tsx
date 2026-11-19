@@ -14,5 +14,5 @@ export default async function UsersPage() {
     prisma.client.findMany({ orderBy: { businessName: "asc" }, select: { id: true, businessName: true } }),
   ]);
 
-  return <AppShell mode="admin" activeNav="Users"><div className="content"><div className="page-heading"><div><Link className="back-link" href="/admin"><ArrowLeft size={13} /> Back to workspace overview</Link><h1>Users and access</h1></div></div><UserManagement initialUsers={users.map(({ id, email, name, role, status, client }) => ({ id, email, name, role, status, client }))} clients={clients} /></div></AppShell>;
+  return <AppShell mode="admin" activeNav="Users"><div className="content"><div className="page-heading"><div><Link className="back-link" href="/admin"><ArrowLeft size={13} /> Back to workspace overview</Link><h1>Users and access</h1></div></div><UserManagement initialUsers={users.map(({ id, email, name, role, status, authUserId, portalPasswordUpdatedAt, client }) => ({ id, email, name, role, status, hasAuthAccount: Boolean(authUserId), portalPasswordUpdatedAt: portalPasswordUpdatedAt?.toISOString() ?? null, client }))} clients={clients} /></div></AppShell>;
 }

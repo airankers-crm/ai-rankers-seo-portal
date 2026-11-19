@@ -36,7 +36,9 @@ type AppShellProps = {
   shellVariant?: "analytics" | "analytics-details";
 };
 
-type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
+type PortalService = "website" | "analytics" | "gbp";
+type PortalServiceEntitlements = Record<PortalService, boolean>;
+type NavItem = { label: string; href: string; icon: typeof LayoutDashboard; service?: PortalService };
 type NavGroup = { label: string; items: NavItem[] };
 
 const portalNavGroups: NavGroup[] = [
@@ -44,9 +46,9 @@ const portalNavGroups: NavGroup[] = [
     label: "Workspace",
     items: [
       { label: "Overview", href: "/portal", icon: LayoutDashboard },
-      { label: "Website GSC", href: "/portal/website-seo", icon: BarChart3 },
-      { label: "Analytics", href: "/portal/analytics", icon: LineChart },
-      { label: "GBP", href: "/portal/gbp", icon: Building2 },
+      { label: "Website GSC", href: "/portal/website-seo", icon: BarChart3, service: "website" },
+      { label: "Analytics", href: "/portal/analytics", icon: LineChart, service: "analytics" },
+      { label: "GBP", href: "/portal/gbp", icon: Building2, service: "gbp" },
     ],
   },
   {
@@ -101,10 +103,21 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const [accountOpen, setAccountOpen] = useState(false);
   const [unreadReports, setUnreadReports] = useState(0);
   const [unreadFeedback, setUnreadFeedback] = useState(0);
+  const [portalServices, setPortalServices] = useState<PortalServiceEntitlements | null>(null);
   const pathname = usePathname();
   useEffect(() => {
     if (mode !== "portal" && mode !== "admin") return;
     let active = true;
+
+    if (mode === "portal") {
+      void fetch("/api/portal/services", { cache: "no-store" }).then(async (response) => {
+        if (!active || !response.ok) return;
+        const payload = await response.json() as Partial<PortalServiceEntitlements>;
+        setPortalServices({ website: payload.website !== false, analytics: payload.analytics !== false, gbp: payload.gbp !== false });
+      }).catch(() => {
+        // Keep navigation available if entitlement lookup is temporarily unavailable.
+      });
+    }
 
     async function refreshNotifications() {
       try {
@@ -141,7 +154,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   }, [mode, pathname]);
   const navGroups: NavGroup[] = mode === "admin" ? adminNavGroups : portalNavGroups;
   const visibleNavGroups = navGroups
-    .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label)) }))
+    .map((group) => ({ ...group, items: group.items.filter((item) => !hiddenNav.includes(item.label) && !(mode === "portal" && item.service && portalServices && !portalServices[item.service])) }))
     .filter((group) => group.items.length > 0);
   const nav = visibleNavGroups.flatMap((group) => group.items);
   const activeItem = nav

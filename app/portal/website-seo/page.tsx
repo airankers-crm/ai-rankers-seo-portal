@@ -1,5 +1,5 @@
 import { prisma } from "@ai-rankers/db";
-import { requirePortalAccess } from "../../../lib/auth/access";
+import { requirePortalService } from "../../../lib/auth/access";
 import { WebsiteSeoDashboard, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
 import { CsvImportPanel } from "../../../components/csv-import-panel";
 
@@ -26,7 +26,7 @@ function formatPeriod(date: Date) {
 }
 
 export default async function WebsiteSeoPage() {
-  const access = await requirePortalAccess();
+  const access = await requirePortalService("website");
   const clientId = access.user?.clientId;
   const client = clientId ? await getWebsiteSeoClient(clientId) : null;
 

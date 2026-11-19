@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   Bell,
@@ -40,6 +40,21 @@ const fallbackSettings: WorkspaceSettingsValue = {
 
 type Notice = { kind: "success" | "error"; text: string } | null;
 
+export type AdminSettingsSource = {
+  id: string;
+  label: string;
+  detail: string;
+  status: string;
+  tone: "ready" | "review" | "future";
+};
+
+const previewSources: AdminSettingsSource[] = [
+  { id: "ga4", label: "GA4", detail: "Organic sessions", status: "Preview only", tone: "review" },
+  { id: "gsc", label: "GSC", detail: "Search visibility", status: "Preview only", tone: "review" },
+  { id: "gbp", label: "GBP", detail: "Local actions", status: "Preview only", tone: "review" },
+  { id: "dataforseo", label: "DataForSEO", detail: "Keyword rankings", status: "Preview only", tone: "review" },
+];
+
 function StatusPill({ tone, children }: { tone: "ready" | "review" | "future"; children: React.ReactNode }) {
   return <span className={`admin-setting-status ${tone}`}>{children}</span>;
 }
@@ -59,10 +74,14 @@ function SettingRow({ label, description, value, tone = "ready", action }: { lab
   );
 }
 
-export function AdminSettings({ initialSettings, preview = false }: { initialSettings: WorkspaceSettingsValue | null; preview?: boolean }) {
+export function AdminSettings({ initialSettings, preview = false, sources = previewSources }: { initialSettings: WorkspaceSettingsValue | null; preview?: boolean; sources?: AdminSettingsSource[] }) {
   const [settings, setSettings] = useState<WorkspaceSettingsValue>(initialSettings ?? fallbackSettings);
+  const [savedSettings, setSavedSettings] = useState<WorkspaceSettingsValue>(initialSettings ?? fallbackSettings);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const dirty = useMemo(() => JSON.stringify({ ...settings, updatedAt: undefined }) !== JSON.stringify({ ...savedSettings, updatedAt: undefined }), [savedSettings, settings]);
+  const sectionTone = preview ? "review" : dirty ? "review" : "ready";
+  const sectionStatus = preview ? "Preview only" : dirty ? "Unsaved changes" : "Persisted";
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,6 +113,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
         return;
       }
       setSettings(body.settings);
+      setSavedSettings(body.settings);
       setNotice({ kind: "success", text: "Workspace settings saved to Neon." });
     } catch {
       setNotice({ kind: "error", text: "We could not reach the settings service. Try again." });
@@ -102,7 +122,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
     }
   }
 
-  const lastSaved = settings.updatedAt === new Date(0).toISOString() ? "Not saved yet" : `Saved ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(settings.updatedAt))}`;
+  const lastSaved = savedSettings.updatedAt === new Date(0).toISOString() ? "Not saved yet" : `Saved ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(savedSettings.updatedAt))}`;
 
   return (
     <AppShell mode="admin" activeNav="Settings">
@@ -131,7 +151,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
             <h2>One place for workspace-wide defaults</h2>
             <p>These controls define the agency experience. Client-specific values remain managed from each client workspace.</p>
           </div>
-          <div className="admin-settings-summary-score"><strong>4</strong><span>areas configured</span></div>
+          <div className="admin-settings-summary-score"><strong>{sources.filter((source) => source.tone === "ready").length} / {sources.length}</strong><span>sources connected</span></div>
         </section>
 
         {notice ? <p className={notice.kind === "error" ? "auth-error admin-settings-notice" : "auth-success admin-settings-notice"} role="status">{notice.text}</p> : null}
@@ -142,7 +162,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
               <div className="admin-settings-card-heading">
                 <div className="admin-settings-card-icon purple"><Building2 size={17} /></div>
                 <div><h2>Workspace profile</h2><p>Defaults used when new client workspaces are created.</p></div>
-                <StatusPill tone="ready">Persisted</StatusPill>
+                <StatusPill tone={sectionTone}>{sectionStatus}</StatusPill>
               </div>
               <div className="settings-grid admin-settings-edit-grid">
                 <label>Workspace name<input value={settings.workspaceName} onChange={(event) => setSettings({ ...settings, workspaceName: event.target.value })} maxLength={80} /></label>
@@ -155,7 +175,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
               <div className="admin-settings-card-heading">
                 <div className="admin-settings-card-icon teal"><SlidersHorizontal size={17} /></div>
                 <div><h2>Client portal defaults</h2><p>Set consistent, client-safe presentation rules across workspaces.</p></div>
-                <StatusPill tone="ready">Persisted</StatusPill>
+                <StatusPill tone={sectionTone}>{sectionStatus}</StatusPill>
               </div>
               <div className="settings-grid admin-settings-edit-grid">
                 <label>Portal visibility<select value={settings.portalVisibility} onChange={(event) => setSettings({ ...settings, portalVisibility: event.target.value })}><option value="published">Published results only</option><option value="approved">Approved results and reports</option></select></label>
@@ -170,7 +190,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
               <div className="admin-settings-card-heading">
                 <div className="admin-settings-card-icon orange"><Bell size={17} /></div>
                 <div><h2>Notifications</h2><p>Decide which events need agency attention.</p></div>
-                <StatusPill tone="ready">Persisted</StatusPill>
+                <StatusPill tone={sectionTone}>{sectionStatus}</StatusPill>
               </div>
               <div className="admin-settings-toggle-list">
                 <label className="admin-settings-toggle"><input type="checkbox" checked={settings.notifyClientFeedback} onChange={(event) => setSettings({ ...settings, notifyClientFeedback: event.target.checked })} /><span><strong>Client feedback</strong><small>Highlight new questions, issues, and requests in the feedback inbox.</small></span></label>
@@ -193,6 +213,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
             </section>
             <div className="admin-settings-savebar">
               <span className="admin-settings-last-saved">{lastSaved}</span>
+              {dirty ? <button className="button" type="button" onClick={() => { setSettings(savedSettings); setNotice(null); }}>Discard changes</button> : null}
               <button className="button primary" type="submit" disabled={saving}>{saving ? "Saving…" : "Save workspace settings"}<CheckCircle2 size={14} /></button>
             </div>
           </main>
@@ -202,7 +223,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
               <div className="admin-settings-side-heading"><Database size={16} /><h2>Connected sources</h2></div>
               <p>Source connections determine which metrics can be refreshed and published to client portals.</p>
               <div className="admin-settings-source-list">
-                {[["GA4", "Organic sessions"], ["GSC", "Search visibility"], ["GBP", "Local actions"], ["DataForSEO", "Keyword rankings"]].map(([source, label]) => <div className="admin-settings-source" key={source}><span className="admin-settings-source-dot" /><span><strong>{source}</strong><small>{label}</small></span><ChevronRight size={13} /></div>)}
+                {sources.map((source) => <Link href="/admin/integrations" className="admin-settings-source" key={source.id} aria-label={`${source.label}: ${source.status}. Open integrations`}><span className={`admin-settings-source-dot ${source.tone}`} /><span><strong>{source.label}</strong><small>{source.detail}</small></span><StatusPill tone={source.tone}>{source.status}</StatusPill><ChevronRight size={13} /></Link>)}
               </div>
               <Link href="/admin/integrations" className="admin-settings-side-link">Manage integrations <ArrowUpRight size={13} /></Link>
             </section>
@@ -215,7 +236,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
 
             <section className="admin-settings-truth">
               <CheckCircle2 size={16} />
-              <div><strong>Clear configuration status</strong><p>Changes are stored in the agency workspace and recorded in the admin audit trail.</p></div>
+              <div><strong>{dirty ? "Changes ready to save" : "Clear configuration status"}</strong><p>{dirty ? "Save to write these changes to the agency workspace and record them in the admin audit trail." : preview ? "Preview mode is active; no database changes will be written from this local screen." : "Changes are stored in the agency workspace and recorded in the admin audit trail."}</p></div>
             </section>
           </aside>
         </div>

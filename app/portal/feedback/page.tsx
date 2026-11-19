@@ -13,7 +13,7 @@ export default async function FeedbackPage() {
   });
   const recentFeedback = access.user?.clientId ? await prisma.feedback.findMany({
     where: { clientId: access.user.clientId },
-    select: { id: true, category: true, status: true, message: true, createdAt: true },
+    select: { id: true, category: true, status: true, message: true, createdAt: true, replies: { orderBy: { createdAt: "desc" }, take: 1, select: { message: true, createdAt: true, author: { select: { name: true, email: true } } } } },
     orderBy: { createdAt: "desc" },
     take: 3,
   }) : [];
@@ -27,7 +27,7 @@ export default async function FeedbackPage() {
           <p>Send a question, request, or update directly to The AI Rankers team.</p>
         </div>
       </div>
-      <PortalFeedbackPage recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() }))} />
+      <PortalFeedbackPage recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), latestReply: item.replies[0] ? { message: item.replies[0].message, createdAt: item.replies[0].createdAt.toISOString(), authorName: item.replies[0].author.name || item.replies[0].author.email } : null }))} />
     </div>
   </AppShell>;
 }

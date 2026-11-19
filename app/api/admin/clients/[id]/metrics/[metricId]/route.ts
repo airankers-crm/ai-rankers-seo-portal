@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../../../../lib/auth/access";
+import { revalidateClientPortal } from "../../../../../../../lib/portal-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -106,8 +107,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         after: { name: metric.name, isVisible: metric.isVisible, isDraft: metric.isDraft, valueId: savedValue.id, value: valueText, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() },
       },
     });
+    await transaction.client.update({ where: { id: clientId }, data: { dataMode: "MANAGED" } });
     return { metric: await transaction.metric.findUniqueOrThrow({ where: { id: metric.id }, include: { values: { orderBy: { periodStart: "desc" }, take: 6 } } }), savedValueId: savedValue.id };
   });
+
+  revalidateClientPortal(clientId);
 
   return NextResponse.json({ metric: serializeMetric(updated.metric), savedValueId: updated.savedValueId });
 }

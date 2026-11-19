@@ -84,5 +84,5 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     throw error;
   }
 
-  return NextResponse.json({ user: { id: updated.id, email: updated.email, name: updated.name, role: updated.role, status: updated.status, client: updated.client } });
+  return NextResponse.json({ user: { id: updated.id, email: updated.email, name: updated.name, role: updated.role, status: updated.status, hasAuthAccount: Boolean(updated.authUserId), portalPasswordUpdatedAt: updated.portalPasswordUpdatedAt?.toISOString() ?? null, client: updated.client } });
 }
