@@ -4296,3 +4296,85 @@ html[data-portal-motion="reduced"] .portal-shell *::after { scroll-behavior: aut
   .sidebar.collapsed .brand { padding: 3px 9px 22px; }
   .sidebar.collapsed .profile { padding: 8px 7px; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.055); }
 }
+
+/* Shared CRM mobile shell. Admin and client workspaces use the same navigation
+   pattern at tablet widths so neither portal sacrifices usable content space. */
+@media (max-width: 900px) {
+  html, body { overflow-x: hidden; }
+  .app-shell { width: 100%; min-width: 0; }
+  .app-shell .sidebar { position: fixed; z-index: 50; inset: 0 auto 0 0; width: 250px; flex-basis: 250px; transform: translateX(-105%); transition: transform .22s var(--ease-standard); box-shadow: 12px 0 30px rgba(0,0,0,.18); }
+  .app-shell .sidebar.open { transform: translateX(0); }
+  .app-shell .sidebar-backdrop { position: fixed; z-index: 40; inset: 0; display: block; width: 100%; height: 100%; padding: 0; border: 0; background: rgba(24,15,58,.28); cursor: pointer; }
+  .app-shell .sidebar.collapsed { width: 250px; flex-basis: 250px; padding: 24px 16px 18px; }
+  .app-shell .sidebar.collapsed .brand { justify-items: initial; padding: 4px 10px 28px; }
+  .app-shell .sidebar.collapsed .brand-sub,
+  .app-shell .sidebar.collapsed .nav-label,
+  .app-shell .sidebar.collapsed .nav-item-label,
+  .app-shell .sidebar.collapsed .profile-copy { display: initial; }
+  .app-shell .sidebar.collapsed .nav-item { justify-content: initial; padding: 11px 12px; }
+  .app-shell .sidebar.collapsed .profile { grid-template-columns: 30px minmax(0,1fr) 30px; justify-items: initial; padding: 4px 8px; }
+  .app-shell .sidebar.collapsed .profile-signout { display: inline-grid; }
+  .app-shell .main { width: 100%; min-width: 0; }
+  .app-shell .sidebar-toggle { display: none; }
+  .app-shell .mobile-menu { display: grid; }
+  .app-shell .topbar { height: 62px; padding: 0 16px; }
+  .app-shell .topbar-account-copy { display: none; }
+  .app-shell .topbar-account-trigger { padding-right: 4px; }
+  .app-shell .preview-pill,
+  .app-shell .live-sync-pill,
+  .app-shell .workspace-status { display: none; }
+  .app-shell .breadcrumb { margin-left: 9px; }
+  .app-shell .content { max-width: none; padding: 24px 16px 40px; }
+  .app-shell .page-heading { display: block; }
+  .app-shell .heading-actions { flex-wrap: wrap; margin-top: 14px; }
+  .app-shell .date-range-popover { position: fixed; top: 70px; left: 16px; width: calc(100vw - 32px); max-height: calc(100vh - 88px); overflow-y: auto; }
+
+  .admin-shell .admin-workflow-grid,
+  .admin-shell .admin-stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .admin-shell .admin-template-preview,
+  .admin-shell .admin-template-library { grid-template-columns: 1fr; }
+  .admin-shell .ops-toolbar { align-items: stretch; flex-direction: column; }
+  .admin-shell .ops-toolbar-badge { align-self: flex-start; }
+  .admin-shell .ops-filters { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .admin-shell .ops-search { grid-column: 1 / -1; min-width: 0; }
+  .admin-shell .ops-filter { min-width: 0; }
+  .admin-shell .admin-settings-aside { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .admin-shell .admin-report-upload-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .app-shell .page-heading { display: grid; gap: 12px; }
+  .app-shell .heading-actions { width: 100%; }
+  .app-shell .heading-actions .button { flex: 1 1 150px; }
+  .app-shell .breadcrumb span,
+  .app-shell .breadcrumb i { display: none; }
+  .app-shell .breadcrumb strong { max-width: 170px; font-size: 11px; }
+
+  .admin-shell .admin-stat-grid,
+  .admin-shell .admin-workflow-grid,
+  .admin-shell .admin-settings-aside { grid-template-columns: 1fr; }
+  .admin-shell .ops-filters { grid-template-columns: 1fr; }
+  .admin-shell .ops-search { grid-column: auto; }
+  .admin-shell .admin-report-heading { display: grid; align-items: start; }
+  .admin-shell .admin-report-heading-actions { justify-content: flex-start; }
+  .admin-shell .admin-report-summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .admin-shell .admin-settings-summary { grid-template-columns: auto minmax(0,1fr); }
+  .admin-shell .admin-settings-summary-score { grid-column: 2; justify-items: start; padding-top: 9px; padding-left: 0; border-top: 1px solid #cfe9e4; border-left: 0; }
+  .admin-shell .client-setup-intro { flex-direction: column; }
+  .admin-shell .client-setup-navigation { align-items: stretch; flex-wrap: wrap; }
+  .admin-shell .setup-save-note { order: 3; flex: 1 0 100%; }
+}
+
+@media (max-width: 600px) {
+  .app-shell .topbar { padding: 0 12px; }
+  .app-shell .content { padding: 20px 12px 36px; }
+  .app-shell .breadcrumb strong { max-width: 145px; }
+  .admin-shell .admin-report-summary-grid { grid-template-columns: 1fr; }
+  .admin-shell .ops-workspace { padding: 16px; }
+  .admin-shell .admin-settings-card { padding: 16px 16px 11px; }
+}
+
+@media (max-width: 380px) {
+  .app-shell .topbar-help { display: none; }
+  .app-shell .breadcrumb strong { max-width: 125px; }
+}

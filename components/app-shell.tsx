@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   UsersRound,
   LineChart,
+  X,
 } from "lucide-react";
 
 type AppShellProps = {
@@ -168,6 +169,33 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
   const accountName = mode === "admin" ? "Scott" : clientName ?? "Client workspace";
   const accountRole = mode === "admin" ? "AI Rankers admin" : "Client portal";
 
+  useEffect(() => {
+    const closeMenus = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileOpen(false);
+      setAccountOpen(false);
+    };
+    window.addEventListener("keydown", closeMenus);
+    const closeOnHistoryNavigation = () => {
+      setMobileOpen(false);
+      setAccountOpen(false);
+    };
+    window.addEventListener("popstate", closeOnHistoryNavigation);
+    return () => {
+      window.removeEventListener("keydown", closeMenus);
+      window.removeEventListener("popstate", closeOnHistoryNavigation);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+
   return (
     <div className={`app-shell ${mode}-shell${shellVariant ? ` ${shellVariant}-shell` : ""}`}>
       {mode === "portal" ? <PortalPreferenceEffects /> : null}
@@ -218,7 +246,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
         <header className="topbar">
           <div className="topbar-leading">
             <button className="icon-button sidebar-toggle" type="button" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((current) => !current)}>{collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button>
-            <button className="icon-button mobile-menu" type="button" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="portal-navigation" onClick={() => setMobileOpen((current) => !current)}><Menu size={17} /></button>
+            <button className="icon-button mobile-menu" type="button" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} title={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} aria-controls="portal-navigation" onClick={() => setMobileOpen((current) => !current)}>{mobileOpen ? <X size={17} /> : <Menu size={17} />}</button>
             <div className="breadcrumb"><span>{mode === "admin" ? "The AI Rankers" : "Client portal"}</span><i>/</i><strong>{activeLabel}</strong></div>
           </div>
           <div className="top-actions">
