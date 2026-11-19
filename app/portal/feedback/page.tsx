@@ -13,9 +13,9 @@ export default async function FeedbackPage() {
   });
   const recentFeedback = access.user?.clientId ? await prisma.feedback.findMany({
     where: { clientId: access.user.clientId },
-    select: { id: true, category: true, status: true, message: true, createdAt: true, replies: { orderBy: { createdAt: "desc" }, take: 1, select: { message: true, createdAt: true, author: { select: { name: true, email: true } } } } },
+    select: { id: true, category: true, status: true, message: true, createdAt: true, replies: { orderBy: { createdAt: "asc" }, select: { id: true, message: true, createdAt: true, author: { select: { name: true, email: true } } } } },
     orderBy: { createdAt: "desc" },
-    take: 3,
+    take: 100,
   }) : [];
   const clientName = client?.businessName ?? "Client workspace";
   return <AppShell mode="portal" clientName={clientName} brandMark={client?.brandMark ?? undefined} brandAccent={client?.brandAccent ?? "#F26B38"} activeNav="Feedback">
@@ -27,7 +27,7 @@ export default async function FeedbackPage() {
           <p>Send a question, request, or update directly to The AI Rankers team.</p>
         </div>
       </div>
-      <PortalFeedbackPage recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), latestReply: item.replies[0] ? { message: item.replies[0].message, createdAt: item.replies[0].createdAt.toISOString(), authorName: item.replies[0].author.name || item.replies[0].author.email } : null }))} />
+      <PortalFeedbackPage recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), replies: item.replies.map((reply) => ({ id: reply.id, message: reply.message, createdAt: reply.createdAt.toISOString(), authorName: reply.author.name || reply.author.email })) }))} />
     </div>
   </AppShell>;
 }

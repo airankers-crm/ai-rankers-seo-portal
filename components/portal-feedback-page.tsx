@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronRight, CircleAlert, Clock3, Database, FilePlus2, Headphones, MessageCircle, Paperclip, Save, Send, ShieldCheck } from "lucide-react";
 
 type RequestType = "QUESTION" | "ISSUE" | "REQUEST" | "DATA_UPDATE";
-type RecentRequest = { id: string; category: "ISSUE" | "QUESTION" | "REQUEST" | "PRAISE"; status: "OPEN" | "REVIEWED" | "RESOLVED"; message: string; createdAt: string; latestReply: { message: string; createdAt: string; authorName: string } | null };
+type FeedbackReply = { id: string; message: string; createdAt: string; authorName: string };
+type RecentRequest = { id: string; category: "ISSUE" | "QUESTION" | "REQUEST" | "PRAISE"; status: "OPEN" | "REVIEWED" | "RESOLVED"; message: string; createdAt: string; replies: FeedbackReply[] };
 
 const requestTypes: Array<{ value: RequestType; label: string; icon: typeof MessageCircle }> = [
   { value: "QUESTION", label: "Question", icon: MessageCircle },
@@ -29,7 +30,18 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+}
+
+function subjectFromMessage(message: string, fallback: string) {
+  return message.split("\n")[0].replace(/^Subject:\s*/, "") || fallback;
+}
+
 export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentRequest[] }) {
+  const [requests, setRequests] = useState(recentRequests);
+  const [activeSection, setActiveSection] = useState<"new" | "history">(recentRequests.length ? "history" : "new");
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(recentRequests[0]?.id ?? null);
   const [requestType, setRequestType] = useState<RequestType>("QUESTION");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -104,8 +116,8 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
       }),
     }).catch(() => null);
 
+    const body = await response?.json().catch(() => null);
     if (!response?.ok) {
-      const body = await response?.json().catch(() => null);
       setError(body?.error || "Your message could not be sent. Please try again.");
       setPending(false);
       return;
@@ -115,11 +127,23 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
     setMessage("");
     setDocumentUrl("");
     window.localStorage.removeItem("ai-rankers-feedback-draft");
+    const newRequest = { id: body?.feedback?.id ?? `local-${Date.now()}`, category: category as RecentRequest["category"], status: "OPEN" as const, message: composedMessage, createdAt: new Date().toISOString(), replies: [] };
+    setRequests((current) => [newRequest, ...current]);
+    setSelectedRequestId(newRequest.id);
+    setActiveSection("history");
     setSuccess("Your message was sent to The AI Rankers team.");
     setPending(false);
   }
 
-  return <div className="feedback-page-grid">
+  const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0] ?? null;
+
+  return <div className="feedback-page-shell">
+    <nav className="feedback-section-nav" aria-label="Feedback navigation" role="tablist">
+      <button type="button" role="tab" aria-selected={activeSection === "new"} className={activeSection === "new" ? "active" : ""} onClick={() => setActiveSection("new")}><MessageCircle size={15} /><span>New request</span><small>Contact support</small></button>
+      <button type="button" role="tab" aria-selected={activeSection === "history"} className={activeSection === "history" ? "active" : ""} onClick={() => setActiveSection("history")}><Headphones size={15} /><span>Conversation history</span><small>{requests.length} {requests.length === 1 ? "conversation" : "conversations"}</small></button>
+    </nav>
+
+    {activeSection === "new" ? <div className="feedback-page-grid">
     <form className="card feedback-composer" onSubmit={submit}>
       <div className="feedback-card-heading">
         <div className="feedback-card-icon purple"><MessageCircle size={19} /></div>
@@ -154,11 +178,26 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
       </section>
 
       <section className="card feedback-recent-card" aria-labelledby="recent-requests-title">
-        <div className="feedback-card-heading"><div className="feedback-card-icon purple"><FilePlus2 size={19} /></div><div><h2 id="recent-requests-title">Your recent requests</h2><p>Follow up on questions sent from this workspace.</p></div></div>
-        {recentRequests.length > 0 ? <div className="feedback-recent-list">{recentRequests.map((request) => <div className="feedback-recent-row" key={request.id}><div className="feedback-recent-copy"><strong>{request.message.split("\n")[0].replace(/^Subject:\s*/, "") || requestLabel(request.category)}</strong><span>{formatDate(request.createdAt)} · {requestLabel(request.category)}</span>{request.latestReply ? <small className="feedback-recent-response">Team response: {request.latestReply.message}</small> : null}</div><span className={`feedback-status ${statusClass(request.status)}`}><span />{statusLabel(request.status)}</span><ChevronRight size={15} className="feedback-recent-arrow" /></div>)}</div> : <div className="feedback-recent-empty"><CheckCircle2 size={17} /><div><strong>No requests yet</strong><span>Your submitted questions and updates will appear here.</span></div></div>}
+        <div className="feedback-card-heading"><div className="feedback-card-icon purple"><FilePlus2 size={19} /></div><div><h2 id="recent-requests-title">Conversation history</h2><p>Open a conversation to see the full support thread.</p></div></div>
+        {requests.length > 0 ? <div className="feedback-recent-list">{requests.slice(0, 4).map((request) => <button className={`feedback-recent-row${selectedRequestId === request.id ? " selected" : ""}`} type="button" key={request.id} onClick={() => { setSelectedRequestId(request.id); setActiveSection("history"); }}><div className="feedback-recent-copy"><strong>{subjectFromMessage(request.message, requestLabel(request.category))}</strong><span>{formatDate(request.createdAt)} · {requestLabel(request.category)}</span>{request.replies.length ? <small className="feedback-recent-response">{request.replies.length} support {request.replies.length === 1 ? "response" : "responses"}</small> : <small className="feedback-recent-awaiting">Waiting for a support response</small>}</div><span className={`feedback-status ${statusClass(request.status)}`}><span />{statusLabel(request.status)}</span><ChevronRight size={15} className="feedback-recent-arrow" /></button>)}</div> : <div className="feedback-recent-empty"><CheckCircle2 size={17} /><div><strong>No conversations yet</strong><span>Your submitted questions and updates will appear here.</span></div></div>}
+        {requests.length > 4 ? <button type="button" className="feedback-see-all" onClick={() => setActiveSection("history")}>View all conversations <ChevronRight size={14} /></button> : null}
       </section>
 
       <div className="feedback-privacy-note"><ShieldCheck size={15} /><span>Your messages are private to this client workspace.</span></div>
     </aside>
+  </div> : <section className="feedback-history-layout">
+      <section className="card feedback-conversation-list" aria-labelledby="feedback-history-title">
+        <div className="feedback-card-heading"><div className="feedback-card-icon purple"><Headphones size={19} /></div><div><h2 id="feedback-history-title">Your conversations</h2><p>Every message and support response for this workspace.</p></div></div>
+        {requests.length ? <div className="feedback-history-items">{requests.map((request) => <button type="button" className={`feedback-history-item${selectedRequest?.id === request.id ? " selected" : ""}`} key={request.id} onClick={() => setSelectedRequestId(request.id)}><div><strong>{subjectFromMessage(request.message, requestLabel(request.category))}</strong><span>{formatDate(request.createdAt)} · {requestLabel(request.category)}</span></div><div><span className={`feedback-status ${statusClass(request.status)}`}><span />{statusLabel(request.status)}</span><ChevronRight size={15} /></div></button>)}</div> : <div className="feedback-recent-empty"><CheckCircle2 size={17} /><div><strong>No conversations yet</strong><span>Start a request and your support history will appear here.</span></div></div>}
+        <button type="button" className="button primary feedback-history-new" onClick={() => setActiveSection("new")}><MessageCircle size={14} /> Start a new request</button>
+      </section>
+
+      {selectedRequest ? <article className="card feedback-conversation-detail" aria-labelledby="selected-feedback-title">
+        <div className="feedback-conversation-detail-head"><div><p className="eyebrow">{requestLabel(selectedRequest.category)} · {formatDate(selectedRequest.createdAt)}</p><h2 id="selected-feedback-title">{subjectFromMessage(selectedRequest.message, requestLabel(selectedRequest.category))}</h2></div><span className={`feedback-status ${statusClass(selectedRequest.status)}`}><span />{statusLabel(selectedRequest.status)}</span></div>
+        <div className="feedback-conversation-message"><span>Your message</span><p>{selectedRequest.message.replace(/^Subject:\s*[^\n]+\n?\n?/, "")}</p><time dateTime={selectedRequest.createdAt}>{formatDateTime(selectedRequest.createdAt)}</time></div>
+        <div className="feedback-thread-heading"><span>Support thread</span><small>{selectedRequest.replies.length ? `${selectedRequest.replies.length} ${selectedRequest.replies.length === 1 ? "response" : "responses"}` : "Awaiting response"}</small></div>
+        {selectedRequest.replies.length ? <div className="feedback-client-thread">{selectedRequest.replies.map((reply) => <div className="feedback-client-reply" key={reply.id}><div><strong>{reply.authorName} · Support team</strong><time dateTime={reply.createdAt}>{formatDateTime(reply.createdAt)}</time></div><p>{reply.message}</p></div>)}</div> : <div className="feedback-client-thread-empty"><Clock3 size={17} /><div><strong>Your request is in the support queue</strong><span>The AI Rankers team will reply here when there is an update.</span></div></div>}
+      </article> : <article className="card feedback-conversation-detail feedback-conversation-placeholder"><Headphones size={24} /><h2>Select a conversation</h2><p>Choose a request from the list to see the complete message and support replies.</p></article>}
+    </section>}
   </div>;
 }
