@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { RefreshCw, ShieldCheck, Unplug } from "lucide-react";
+import { BarChart3, Building2, CheckCircle2, Clock3, Database, Globe2, Link2, MapPin, RefreshCw, Search, ShieldCheck, Unplug } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 type IntegrationRow = {
@@ -30,6 +30,12 @@ function statusLabel(status: string) {
   if (status === "RECONNECT_REQUIRED") return "Reconnect required";
   if (status === "ERROR") return "Error";
   return "Not connected";
+}
+
+function statusClass(status: string) {
+  if (status === "CONNECTED") return "is-connected";
+  if (status === "ERROR" || status === "RECONNECT_REQUIRED") return "is-warning";
+  return "is-pending";
 }
 
 export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: IntegrationRow[]; queryMessage?: string | null }) {
@@ -118,29 +124,51 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
     }
   }
 
+  const configuredResourceCount = [ga4PropertyId, gscSiteUrl, gbpAccountId, gbpLocationId].filter(Boolean).length;
+
   return <AppShell mode="admin" activeNav="Integrations">
-    <div className="content">
-      <div className="page-heading"><div><h1>Google integrations</h1><p>Super Admin connection, property selection, and provider readiness for every client workspace.</p></div></div>
-      <section className="ops-context card"><div className="ops-context-icon"><ShieldCheck size={17} /></div><div><strong>Credentials stay server-side</strong><p>Client users can view published reporting only. Google connections are managed here by the Super Admin.</p></div><span className="status progress">Tenant-scoped</span></section>
-      <section className="card" style={{ padding: 18, marginBottom: 14 }}>
-        <label style={{ display: "grid", gap: 6, maxWidth: 520 }}><span className="eyebrow">Client workspace</span><select value={selectedId} onChange={(event) => selectClient(event.target.value)} style={{ minHeight: 38, padding: "0 10px", border: "1px solid var(--line)", borderRadius: 7, background: "white", color: "var(--ink)" }}>{clients.map((client) => <option key={client.id} value={client.id}>{client.businessName}</option>)}</select></label>
+    <div className="content integrations-page">
+      <div className="page-heading integrations-page-heading">
+        <div><p className="eyebrow">Admin control center</p><h1>Google integrations</h1><p>Connect Google once, then map the approved reporting resources for each client workspace.</p></div>
+        <span className="integration-page-status"><span className="integration-live-dot" /> Provider status</span>
+      </div>
+
+      <section className="integration-trust-banner card">
+        <span className="integration-trust-icon"><ShieldCheck size={18} /></span>
+        <div><strong>Secure connection management</strong><p>Google credentials stay server-side. Client users only see approved reporting in their portal.</p></div>
+        <span className="integration-scope-badge">Admin controlled</span>
       </section>
-      {selected ? <section className="card" style={{ padding: 18 }}>
-        <div className="page-heading" style={{ marginBottom: 18 }}><div><p className="eyebrow">Google connection</p><h2>{selected.businessName}</h2><p>{selected.googleAccountEmail ?? "No Google account connected"}</p></div><span className={`status ${selected.status === "CONNECTED" ? "complete" : selected.status === "ERROR" || selected.status === "RECONNECT_REQUIRED" ? "urgent" : "planned"}`}>{statusLabel(selected.status)}</span></div>
+
+      <section className="integration-workspace-picker card">
+        <div className="integration-picker-intro"><span className="integration-picker-icon"><Building2 size={18} /></span><div><p className="eyebrow">Workspace</p><h2>Select a client workspace</h2><p>Choose the client whose Google resources you want to manage.</p></div></div>
+        <label className="integration-workspace-field"><span>Client workspace</span><div className="integration-select-shell"><select value={selectedId} onChange={(event) => selectClient(event.target.value)}>{clients.map((client) => <option key={client.id} value={client.id}>{client.businessName}</option>)}</select></div></label>
+      </section>
+
+      {selected ? <section className="integration-connection-card card">
+        <div className="integration-card-header">
+          <div className="integration-client-identity"><span className="integration-client-mark">{selected.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><p className="eyebrow">Google connection</p><h2>{selected.businessName}</h2><p className="integration-account"><Globe2 size={13} /> {selected.googleAccountEmail ?? "No Google account connected"}</p></div></div>
+          <span className={`integration-status ${statusClass(selected.status)}`}><span className="integration-status-dot" />{statusLabel(selected.status)}</span>
+        </div>
+
         {selected.status === "CONNECTED" ? <>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}><button className="button" type="button" onClick={discover} disabled={busy}><RefreshCw size={14} /> {busy ? "Loading" : "Discover Google resources"}</button><button className="button primary" type="button" onClick={syncNow} disabled={busy}><RefreshCw size={14} /> {busy ? "Syncing" : "Sync Google data now"}</button><button className="button" type="button" onClick={disconnect} disabled={busy}><Unplug size={14} /> Disconnect</button></div>
-          <div className="setup-source-layout">
-            <label><span className="eyebrow">GA4 property</span><select value={ga4PropertyId} onChange={(event) => setGa4PropertyId(event.target.value)} disabled={!resources || busy}><option value="">Select a GA4 property</option>{!resources && ga4PropertyId ? <option value={ga4PropertyId}>{ga4PropertyId}</option> : null}{resources?.ga4Properties.map((property) => <option key={property.id} value={property.id}>{property.label} ({property.id})</option>)}</select></label>
-            <label><span className="eyebrow">Search Console site</span><select value={gscSiteUrl} onChange={(event) => setGscSiteUrl(event.target.value)} disabled={!resources || busy}><option value="">Select a Search Console site</option>{!resources && gscSiteUrl ? <option value={gscSiteUrl}>{gscSiteUrl}</option> : null}{resources?.gscSites.map((site) => <option key={site.id} value={site.id}>{site.label}</option>)}</select></label>
-            <label><span className="eyebrow">GBP account</span><select value={gbpAccountId} onChange={(event) => { setGbpAccountId(event.target.value); setGbpLocationId(""); }} disabled={!resources || busy}><option value="">Select a GBP account</option>{!resources && gbpAccountId ? <option value={gbpAccountId}>{gbpAccountId}</option> : null}{resources?.gbpAccounts.map((account) => <option key={account.id} value={account.id}>{account.label}</option>)}</select></label>
-            <label><span className="eyebrow">GBP location</span><select value={gbpLocationId} onChange={(event) => setGbpLocationId(event.target.value)} disabled={!resources || !gbpAccountId || busy}><option value="">Select a GBP location</option>{!resources && gbpLocationId ? <option value={gbpLocationId}>{gbpLocationId}</option> : null}{resources?.gbpLocations.filter((location) => location.accountId === gbpAccountId).map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}</select></label>
+          <div className="integration-action-bar"><div><strong>Connection actions</strong><span>Refresh resources or pull the latest provider data.</span></div><div className="integration-actions"><button className="button" type="button" onClick={discover} disabled={busy}><Search size={14} /> {busy ? "Loading" : "Discover resources"}</button><button className="button primary" type="button" onClick={syncNow} disabled={busy}><RefreshCw size={14} /> {busy ? "Syncing" : "Sync data now"}</button><button className="button integration-disconnect-button" type="button" onClick={disconnect} disabled={busy}><Unplug size={14} /> Disconnect</button></div></div>
+
+          <div className="integration-resource-section">
+            <div className="integration-section-heading"><div><p className="eyebrow">Resource mapping</p><h3>Choose reporting resources</h3><p>Map each Google source to the client workspace. These selections power reporting and sync.</p></div><span className="integration-selection-count"><CheckCircle2 size={14} /> {configuredResourceCount} of 4 configured</span></div>
+            <div className="integration-resource-grid">
+              <label className="integration-resource-card"><span className="integration-resource-icon analytics"><BarChart3 size={17} /></span><span className="integration-resource-copy"><span className="integration-resource-title">GA4 property <small>Analytics</small></span><span className="integration-resource-help">Traffic, engagement, and conversion data.</span><select value={ga4PropertyId} onChange={(event) => setGa4PropertyId(event.target.value)} disabled={!resources || busy}><option value="">Select a GA4 property</option>{!resources && ga4PropertyId ? <option value={ga4PropertyId}>{ga4PropertyId}</option> : null}{resources?.ga4Properties.map((property) => <option key={property.id} value={property.id}>{property.label} ({property.id})</option>)}</select></span></label>
+              <label className="integration-resource-card"><span className="integration-resource-icon search"><Search size={17} /></span><span className="integration-resource-copy"><span className="integration-resource-title">Search Console site <small>Website GSC</small></span><span className="integration-resource-help">Search visibility and organic performance.</span><select value={gscSiteUrl} onChange={(event) => setGscSiteUrl(event.target.value)} disabled={!resources || busy}><option value="">Select a Search Console site</option>{!resources && gscSiteUrl ? <option value={gscSiteUrl}>{gscSiteUrl}</option> : null}{resources?.gscSites.map((site) => <option key={site.id} value={site.id}>{site.label}</option>)}</select></span></label>
+              <label className="integration-resource-card"><span className="integration-resource-icon gbp"><MapPin size={17} /></span><span className="integration-resource-copy"><span className="integration-resource-title">GBP account <small>Local SEO</small></span><span className="integration-resource-help">Business Profile accounts and locations.</span><select value={gbpAccountId} onChange={(event) => { setGbpAccountId(event.target.value); setGbpLocationId(""); }} disabled={!resources || busy}><option value="">Select a GBP account</option>{!resources && gbpAccountId ? <option value={gbpAccountId}>{gbpAccountId}</option> : null}{resources?.gbpAccounts.map((account) => <option key={account.id} value={account.id}>{account.label}</option>)}</select></span></label>
+              <label className="integration-resource-card"><span className="integration-resource-icon location"><Link2 size={17} /></span><span className="integration-resource-copy"><span className="integration-resource-title">GBP location <small>Local SEO</small></span><span className="integration-resource-help">The specific location used for reporting.</span><select value={gbpLocationId} onChange={(event) => setGbpLocationId(event.target.value)} disabled={!resources || !gbpAccountId || busy}><option value="">Select a GBP location</option>{!resources && gbpLocationId ? <option value={gbpLocationId}>{gbpLocationId}</option> : null}{resources?.gbpLocations.filter((location) => location.accountId === gbpAccountId).map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}</select></span></label>
+            </div>
+            {!resources ? <div className="integration-discover-note"><Database size={15} /><span>Discover Google resources to unlock the selectors for this workspace.</span></div> : null}
+            <div className="integration-resource-footer"><span>{selected.lastSyncedAt ? <><Clock3 size={14} /> Last synced {new Date(selected.lastSyncedAt).toLocaleString()}</> : <><Clock3 size={14} /> No sync recorded yet</>}</span><button className="button primary" type="button" onClick={saveConfiguration} disabled={!resources || busy}><CheckCircle2 size={14} /> Save resource selections</button></div>
           </div>
-          <button className="button primary" type="button" onClick={saveConfiguration} disabled={!resources || busy} style={{ marginTop: 16 }}>Save resource selections</button>
-        </> : <a className="button primary" href={`/api/integrations/google/connect?clientId=${encodeURIComponent(selected.id)}`}>Connect Google</a>}
-        {selected.lastSyncedAt ? <p style={{ marginTop: 16, color: "var(--muted)", fontSize: 12 }}>Last sync: {new Date(selected.lastSyncedAt).toLocaleString()}</p> : null}
-        {selected.lastErrorMessage ? <p style={{ marginTop: 8, color: "#b42318", fontSize: 12 }}>{selected.lastErrorMessage}</p> : null}
-        {message ? <p style={{ marginTop: 12, color: "var(--muted)", fontSize: 12 }}>{message}</p> : null}
-      </section> : <section className="ops-empty card"><div><h3>No client workspaces found</h3><p>Create a client workspace before configuring Google.</p></div></section>}
+        </> : <div className="integration-disconnected-state"><span className="integration-disconnected-icon"><Link2 size={19} /></span><div><h3>Connect this workspace to Google</h3><p>Authorize the agency Google account to discover GA4, Search Console, and Business Profile resources.</p></div><a className="button primary" href={`/api/integrations/google/connect?clientId=${encodeURIComponent(selected.id)}`}>Connect Google</a></div>}
+
+        {selected.lastErrorMessage ? <div className="integration-error-message"><ShieldCheck size={15} /><span>{selected.lastErrorMessage}</span></div> : null}
+        {message ? <div className="integration-feedback"><CheckCircle2 size={15} /><span>{message}</span></div> : null}
+      </section> : <section className="integration-empty-state card"><span className="integration-empty-icon"><Building2 size={20} /></span><div><h3>No client workspaces found</h3><p>Create a client workspace before configuring Google.</p></div></section>}
     </div>
   </AppShell>;
 }

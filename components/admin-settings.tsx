@@ -181,6 +181,7 @@ export function AdminSettings({ initialSettings, preview = false, sources = prev
                 <label>Portal visibility<select value={settings.portalVisibility} onChange={(event) => setSettings({ ...settings, portalVisibility: event.target.value })}><option value="published">Published results only</option><option value="approved">Approved results and reports</option></select></label>
                 <label>Branding<select value={settings.brandingMode} onChange={(event) => setSettings({ ...settings, brandingMode: event.target.value })}><option value="default">AI Rankers default</option><option value="client">Client workspace branding</option></select></label>
               </div>
+              <p className="admin-settings-readiness-note">Published-only visibility is the active delivery boundary. Approval workflow and workspace branding enforcement are still pending connection.</p>
               <div className="admin-setting-list admin-settings-readiness-list">
                 <SettingRow label="Tenant isolation" description="Client records and portal access remain scoped to the client workspace." value="Enforced" action={{ label: "Open clients", href: "/admin/clients" }} />
               </div>
@@ -197,6 +198,7 @@ export function AdminSettings({ initialSettings, preview = false, sources = prev
                 <label className="admin-settings-toggle"><input type="checkbox" checked={settings.notifyReportPublishing} onChange={(event) => setSettings({ ...settings, notifyReportPublishing: event.target.checked })} /><span><strong>Report publishing</strong><small>Keep report delivery changes visible to the agency team.</small></span></label>
                 <label className="admin-settings-toggle"><input type="checkbox" checked={settings.notifySyncWarnings} onChange={(event) => setSettings({ ...settings, notifySyncWarnings: event.target.checked })} /><span><strong>Sync warnings</strong><small>Flag provider delays and failed refreshes before client delivery.</small></span></label>
               </div>
+              <p className="admin-settings-readiness-note">The client-feedback badge is connected. Report-publishing and sync-warning event feeds still need their delivery workers.</p>
             </section>
 
             <section className="card admin-settings-card" id="access-security">
