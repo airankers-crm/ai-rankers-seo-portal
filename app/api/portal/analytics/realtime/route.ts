@@ -14,10 +14,6 @@ export async function GET() {
   }
 
   try {
-    const client = await prisma.client.findUnique({ where: { id: access.user.clientId }, select: { dataMode: true } });
-    if (client?.dataMode === "MANAGED") {
-      return NextResponse.json({ status: "MANAGED_MODE", data: null }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
-    }
     const integration = await prisma.googleIntegration.findUnique({ where: { clientId: access.user.clientId }, select: { status: true, ga4PropertyId: true } });
     if (integration?.status !== "CONNECTED" || !integration.ga4PropertyId) {
       return NextResponse.json({ status: "NOT_CONNECTED", data: null }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
