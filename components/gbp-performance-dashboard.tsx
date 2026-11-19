@@ -62,12 +62,16 @@ const metricPresentation: Array<{ key: GbpMetricKey; label: string; icon: typeof
   { key: "reviews", label: "Reviews received", icon: Star },
 ];
 
+function displayMetricLabel(key: string, label: string) {
+  return key === "views" ? "Profile views" : label;
+}
+
 function formatMetric(value: number | null) {
-  return value === null ? "0" : value.toLocaleString();
+  return value === null ? "—" : value.toLocaleString();
 }
 
 function formatHeadlineMetric(value: number | null) {
-  return value === null ? "0" : value.toLocaleString();
+  return value === null ? "—" : value.toLocaleString();
 }
 
 function trend(metric: GbpMetric) {
@@ -153,17 +157,19 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   }, [displayRows, query]);
 
   const activeMetric = currentMetric(displayMetrics, activeMetricKey);
+  const activeMetricLabel = activeMetric ? displayMetricLabel(activeMetric.key, activeMetric.label) : "Profile activity";
+  const activeChartTitle = activeMetricKey === "views" ? presentation.chartTitle : `${activeMetricLabel} over time`;
   const hasChannelBreakdown = displayMetrics.some((metric) => /(^|-)search($|-)|(^|-)maps($|-)/i.test(metric.key));
   const visibleMetrics = metricFilter === "all" ? displayMetrics : displayMetrics.filter((metric) => metric.key === metricFilter);
   const callsChange = trend(currentMetric(displayMetrics, "calls") ?? { key: "calls", label: "Calls", value: null, previousValue: null, source: "GBP", description: "" });
   const clicksChange = trend(currentMetric(displayMetrics, "clicks") ?? { key: "clicks", label: "Website clicks", value: null, previousValue: null, source: "GBP", description: "" });
-  const insightTokens = { callsChange: callsChange === null ? "0%" : `${callsChange >= 0 ? "+" : ""}${callsChange.toFixed(0)}%`, websiteTrend: clicksChange === null ? "flat at 0" : clicksChange >= 0 ? "trending upward" : "trending downward" };
+  const insightTokens = { callsChange: callsChange === null ? "not available" : `${callsChange >= 0 ? "+" : ""}${callsChange.toFixed(0)}%`, websiteTrend: clicksChange === null ? "not available" : clicksChange >= 0 ? "trending upward" : "trending downward" };
   const trendData = visibleRows.filter((row) => row[activeMetricKey] !== null).map((row) => ({ label: row.periodLabel, value: row[activeMetricKey] as number }));
   const emptyTrendData = Array.from({ length: 13 }, (_, index) => ({ label: index === 0 ? visibleRows[0]?.periodLabel ?? "Start" : index === 12 ? visibleRows.at(-1)?.periodLabel ?? "Now" : `Point ${index + 1}`, value: 0 }));
   const displayTrendData = trendData.length > 1 ? trendData : trendData.length === 1 ? [{ ...trendData[0] }, { label: "Now", value: trendData[0].value }] : emptyTrendData;
   const latestAvailableRow = displayRows.at(-1);
   const hasPublishedData = displayRows.length > 0;
-  const zeroTableRow: GbpPeriodRow = { periodStart: "empty", periodLabel: "No published data", calls: 0, views: 0, clicks: 0, directions: 0, reviews: 0 };
+  const zeroTableRow: GbpPeriodRow = { periodStart: "empty", periodLabel: "No published data", calls: null, views: null, clicks: null, directions: null, reviews: null };
   const tableRows = visibleRows.length ? visibleRows : query ? [] : [zeroTableRow];
   const totalFor = (key: keyof Pick<GbpPeriodRow, "views" | "calls" | "clicks" | "directions" | "reviews">) => {
     const values = visibleRows.map((row) => row[key]).filter((value): value is number => value !== null);

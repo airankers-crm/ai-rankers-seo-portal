@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, CheckCircle2, ChevronDown, CircleAlert, Database, Filter, Loader2, Search, Send, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Clock3, Database, Filter, Loader2, MessageSquareText, Search, Send, ShieldCheck, X } from "lucide-react";
 import { AppShell } from "./app-shell";
 
 export type AdminOperationRow = Record<string, string>;
@@ -53,11 +53,16 @@ function AdminOperationDrawer({ detail, onClose }: { detail: AdminOperationDetai
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   async function submitReply(event: React.FormEvent<HTMLFormElement>) {
@@ -84,29 +89,36 @@ function AdminOperationDrawer({ detail, onClose }: { detail: AdminOperationDetai
   return (
     <>
       <button className="admin-operation-drawer-backdrop" type="button" aria-label="Close feedback details" onClick={onClose} />
-      <aside className="admin-operation-drawer" role="dialog" aria-modal="true" aria-labelledby="admin-operation-drawer-title">
+      <aside className="admin-operation-drawer" role="dialog" aria-modal="true" aria-labelledby="admin-operation-drawer-title" aria-describedby="admin-operation-drawer-description">
         <header className="admin-operation-drawer-header">
-          <div>
-            {detail.eyebrow ? <span>{detail.eyebrow}</span> : null}
-            <h2 id="admin-operation-drawer-title">{detail.title}</h2>
+          <div className="admin-operation-drawer-header-main">
+            <div className="admin-operation-drawer-mark" aria-hidden="true"><MessageSquareText size={18} /></div>
+            <div className="admin-operation-drawer-header-copy">
+              <div className="admin-operation-drawer-eyebrow-row">
+                {detail.eyebrow ? <span>{detail.eyebrow}</span> : <span>Client feedback</span>}
+                <span className="admin-operation-drawer-channel"><span /> Portal inbox</span>
+              </div>
+              <h2 id="admin-operation-drawer-title">{detail.title}</h2>
+              <p id="admin-operation-drawer-description">Review the request, page context, and response thread in one place.</p>
+            </div>
           </div>
-          <button className="admin-operation-drawer-close" type="button" aria-label="Close feedback details" onClick={onClose}><X size={18} /></button>
+          <button className="admin-operation-drawer-close" type="button" aria-label="Close feedback details" title="Close details" onClick={onClose}><X size={18} /></button>
         </header>
         <div className="admin-operation-drawer-body">
-          {detail.status ? <div className={`status ${detail.status.tone}`}><CheckCircle2 size={13} /> {detail.status.label}</div> : null}
+          {detail.status ? <div className="admin-operation-drawer-overview"><span className={`admin-operation-drawer-status ${detail.status.tone}`}>{detail.status.tone === "complete" ? <CheckCircle2 size={13} /> : detail.status.tone === "progress" ? <Clock3 size={13} /> : detail.status.tone === "urgent" ? <CircleAlert size={13} /> : <MessageSquareText size={13} />} {detail.status.label}</span><span className="admin-operation-drawer-visibility"><ShieldCheck size={13} /> Client-visible thread</span></div> : null}
           <section className="admin-operation-drawer-message">
-            <div className="admin-operation-drawer-section-heading"><CircleAlert size={16} /><div><strong>Feedback message</strong><small>Submitted by the client portal</small></div></div>
-            <p>{detail.message}</p>
+            <div className="admin-operation-drawer-section-heading"><span className="admin-operation-drawer-section-icon"><CircleAlert size={16} /></span><div><strong>Feedback message</strong><small>Submitted by the client portal</small></div><span className="admin-operation-drawer-section-label">Original request</span></div>
+            <div className="admin-operation-drawer-message-copy"><p>{detail.message}</p></div>
           </section>
-          {detail.metadata?.length ? <dl className="admin-operation-drawer-meta">{detail.metadata.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}{item.detail ? <small>{item.detail}</small> : null}</dd></div>)}</dl> : null}
-          {detail.context ? <details className="admin-operation-drawer-context"><summary>View captured page context</summary><pre>{detail.context}</pre></details> : null}
+          {detail.metadata?.length ? <section className="admin-operation-drawer-details"><div className="admin-operation-drawer-subheading"><div><strong>Request details</strong><small>Workspace and submission information</small></div><Clock3 size={15} aria-hidden="true" /></div><dl className="admin-operation-drawer-meta">{detail.metadata.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}{item.detail ? <small>{item.detail}</small> : null}</dd></div>)}</dl></section> : null}
+          {detail.context ? <details className="admin-operation-drawer-context"><summary><span><Database size={14} /><span><strong>Captured page context</strong><small>See where the request was submitted</small></span></span><ChevronRight size={15} /></summary><pre>{detail.context}</pre></details> : null}
           {detail.reply ? <section className="admin-operation-drawer-reply">
-            <div className="admin-operation-drawer-section-heading"><Send size={16} /><div><strong>Response thread</strong><small>Reply directly from the feedback inbox</small></div></div>
+            <div className="admin-operation-drawer-section-heading"><span className="admin-operation-drawer-section-icon teal"><Send size={16} /></span><div><strong>Response thread</strong><small>Reply directly from the feedback inbox</small></div><span className="admin-operation-drawer-thread-count">{replies.length ? `${replies.length} ${replies.length === 1 ? "reply" : "replies"}` : "Awaiting reply"}</span></div>
             {replies.length ? <div className="admin-operation-drawer-thread">{replies.map((reply) => <article key={reply.id}><div><strong>{reply.authorName}</strong><time dateTime={reply.createdAt}>{formatDrawerDate(reply.createdAt)}</time></div><p>{reply.message}</p></article>)}</div> : <p className="admin-operation-drawer-empty">No response has been sent yet.</p>}
             <form className="admin-operation-drawer-form" onSubmit={submitReply}>
-              <label htmlFor="admin-feedback-reply">Write a response</label>
-              <textarea id="admin-feedback-reply" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Add a clear response for the client…" rows={4} disabled={pending} />
-              <div><small>{notice ? <span className="admin-operation-drawer-success">{notice}</span> : "Your response will be visible in the client portal."}</small><button className="button primary" type="submit" disabled={pending || !message.trim()}>{pending ? <><Loader2 size={14} className="spin" /> Sending…</> : <><Send size={14} /> Send response</>}</button></div>
+              <div className="admin-operation-drawer-form-heading"><label htmlFor="admin-feedback-reply">Write a response</label><span><ShieldCheck size={12} /> Visible to client</span></div>
+              <textarea id="admin-feedback-reply" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={4000} placeholder="Add a clear response for the client…" rows={4} disabled={pending} />
+              <div className="admin-operation-drawer-form-footer"><small>{notice ? <span className="admin-operation-drawer-success">{notice}</span> : "Keep the client updated with the next step."}</small><span className="admin-operation-drawer-character-count">{message.length}/4000</span><button className="button primary" type="submit" disabled={pending || !message.trim()}>{pending ? <><Loader2 size={14} className="spin" /> Sending…</> : <><Send size={14} /> Send response</>}</button></div>
               {error ? <p className="admin-operation-drawer-error">{error}</p> : null}
             </form>
           </section> : null}

@@ -15,7 +15,7 @@ function getCachedPortalData(clientId: string) {
     if (!clientSettings) return null;
     const [metrics, reportRecords, goalRecords] = await Promise.all([
       prisma.metric.findMany({ where: { clientId, isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: clientSettings.dataMode }, orderBy: { periodStart: "desc" }, take: 6 } }, orderBy: { position: "asc" } }),
-      prisma.report.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
+      prisma.report.findMany({ where: { clientId, isVisible: true }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.goal.findMany({
         where: { clientId, isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } },
         include: { metric: { include: { values: { where: { dataOrigin: clientSettings.dataMode }, orderBy: { periodStart: "desc" }, take: 1 } } }, annotations: { where: { isVisible: true }, orderBy: { happenedAt: "desc" }, take: 3 } },

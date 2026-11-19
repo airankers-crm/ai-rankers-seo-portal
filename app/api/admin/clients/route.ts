@@ -10,6 +10,17 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "client";
 }
 
+async function getUniqueSlug(baseSlug: string) {
+  let candidate = baseSlug;
+  let suffix = 2;
+  while (await prisma.client.findUnique({ where: { slug: candidate }, select: { id: true } })) {
+    const suffixLabel = `-${suffix}`;
+    candidate = `${baseSlug.slice(0, 60 - suffixLabel.length)}${suffixLabel}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
 export async function POST(request: Request) {
   const access = await requireAdminAccess();
   if (access.preview || !access.user) {
@@ -22,6 +33,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as { businessName?: string; websiteUrl?: string; contactEmail?: string } | null;
   const businessName = body?.businessName?.trim();
   if (!businessName) return NextResponse.json({ error: "Business name is required." }, { status: 400 });
+  if (businessName.length < 2) return NextResponse.json({ error: "Business name must be at least 2 characters." }, { status: 400 });
+  if (businessName.length > 120) return NextResponse.json({ error: "Business name must be 120 characters or fewer." }, { status: 400 });
 
   let websiteUrl: string | null = null;
   if (body?.websiteUrl?.trim()) {
@@ -30,13 +43,12 @@ export async function POST(request: Request) {
   }
 
   const contactEmail = body?.contactEmail?.trim() || null;
-  if (contactEmail && !/^\S+@\S+\.\S+$/.test(contactEmail)) {
+  if (contactEmail && (contactEmail.length > 254 || !/^\S+@\S+\.\S+$/.test(contactEmail))) {
     return NextResponse.json({ error: "Primary contact email must be valid." }, { status: 400 });
   }
 
   const baseSlug = slugify(businessName);
-  const existing = await prisma.client.count({ where: { slug: { startsWith: baseSlug } } });
-  const slug = existing ? `${baseSlug}-${existing + 1}` : baseSlug;
+  const slug = await getUniqueSlug(baseSlug);
   const workspaceSettings = await getWorkspaceSettings();
 
   const client = await prisma.client.create({
