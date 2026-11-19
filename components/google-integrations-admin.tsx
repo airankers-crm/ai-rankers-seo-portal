@@ -38,7 +38,7 @@ function statusClass(status: string) {
   return "is-pending";
 }
 
-export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: IntegrationRow[]; queryMessage?: string | null }) {
+export function GoogleIntegrationsAdmin({ clients, queryMessage, workspaceTimezone }: { clients: IntegrationRow[]; queryMessage?: string | null; workspaceTimezone: string }) {
   const [clientRows, setClientRows] = useState(clients);
   const [selectedId, setSelectedId] = useState(clients[0]?.id ?? "");
   const selected = useMemo(() => clientRows.find((client) => client.id === selectedId) ?? null, [clientRows, selectedId]);
@@ -156,7 +156,7 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
               <label className="integration-resource-card"><span className="integration-resource-icon location"><Link2 size={17} /></span><span className="integration-resource-copy"><span className="integration-resource-title">GBP location <small>Local SEO</small></span><span className="integration-resource-help">The specific location used for reporting.</span><select value={gbpLocationId} onChange={(event) => setGbpLocationId(event.target.value)} disabled={!resources || !gbpAccountId || busy}><option value="">Select a GBP location</option>{!resources && gbpLocationId ? <option value={gbpLocationId}>{gbpLocationId}</option> : null}{resources?.gbpLocations.filter((location) => location.accountId === gbpAccountId).map((location) => <option key={location.id} value={location.id}>{location.label}</option>)}</select></span></label>
             </div>
             {!resources ? <div className="integration-discover-note"><Database size={15} /><span>Discover Google resources to unlock the selectors for this workspace.</span></div> : null}
-            <div className="integration-resource-footer"><span>{selected.lastSyncedAt ? <><Clock3 size={14} /> Last synced {new Date(selected.lastSyncedAt).toLocaleString()}</> : <><Clock3 size={14} /> No sync recorded yet</>}</span><button className="button primary" type="button" onClick={saveConfiguration} disabled={!resources || busy}><CheckCircle2 size={14} /> Save resource selections</button></div>
+            <div className="integration-resource-footer"><span>{selected.lastSyncedAt ? <><Clock3 size={14} /> Last synced {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: workspaceTimezone }).format(new Date(selected.lastSyncedAt))}</> : <><Clock3 size={14} /> No sync recorded yet</>}</span><button className="button primary" type="button" onClick={saveConfiguration} disabled={!resources || busy}><CheckCircle2 size={14} /> Save resource selections</button></div>
           </div>
         </> : <div className="integration-disconnected-state"><span className="integration-disconnected-icon"><Link2 size={19} /></span><div><h3>Connect this workspace to Google</h3><p>Authorize the agency Google account to discover GA4, Search Console, and Business Profile resources.</p></div><a className="button primary" href={`/api/integrations/google/connect?clientId=${encodeURIComponent(selected.id)}`}>Connect Google</a></div>}
 

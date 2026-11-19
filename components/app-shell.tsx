@@ -18,6 +18,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
   Settings2,
   ShieldCheck,
   UsersRound,
@@ -90,6 +91,13 @@ const adminNavGroups: NavGroup[] = [
       { label: "Settings", href: "/admin/settings", icon: ShieldCheck },
     ],
   },
+  {
+    label: "Operations",
+    items: [
+      { label: "Audit activity", href: "/admin/audit", icon: ShieldCheck },
+      { label: "Sync health", href: "/admin/sync-health", icon: RefreshCw },
+    ],
+  },
 ];
 
 export function AppShell({ children, mode, clientName, brandMark, brandAccent, activeNav, hiddenNav = [], shellVariant }: AppShellProps) {
@@ -153,7 +161,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     .filter((group) => group.items.length > 0);
   const nav = visibleNavGroups.flatMap((group) => group.items);
   const activeItem = nav
-    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .filter((item) => pathname === item.href || (item.href !== "/admin" && item.href !== "/portal" && pathname.startsWith(`${item.href}/`)))
     .sort((first, second) => second.href.length - first.href.length)[0];
   const activeLabel = activeItem?.label ?? activeNav ?? (mode === "admin" ? "Workspace overview" : "Overview");
   const clientInitials = clientName?.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "CL";

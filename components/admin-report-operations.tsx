@@ -65,7 +65,7 @@ export function AdminReportOperations({ clients, reports: startingReports }: { c
     const search = `${report.title} ${report.clientName} ${report.periodLabel} ${report.originalFileName ?? ""}`.toLowerCase();
     return (statusFilter === "ALL" || report.status === statusFilter || report.deliveryStatus === statusFilter) && (!query.trim() || search.includes(query.trim().toLowerCase()));
   }), [query, reports, statusFilter]);
-  const counts = { published: reports.filter((report) => report.status === "PUBLISHED").length, sent: reports.filter((report) => report.deliveryStatus === "SENT").length, review: reports.filter((report) => report.status === "IN_REVIEW").length };
+  const counts = { clientVisible: reports.filter((report) => report.status === "PUBLISHED" || report.deliveryStatus === "SENT").length, review: reports.filter((report) => report.status === "IN_REVIEW").length };
 
   function validateFile(nextFile: File | null) {
     setError(null);
@@ -129,7 +129,7 @@ export function AdminReportOperations({ clients, reports: startingReports }: { c
 
       <div className="admin-report-summary-grid" aria-label="Report workspace summary">
         <div className="admin-report-summary-card"><span className="admin-report-summary-icon purple"><FileText size={17} /></span><div><strong>{reports.length}</strong><span>Total reports</span></div></div>
-        <div className="admin-report-summary-card"><span className="admin-report-summary-icon teal"><CheckCircle2 size={17} /></span><div><strong>{counts.sent + counts.published}</strong><span>Client-visible</span></div></div>
+        <div className="admin-report-summary-card"><span className="admin-report-summary-icon teal"><CheckCircle2 size={17} /></span><div><strong>{counts.clientVisible}</strong><span>Client-visible</span></div></div>
         <div className="admin-report-summary-card"><span className="admin-report-summary-icon orange"><Clock3 size={17} /></span><div><strong>{counts.review}</strong><span>Awaiting review</span></div></div>
       </div>
 

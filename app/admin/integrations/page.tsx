@@ -1,5 +1,6 @@
 import { prisma } from "@ai-rankers/db";
 import { GoogleIntegrationsAdmin } from "../../../components/google-integrations-admin";
+import { getWorkspaceSettings } from "../../../lib/admin-settings";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +18,18 @@ const errorMessages: Record<string, string> = {
 export default async function AdminIntegrationsPage({ searchParams }: { searchParams?: Promise<{ error?: string; connected?: string }> }) {
   await requireAdminAccess();
   const params = await searchParams;
-  const clients = await prisma.client.findMany({
-    where: { status: { not: "ARCHIVED" } },
-    orderBy: { businessName: "asc" },
-    include: { googleIntegration: true },
-  });
+  const [settings, clients] = await Promise.all([
+    getWorkspaceSettings(),
+    prisma.client.findMany({
+      where: { status: { not: "ARCHIVED" } },
+      orderBy: { businessName: "asc" },
+      include: { googleIntegration: true },
+    }),
+  ]);
 
   return <GoogleIntegrationsAdmin
     queryMessage={params?.connected === "1" ? "Google account connected. Discover and select the client resources next." : params?.error ? errorMessages[params.error] ?? "The Google integration request could not be completed." : null}
+    workspaceTimezone={settings.defaultTimezone}
     clients={clients.map((client) => ({
       id: client.id,
       businessName: client.businessName,

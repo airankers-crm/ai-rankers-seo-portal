@@ -4,11 +4,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { createAuthClient } from "@neon/auth/next";
 import { BinaryOrbitsBackground } from "./binary-orbits-background";
 
 const authClient = createAuthClient();
+
+function friendlyAuthError(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("invalid") && (normalized.includes("credential") || normalized.includes("password") || normalized.includes("email"))) return "The email or password could not be verified. Check your details and try again.";
+  if (normalized.includes("too many") || normalized.includes("rate limit") || normalized.includes("try again later")) return "There have been too many attempts. Please wait a few minutes or reset your password.";
+  if (normalized.includes("already") && normalized.includes("exist")) return "An account with this email already exists. Try signing in instead.";
+  return message;
+}
 
 type AuthAudience = "client" | "admin";
 
@@ -59,12 +67,18 @@ export function AuthForm({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [pending, setPending] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [rippleKey, setRippleKey] = useState(0);
 
   const isSignIn = mode === "sign-in";
   const content = audienceContent[audience];
   const AudienceIcon = content.icon;
+  const emailInvalid = emailTouched && email.length > 0 && !/^\S+@\S+\.\S+$/.test(email);
+  const passwordInvalid = passwordTouched && password.length > 0 && password.length < 8;
 
   async function resolveDestination() {
     const response = await fetch(`/api/auth/redirect?redirectTo=${encodeURIComponent(redirectTo)}`, {
@@ -82,6 +96,7 @@ export function AuthForm({
     event.preventDefault();
     setPending(true);
     setError("");
+    setSuccess("");
     setRippleKey((current) => current + 1);
 
     try {
@@ -90,7 +105,7 @@ export function AuthForm({
         : await authClient.signUp.email({ name, email, password });
 
       if (result.error) {
-        setError(result.error.message || "We could not complete that request.");
+        setError(friendlyAuthError(result.error.message || "We could not complete that request."));
         return;
       }
 
@@ -102,10 +117,12 @@ export function AuthForm({
         return;
       }
 
+      setSuccess(audience === "admin" ? "Access confirmed. Opening the agency workspace…" : "Access confirmed. Opening your client portal…");
+      await new Promise((resolve) => window.setTimeout(resolve, 360));
       router.replace(access.destination);
       router.refresh();
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "We could not complete that request. Please try again.");
+      setError(friendlyAuthError(submissionError instanceof Error ? submissionError.message : "We could not complete that request. Please try again."));
     } finally {
       setPending(false);
     }
@@ -136,8 +153,9 @@ export function AuthForm({
               <label htmlFor="auth-email">Work email</label>
               <div className="auth-input-wrap">
                 <Mail size={16} aria-hidden="true" />
-                <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoFocus required />
+                <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onBlur={() => setEmailTouched(true)} autoComplete="email" autoFocus required aria-invalid={emailInvalid} aria-describedby={emailInvalid ? "auth-email-error" : undefined} />
               </div>
+              {emailInvalid ? <p className="auth-field-error" id="auth-email-error"><AlertCircle size={12} /> Enter a valid work email.</p> : null}
             </div>
             <div className="auth-field">
               <div className="auth-field-heading">
@@ -151,12 +169,15 @@ export function AuthForm({
               </div>
               <div className="auth-input-wrap">
                 <LockKeyhole size={16} aria-hidden="true" />
-                <input id="auth-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={isSignIn ? "current-password" : "new-password"} minLength={8} required />
+                <input id="auth-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} onBlur={() => { setPasswordTouched(true); setCapsLockOn(false); }} onKeyDown={(event) => setCapsLockOn(event.getModifierState("CapsLock"))} onKeyUp={(event) => setCapsLockOn(event.getModifierState("CapsLock"))} autoComplete={isSignIn ? "current-password" : "new-password"} minLength={8} required aria-invalid={passwordInvalid} aria-describedby={capsLockOn ? "auth-password-caps" : passwordInvalid ? "auth-password-error" : undefined} />
               </div>
+              {capsLockOn ? <p className="auth-field-hint warning" id="auth-password-caps">Caps Lock is on.</p> : null}
+              {passwordInvalid ? <p className="auth-field-error" id="auth-password-error"><AlertCircle size={12} /> Use at least 8 characters.</p> : null}
             </div>
             {error && <p className="auth-error" role="alert">{error}</p>}
+            {success ? <p className="auth-success" role="status">{success}</p> : null}
             <button className="button primary auth-submit" disabled={pending} aria-busy={pending}>
-              {pending ? "Checking access…" : isSignIn ? "Sign in securely" : "Create client account"}
+              {pending ? <><Loader2 className="auth-submit-spinner" size={15} /> Checking access…</> : isSignIn ? "Sign in securely" : "Create client account"}
             </button>
           </form>
 
@@ -180,6 +201,14 @@ export function AuthForm({
               {content.alternateLabel} <Link href={content.alternateHref}>{content.alternateAction}</Link>
             </p>
           )}
+
+          <div className="auth-support-links" aria-label="Login support">
+            <a href="mailto:support@theairankers.com">Contact support</a>
+            <span aria-hidden="true">·</span>
+            <Link href="/privacy">Privacy policy</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/terms">Terms of service</Link>
+          </div>
         </section>
 
         <aside className="auth-context" aria-label={`${content.eyebrow} information`}>

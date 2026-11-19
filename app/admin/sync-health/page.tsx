@@ -1,25 +1,29 @@
 import { prisma } from "@ai-rankers/db";
 import { AdminOperationsPage } from "../../../components/admin-operations";
+import { getWorkspaceSettings } from "../../../lib/admin-settings";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSyncHealthPage() {
   await requireAdminAccess();
-  const runs = await prisma.integrationSyncRun.findMany({ orderBy: { startedAt: "desc" }, take: 50, include: { client: true, integration: true } });
+  const [settings, runs] = await Promise.all([
+    getWorkspaceSettings(),
+    prisma.integrationSyncRun.findMany({ orderBy: { startedAt: "desc" }, take: 50, include: { client: true, integration: true } }),
+  ]);
   const rows = runs.map((run) => ({
     id: run.clientId,
     client: run.client.businessName,
     provider: "Google",
     mode: run.mode === "INITIAL_BACKFILL" ? "Initial backfill" : run.mode === "SCHEDULED" ? "Scheduled" : "Manual",
     status: run.status,
-    freshness: run.completedAt?.toLocaleString("en-US") ?? "Running",
+    freshness: run.completedAt?.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: settings.defaultTimezone }) ?? "Running",
     coverage: `${run.rowsWritten} written · ${run.rowsOverridden} overrides · ${run.rowsSkipped} skipped`,
     error: run.errorMessage ?? "—",
   }));
 
   return <AdminOperationsPage config={{
-    activeNav: "Integrations",
+    activeNav: "Sync health",
     title: "Sync health",
     description: "Review Google sync attempts, freshness, coverage, overrides, and errors across client workspaces.",
     sourceLabel: "Google sync runs",

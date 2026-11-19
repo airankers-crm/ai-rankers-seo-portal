@@ -160,8 +160,8 @@ export function ClientResultsEditor({ clientId, metrics: initialMetrics, section
   }, [activeView, metrics]);
   const addSection = activeView === "website" || activeView === "analytics" ? websiteSection : activeView === "gbp" ? gbpSection : null;
   const activeViewLabel = activeView === "website" ? "Website GSC" : activeView === "analytics" ? "Analytics" : activeView === "gbp" ? "GBP performance" : "All results";
-  const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=draft` : activeView === "analytics" ? "/portal/analytics" : `/admin/clients/${clientId}/preview/gbp?mode=draft`;
-  const activePortal = activeView === "website" ? "/portal/website-seo" : activeView === "analytics" ? "/portal/analytics" : "/portal/gbp";
+  const activePreview = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=draft` : activeView === "analytics" ? `/admin/clients/${clientId}/preview/analytics?mode=draft` : `/admin/clients/${clientId}/preview/gbp?mode=draft`;
+  const activePortal = activeView === "website" ? `/admin/clients/${clientId}/preview/website-seo?mode=live` : activeView === "analytics" ? `/admin/clients/${clientId}/preview/analytics?mode=live` : `/admin/clients/${clientId}/preview/gbp?mode=live`;
   const activeMetric = editingId ? metrics.find((metric) => metric.id === editingId) ?? null : null;
   const isDirty = Boolean(activeMetric && draft && !draftsMatch(draft, draftFor(activeMetric)));
 
