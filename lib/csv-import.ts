@@ -488,7 +488,7 @@ function summaryMetricName(screen: Exclude<ImportScreen, "all" | "overview">, de
   if (screen === "website") return templateMetricName(definition);
   if (screen === "gbp") {
     return ({
-      "gbp-views": "Search & Maps impressions",
+      "gbp-views": "Profile views",
       "gbp-calls": "Call clicks",
       "gbp-website-clicks": "Website clicks",
       "gbp-directions": "Direction requests",

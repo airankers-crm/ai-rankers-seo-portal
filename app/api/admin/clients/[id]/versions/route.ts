@@ -64,6 +64,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const label = typeof body?.label === "string" && body.label.trim() ? body.label.trim().slice(0, 100) : "Portal update";
 
   const version = await prisma.$transaction(async (transaction) => {
+    const existingClient = await loadClient(clientId, transaction);
+    if (!existingClient) throw new Error("CLIENT_NOT_FOUND");
+    const hasDraftChanges = existingClient.sections.some((section) => section.isDraft) || existingClient.metrics.some((metric) => metric.isDraft);
+    if (!hasDraftChanges) throw new Error("NO_DRAFT_CHANGES");
     await transaction.section.updateMany({ where: { clientId, kind: { in: ["OVERVIEW", "WEBSITE", "GBP"] }, isVisible: true }, data: { isDraft: false } });
     await transaction.metric.updateMany({ where: { clientId, isVisible: true }, data: { isDraft: false } });
     const client = await loadClient(clientId, transaction);
@@ -75,9 +79,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return saved;
   }).catch((error) => {
     if (error instanceof Error && error.message === "CLIENT_NOT_FOUND") return null;
+    if (error instanceof Error && error.message === "NO_DRAFT_CHANGES") return "NO_DRAFT_CHANGES" as const;
     throw error;
   });
 
+  if (version === "NO_DRAFT_CHANGES") return NextResponse.json({ error: "There are no draft changes to publish." }, { status: 409 });
   if (!version) return NextResponse.json({ error: "Client workspace not found." }, { status: 404 });
   return NextResponse.json({ version: { id: version.id, version: version.version, label: version.label, publishedAt: version.publishedAt } }, { status: 201 });
 }

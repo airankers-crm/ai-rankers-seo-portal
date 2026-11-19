@@ -11,6 +11,7 @@ export function ClientPublishControls({ clientId, versions: initialVersions, dra
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState<"publish" | string | null>(null);
+  const hasDraftChanges = draftMetricCount > 0 || draftSectionCount > 0;
 
   async function publishPortal() {
     setPending("publish");
@@ -59,7 +60,7 @@ export function ClientPublishControls({ clientId, versions: initialVersions, dra
     <div className="publish-status-grid"><div><strong>{draftMetricCount}</strong><span>draft metrics</span></div><div><strong>{draftSectionCount}</strong><span>draft sections</span></div><div><strong>{versions.length}</strong><span>saved versions</span></div><div className="publish-safety"><ShieldCheck size={14} /><span>Client sees published data only</span></div></div>
     {message && <p className="save-status section-feedback" role="status"><CheckCircle2 size={14} /> {message}</p>}
     {error && <p className="auth-error section-feedback" role="alert">{error}</p>}
-    <div className="publish-action-row"><label>Release label<input value={label} maxLength={100} onChange={(event) => setLabel(event.target.value)} /></label><button className="button primary" type="button" onClick={() => void publishPortal()} disabled={pending !== null}><Send size={13} /> {pending === "publish" ? "Publishing…" : "Publish approved changes"}</button></div>
+    <div className="publish-action-row"><label>Release label<input value={label} maxLength={100} onChange={(event) => setLabel(event.target.value)} /></label><button className="button primary" type="button" onClick={() => void publishPortal()} disabled={pending !== null || !hasDraftChanges}><Send size={13} /> {pending === "publish" ? "Publishing…" : hasDraftChanges ? "Publish approved changes" : "No changes to publish"}</button></div>
     <div className="version-history"><div className="version-history-heading"><div><strong>Version history</strong><span>Published portal snapshots</span></div><History size={15} /></div>{versions.length ? versions.map((version) => <div className="version-row" key={version.id}><div><strong>Version {version.version}</strong><span>{version.label || "Portal update"}</span></div><time dateTime={version.publishedAt}>{new Date(version.publishedAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</time><button className="table-action" type="button" onClick={() => void rollback(version)} disabled={pending !== null}><RotateCcw size={12} /> {pending === version.id ? "Restoring…" : "Restore"}</button></div>) : <p className="version-empty">No published versions yet. Publish the first approved portal state above.</p>}</div>
   </section>;
 }

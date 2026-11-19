@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const metricConfig = [
   { key: "gbp-calls", viewKey: "calls", label: "Call clicks", source: "GBP", description: "Calls attributed to the Google Business Profile listing." },
-  { key: "gbp-views", viewKey: "views", label: "Search & Maps impressions", source: "GBP", description: "Search and Maps impressions for the listing." },
+  { key: "gbp-views", viewKey: "views", label: "Profile views", source: "GBP", description: "Search and Maps profile views for the listing." },
   { key: "gbp-website-clicks", viewKey: "clicks", label: "Website clicks", source: "GBP", description: "Website actions attributed to the listing." },
   { key: "gbp-directions", viewKey: "directions", label: "Direction requests", source: "GBP", description: "Requests for directions from the listing." },
   { key: "gbp-reviews", viewKey: "reviews", label: "Reviews received", source: "GBP", description: "New reviews received during the reporting period." },

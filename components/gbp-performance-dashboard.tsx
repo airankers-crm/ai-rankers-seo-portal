@@ -55,7 +55,7 @@ type GbpChannelKey = "search-maps" | "search" | "maps";
 type GbpDisplayKey = "monthly" | "quarterly";
 
 const metricPresentation: Array<{ key: GbpMetricKey; label: string; icon: typeof Phone }> = [
-  { key: "views", label: "Search & Maps impressions", icon: MapPin },
+  { key: "views", label: "Profile views", icon: MapPin },
   { key: "calls", label: "Call clicks", icon: Phone },
   { key: "clicks", label: "Website clicks", icon: TrendingUp },
   { key: "directions", label: "Direction requests", icon: Compass },
