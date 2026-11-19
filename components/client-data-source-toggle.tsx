@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type DataMode = "MANAGED" | "GOOGLE_API";
 
-export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, lastSyncedAt, screenLabel }: { clientId: string; initialMode: DataMode; googleStatus: string; lastSyncedAt: string | null; screenLabel?: string }) {
+export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, lastSyncedAt, screenLabel, workspaceTimezone = "America/Los_Angeles" }: { clientId: string; initialMode: DataMode; googleStatus: string; lastSyncedAt: string | null; screenLabel?: string; workspaceTimezone?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<DataMode>(initialMode);
   const [pending, setPending] = useState(false);
@@ -47,7 +47,7 @@ export function ClientDataSourceToggle({ clientId, initialMode, googleStatus, la
       <button type="button" className={mode === "MANAGED" ? "active" : ""} onClick={() => void save("MANAGED")} disabled={pending} aria-pressed={mode === "MANAGED"}><Database size={15} /><span><strong>Managed DB data</strong><small>Excel imports + Admin edits</small></span>{mode === "MANAGED" ? <CheckCircle2 size={15} /> : null}</button>
       <button type="button" className={mode === "GOOGLE_API" ? "active" : ""} onClick={() => void save("GOOGLE_API")} disabled={pending} aria-pressed={mode === "GOOGLE_API"}><Globe2 size={15} /><span><strong>Google API data</strong><small>{googleReady ? "Latest synced provider values" : "No live connection · existing synced rows only"}</small></span>{mode === "GOOGLE_API" ? <CheckCircle2 size={15} /> : null}</button>
     </div>
-    <div className="client-data-source-meta"><span className={`status ${googleReady ? "complete" : "progress"}`}>{googleReady ? "Google connected" : "Google not connected"}</span><span>{lastSyncedAt ? `Last Google sync ${new Date(lastSyncedAt).toLocaleString()}` : "No Google sync recorded"}</span>{pending ? <span><Loader2 size={13} className="spin" /> Saving source…</span> : null}</div>
+    <div className="client-data-source-meta"><span className={`status ${googleReady ? "complete" : "progress"}`}>{googleReady ? "Google connected" : "Google not connected"}</span><span>{lastSyncedAt ? `Last Google sync ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: workspaceTimezone }).format(new Date(lastSyncedAt))}` : "No Google sync recorded"}</span>{pending ? <span><Loader2 size={13} className="spin" /> Saving source…</span> : null}</div>
     {message ? <p className="save-status" role="status"><CheckCircle2 size={14} /> {message}</p> : null}
     {error ? <p className="auth-error" role="alert">{error}</p> : null}
   </section>;

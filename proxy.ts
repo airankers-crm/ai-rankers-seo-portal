@@ -13,6 +13,8 @@ const publicRoutes = [
   "/auth/sign-in",
   "/auth/sign-up",
   "/auth/reset-password",
+  "/privacy",
+  "/terms",
   "/api/auth/redirect",
   "/api/health/db",
   "/api/cron/google-sync",

@@ -105,7 +105,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
     }
   }
 
-  const lastSaved = savedSettings.updatedAt === new Date(0).toISOString() ? "Not saved yet" : `Saved ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(savedSettings.updatedAt))}`;
+  const lastSaved = savedSettings.updatedAt === new Date(0).toISOString() ? "Not saved yet" : `Saved ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: savedSettings.defaultTimezone }).format(new Date(savedSettings.updatedAt))}`;
 
   return (
     <AppShell mode="admin" activeNav="Settings">

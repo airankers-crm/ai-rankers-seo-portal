@@ -178,11 +178,7 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
   const comparisonWindow = useMemo(() => comparisonDateWindow(dateRange.start, dateRange.end, compare), [compare, dateRange.end, dateRange.start]);
 
   useEffect(() => {
-    if (isDraftPreview) {
-      setTrendResult(null);
-      setTrendStatus("idle");
-      return;
-    }
+    if (isDraftPreview) return;
     const controller = new AbortController();
     const initialLoad = window.setTimeout(() => {
       setTrendStatus("loading");
@@ -212,6 +208,9 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     };
   }, [comparisonWindow, dateRange.end, dateRange.start, isDraftPreview]);
 
+  const displayedTrendResult = isDraftPreview ? null : trendResult;
+  const displayedTrendStatus = isDraftPreview ? "idle" : trendStatus;
+
   const metricMap = useMemo(() => new Map(metrics.map((metric) => [metric.key, metric])), [metrics]);
   const connectedMetricCount = metrics.filter((metric) => metric.value !== null).length;
   const hasReportingData = connectedMetricCount > 0 || rows.length > 0;
@@ -240,7 +239,7 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     return values[values.length - 1] ?? 0;
   };
   const liveSummaryValue = (key: AnalyticsViewKey) => {
-    const summary = trendResult?.current.summary;
+    const summary = displayedTrendResult?.current.summary;
     if (!summary) return null;
     if (key === "activeUsers") return summary.activeUsers;
     if (key === "sessions") return summary.sessions;
@@ -251,12 +250,12 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
   };
   const valueFor = (key: AnalyticsViewKey) => {
     if (visibleRows.length > 0) return valueForRows(key, visibleRows);
-    const liveValue = trendStatus === "ready" ? liveSummaryValue(key) : null;
+    const liveValue = displayedTrendStatus === "ready" ? liveSummaryValue(key) : null;
     if (liveValue !== null) return liveValue;
     if (rows.length > 0) return null;
     return metricMap.get(key)?.value ?? null;
   };
-  const liveTrendPoints = trendStatus === "ready" ? trendResult?.current.points ?? [] : [];
+  const liveTrendPoints = displayedTrendStatus === "ready" ? displayedTrendResult?.current.points ?? [] : [];
   const fallbackTrendValues = visibleRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
   const rawTrendSource = liveTrendPoints.length ? liveTrendPoints.map((point) => point.sessions) : fallbackTrendValues;
   const rawTrendValues = rawTrendSource.length === 1 ? [rawTrendSource[0], rawTrendSource[0]] : rawTrendSource.length > 1 ? rawTrendSource : Array.from({ length: 6 }, () => 0);
@@ -264,7 +263,7 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
   const liveTrendLabels = liveTrendPoints.map((point) => new Date(`${point.date}T00:00:00.000Z`).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
   const fallbackTrendLabels = visibleRows.map((row) => row.periodLabel);
   const trendLabels = rawTrendSource.length === 1 ? [liveTrendLabels[0] ?? fallbackTrendLabels[0] ?? "Start", ""] : rawTrendSource.length > 1 ? (liveTrendLabels.length ? liveTrendLabels : fallbackTrendLabels) : labelsForRange(range);
-  const rawComparisonPoints = trendStatus === "ready" ? trendResult?.comparison?.points ?? [] : [];
+  const rawComparisonPoints = displayedTrendStatus === "ready" ? displayedTrendResult?.comparison?.points ?? [] : [];
   const rawComparison = rawComparisonPoints.length ? rawComparisonPoints.map((point) => point.sessions) : comparisonRows.map((row) => row.sessions ?? row.organicSessions ?? 0);
   const comparisonValues = rawComparison.length ? normalizeSeries(rawComparison.length === 1 ? [rawComparison[0], rawComparison[0]] : rawComparison) : undefined;
   const sparkline = (key: AnalyticsViewKey) => {
@@ -282,7 +281,7 @@ export function AnalyticsDashboard({ clientName, brandMark, brandAccent, metrics
     <div className="content analytics-reference" aria-label="Google Analytics 4 performance">
       <div className="analytics-reference-heading"><div><span className="analytics-reference-accent" /><h1>Website analytics</h1><p>Understand what visitors do after they arrive.</p></div><div className="analytics-reference-heading-actions">{isDraftPreview ? <span className="data-confidence data-confidence-preview"><CheckCircle2 size={14} /> Draft preview · not client-visible</span> : <span className={`analytics-reference-connected${hasReportingData ? "" : " is-waiting"}`}>{hasReportingData ? <CheckCircle2 size={14} /> : <Clock3 size={14} />} {hasReportingData ? "GA4 data available" : "GA4 awaiting sync"}</span>}<span className="analytics-reference-updated">{latestPeriod ? `Latest published period · ${latestPeriod}` : "No GA4 values published"}</span></div></div>
       <section className="analytics-reference-kpis" aria-label="Google Analytics key metrics">{[["Active users", valueFor("activeUsers"), "purple", "activeUsers"], ["Event count", valueFor("eventCount"), "blue", "eventCount"], ["Key events", valueFor("keyEvents"), "orange", "keyEvents"], ["Views", valueFor("views"), "teal", "views"]].map(([label, value, tone, key]) => <article className="analytics-reference-kpi" key={String(label)}><div><span className={`analytics-reference-kpi-icon ${tone}`}><UsersRound size={16} /></span><strong>{label}</strong></div><b>{compact(value as number | null)}</b><MiniBars values={sparkline(key as AnalyticsViewKey)} /></article>)}</section>
-      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2><div className="analytics-reference-chart-heading-actions">{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}<DateRangePicker value={dateRange} onApply={setDateRange} /></div></div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><div className="analytics-reference-chart-footer"><span className="analytics-reference-chart-note">{trendStatus === "loading" ? "Loading daily GA4 data…" : trendStatus === "ready" ? `${rawTrendSource.length} daily point${rawTrendSource.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : visibleRows.length > 0 ? `${visibleRows.length} published period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span></div></section>{showRealtime ? <AnalyticsRealtime /> : <section className="analytics-reference-card analytics-realtime-panel" aria-label="Google Analytics realtime activity"><div className="analytics-realtime-panel-heading"><div><h2>Realtime activity</h2><p>Live activity is excluded from this draft preview.</p></div><span className="analytics-realtime-status is-empty"><span /> Draft preview</span></div><div className="analytics-realtime-empty"><Clock3 size={18} /><div><strong>Realtime data is not part of the draft</strong><p>Review the published GA4 metrics here. Client-visible realtime activity remains available only in the live portal.</p></div></div></section>}</div>
+      <div className="analytics-reference-main-grid"><section className="analytics-reference-card analytics-reference-chart-card"><div className="analytics-reference-card-heading"><h2>Sessions over time</h2><div className="analytics-reference-chart-heading-actions">{compare !== "none" ? <span className="analytics-reference-chart-legend"><i /> Current {comparisonValues ? <><i className="comparison" /> {compareOptions.find((option) => option.key === compare)?.label}</> : null}</span> : null}<DateRangePicker value={dateRange} onApply={setDateRange} /></div></div><ReferenceTrendChart values={trendValues} labels={trendLabels} comparisonValues={comparisonValues} tooltipValues={rawTrendValues} /><div className="analytics-reference-chart-footer"><span className="analytics-reference-chart-note">{displayedTrendStatus === "loading" ? "Loading daily GA4 data…" : displayedTrendStatus === "ready" ? `${rawTrendSource.length} daily point${rawTrendSource.length === 1 ? "" : "s"} · ${selectedRange.label}${compare !== "none" && !comparisonValues ? " · comparison data unavailable" : ""}` : visibleRows.length > 0 ? `${visibleRows.length} published period${visibleRows.length === 1 ? "" : "s"} · ${selectedRange.label}` : `0 sessions · no published rows in ${selectedRange.label.toLowerCase()}`}</span></div></section>{showRealtime ? <AnalyticsRealtime /> : <section className="analytics-reference-card analytics-realtime-panel" aria-label="Google Analytics realtime activity"><div className="analytics-realtime-panel-heading"><div><h2>Realtime activity</h2><p>Live activity is excluded from this draft preview.</p></div><span className="analytics-realtime-status is-empty"><span /> Draft preview</span></div><div className="analytics-realtime-empty"><Clock3 size={18} /><div><strong>Realtime data is not part of the draft</strong><p>Review the published GA4 metrics here. Client-visible realtime activity remains available only in the live portal.</p></div></div></section>}</div>
       <section className="analytics-reference-card analytics-reference-results-card" aria-labelledby="analytics-results-title"><div className="analytics-reference-card-heading"><div><h2 id="analytics-results-title">Results by month</h2><p>Stored GA4 data · {selectedRange.label}</p></div><div className="analytics-reference-results-actions"><Table2 size={18} aria-hidden="true" /></div></div><div className="analytics-reference-table-wrap"><table className="analytics-reference-results-table"><thead><tr><th>Month</th><th>Active users</th><th>Sessions</th><th>Organic sessions</th><th>Views</th><th>Engaged sessions</th><th>Engagement rate</th><th>Events</th><th>Key events</th></tr></thead><tbody>{visibleRows.length ? visibleRows.map((row, index) => <tr className={index === visibleRows.length - 1 ? "is-latest" : undefined} key={row.periodStart}><td><strong>{row.periodLabel}</strong><span>{index === visibleRows.length - 1 ? "Latest period" : "Historical period"}</span></td><td>{analyticsTableValue(row.activeUsers, "INTEGER")}</td><td>{analyticsTableValue(row.sessions, "INTEGER")}</td><td>{analyticsTableValue(row.organicSessions, "INTEGER")}</td><td>{analyticsTableValue(row.views, "INTEGER")}</td><td>{analyticsTableValue(row.engagedSessions, "INTEGER")}</td><td>{analyticsTableValue(row.engagementRate, "PERCENT")}</td><td>{analyticsTableValue(row.eventCount, "INTEGER")}</td><td>{analyticsTableValue(row.keyEvents, "INTEGER")}</td></tr>) : <tr><td colSpan={9}>No stored GA4 data for this range.</td></tr>}</tbody></table></div><div className="analytics-reference-table-foot"><span>Rows are read from the stored GA4 monthly reporting periods.</span><span>{visibleRows.length} period{visibleRows.length === 1 ? "" : "s"} · {selectedRange.label}</span></div></section>
     </div>
   </AppShell>;

@@ -12,6 +12,7 @@ import { ClientPublishControls } from "../../../../components/client-publish-con
 import { ClientDataSourceToggle } from "../../../../components/client-data-source-toggle";
 import { ClientBusinessProfileStep, ClientReviewStep, ClientSetupWizard, ClientSourceChecklist, ClientSourceToolbar, getClientSetupStep } from "../../../../components/client-setup-wizard";
 import { requireAdminAccess } from "../../../../lib/auth/access";
+import { getWorkspaceSettings } from "../../../../lib/admin-settings";
 import { provisionGoogleMetrics, provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,8 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
 
   if (!client) notFound();
 
+  const workspaceSettings = await getWorkspaceSettings();
+
   const canImportCsv = access.user?.role === "SUPER_ADMIN" || access.user?.role === "ADMIN";
   const editorSections = client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind }));
   const editorMetrics = client.metrics.map((metric) => ({
@@ -84,7 +87,7 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
       isOverride: value.isOverride,
     })),
   }));
-  const sourceToggleProps = { clientId: client.id, initialMode: client.dataMode, googleStatus: client.googleIntegration?.status ?? "DISCONNECTED", lastSyncedAt: client.googleIntegration?.lastSyncedAt?.toISOString() ?? null };
+  const sourceToggleProps = { clientId: client.id, initialMode: client.dataMode, googleStatus: client.googleIntegration?.status ?? "DISCONNECTED", lastSyncedAt: client.googleIntegration?.lastSyncedAt?.toISOString() ?? null, workspaceTimezone: workspaceSettings.defaultTimezone };
 
   const stepContent = currentStep === "details" ? <>
     <div className="dashboard-grid setup-first-grid">
@@ -113,7 +116,7 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
     <ClientSourceChecklist source="Google Business Profile" description="Prepare verified Search and Maps results for the client. Review the source and reporting period before anything is included in a published portal version." />
     <ClientResultsEditor clientId={client.id} initialView="gbp" showTabs={false} sections={editorSections} metrics={editorMetrics} />
     {canImportCsv && <CsvImportPanel clientId={client.id} screen="gbp" />}
-  </div> : currentStep === "sections" ? <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft, presentation: section.presentation }))} /> : currentStep === "review" ? <ClientReviewStep clientId={client.id} businessName={client.businessName} sectionCount={client.sections.length} metricCount={client.metrics.length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} /> : currentStep === "publish" ? <ClientPublishControls clientId={client.id} versions={client.versions.map((version) => ({ id: version.id, version: version.version, label: version.label, publishedAt: version.publishedAt.toISOString() }))} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} /> : <section className="card panel setup-invite-card"><div className="panel-heading"><div><p className="eyebrow">Step 7</p><h2>Invite the client</h2><p>Only invite the real customer email after the portal has been reviewed and published.</p></div><UsersRound size={18} color="#148f83" /></div><ClientInvitationForm clientId={client.id} /></section>;
+  </div> : currentStep === "sections" ? <ClientSectionEditor clientId={client.id} sections={client.sections.map((section) => ({ id: section.id, name: section.name, kind: section.kind, position: section.position, isVisible: section.isVisible, isDraft: section.isDraft, presentation: section.presentation }))} /> : currentStep === "review" ? <ClientReviewStep clientId={client.id} businessName={client.businessName} sectionCount={client.sections.length} metricCount={client.metrics.length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} /> : currentStep === "publish" ? <ClientPublishControls clientId={client.id} versions={client.versions.map((version) => ({ id: version.id, version: version.version, label: version.label, publishedAt: version.publishedAt.toISOString() }))} draftMetricCount={client.metrics.filter((metric) => metric.isDraft).length} draftSectionCount={client.sections.filter((section) => section.isDraft).length} workspaceTimezone={workspaceSettings.defaultTimezone} /> : <section className="card panel setup-invite-card"><div className="panel-heading"><div><p className="eyebrow">Step 7</p><h2>Invite the client</h2><p>Only invite the real customer email after the portal has been reviewed and published.</p></div><UsersRound size={18} color="#148f83" /></div><ClientInvitationForm clientId={client.id} /></section>;
 
   return (
     <AppShell mode="admin">
