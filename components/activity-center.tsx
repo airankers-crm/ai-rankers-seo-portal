@@ -8,7 +8,6 @@ import {
   Download,
   Filter,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
 import type { DemoActivity } from "@ai-rankers/core";
@@ -50,10 +49,6 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
       return matchesQuery && matchesCategory && matchesStatus;
     });
   }, [activities, category, query, status]);
-  const completedCount = filteredActivities.filter((activity) => activity.status === "COMPLETED").length;
-  const plannedCount = filteredActivities.filter((activity) => activity.status === "PLANNED").length;
-  const inProgressCount = filteredActivities.filter((activity) => activity.status === "IN_PROGRESS").length;
-
   function exportCsv() {
     const rows = [
       ["Activity", "Workstream", "Date", "Status"],
@@ -86,14 +81,6 @@ export function ActivityCenter({ businessName, brandMark, brandAccent, activitie
             <button className="button" type="button" onClick={exportCsv}><Download size={14} /> Export CSV</button>
             <button className={`button${presetSaved ? " saved" : ""}`} type="button" onClick={savePreset}><Bookmark size={14} /> {presetSaved ? "View saved" : "Save view"}</button>
           </div>
-        </div>
-
-          <div className="activity-summary" aria-label="Activity summary">
-          <div><strong>{filteredActivities.length}</strong><span>visible activities</span></div>
-          <div><strong>{completedCount}</strong><span>completed</span></div>
-          <div><strong>{inProgressCount}</strong><span>in progress</span></div>
-          <div><strong>{plannedCount}</strong><span>planned</span></div>
-          <div className="activity-summary-note"><Sparkles size={15} /><span>Activity records are visible after agency publication.</span></div>
         </div>
 
         <ClientTaskCenter initialTasks={tasks} />
