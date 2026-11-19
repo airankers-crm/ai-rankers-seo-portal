@@ -7,8 +7,6 @@ import {
   Bell,
   Building2,
   CheckCircle2,
-  ChevronRight,
-  Database,
   LockKeyhole,
   Settings2,
   ShieldCheck,
@@ -40,21 +38,6 @@ const fallbackSettings: WorkspaceSettingsValue = {
 
 type Notice = { kind: "success" | "error"; text: string } | null;
 
-export type AdminSettingsSource = {
-  id: string;
-  label: string;
-  detail: string;
-  status: string;
-  tone: "ready" | "review" | "future";
-};
-
-const previewSources: AdminSettingsSource[] = [
-  { id: "ga4", label: "GA4", detail: "Organic sessions", status: "Preview only", tone: "review" },
-  { id: "gsc", label: "GSC", detail: "Search visibility", status: "Preview only", tone: "review" },
-  { id: "gbp", label: "GBP", detail: "Local actions", status: "Preview only", tone: "review" },
-  { id: "dataforseo", label: "DataForSEO", detail: "Keyword rankings", status: "Preview only", tone: "review" },
-];
-
 function StatusPill({ tone, children }: { tone: "ready" | "review" | "future"; children: React.ReactNode }) {
   return <span className={`admin-setting-status ${tone}`}>{children}</span>;
 }
@@ -74,7 +57,7 @@ function SettingRow({ label, description, value, tone = "ready", action }: { lab
   );
 }
 
-export function AdminSettings({ initialSettings, preview = false, sources = previewSources }: { initialSettings: WorkspaceSettingsValue | null; preview?: boolean; sources?: AdminSettingsSource[] }) {
+export function AdminSettings({ initialSettings, preview = false }: { initialSettings: WorkspaceSettingsValue | null; preview?: boolean }) {
   const [settings, setSettings] = useState<WorkspaceSettingsValue>(initialSettings ?? fallbackSettings);
   const [savedSettings, setSavedSettings] = useState<WorkspaceSettingsValue>(initialSettings ?? fallbackSettings);
   const [saving, setSaving] = useState(false);
@@ -220,15 +203,6 @@ export function AdminSettings({ initialSettings, preview = false, sources = prev
           </main>
 
           <aside className="admin-settings-aside">
-            <section className="card admin-settings-side-card">
-              <div className="admin-settings-side-heading"><Database size={16} /><h2>Connected sources</h2></div>
-              <p>Source connections determine which metrics can be refreshed and published to client portals.</p>
-              <div className="admin-settings-source-list">
-                {sources.map((source) => <Link href="/admin/integrations" className="admin-settings-source" key={source.id} aria-label={`${source.label}: ${source.status}. Open integrations`}><span className={`admin-settings-source-dot ${source.tone}`} /><span><strong>{source.label}</strong><small>{source.detail}</small></span><StatusPill tone={source.tone}>{source.status}</StatusPill><ChevronRight size={13} /></Link>)}
-              </div>
-              <Link href="/admin/integrations" className="admin-settings-side-link">Manage integrations <ArrowUpRight size={13} /></Link>
-            </section>
-
             <section className="card admin-settings-side-card admin-settings-help-card">
               <div className="admin-settings-side-heading"><UsersRound size={16} /><h2>Need to change something?</h2></div>
               <p>Review client questions, issues, and requests when a setting needs attention or approval.</p>

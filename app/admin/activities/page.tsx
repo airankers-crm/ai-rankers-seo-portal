@@ -1,4 +1,7 @@
-import { AdminOperationsPage } from "../../../components/admin-operations";
+import { redirect } from "next/navigation";
 import { requireAdminAccess } from "../../../lib/auth/access";
 
-export default async function AdminActivitiesPage() { await requireAdminAccess(); return <AdminOperationsPage config={{ activeNav: "Clients", title: "Agency activities", description: "Coordinate client-safe SEO work with owner, priority, due date, evidence, and outcome context.", sourceLabel: "SEO activity records", sourceDescription: "The current activity model is available in the client portal. This agency queue is the next operational layer for ownership and evidence.", columns: [{ key: "activity", label: "Activity" }, { key: "workstream", label: "Workstream" }, { key: "status", label: "Status" }, { key: "owner", label: "Owner" }], filters: [{ key: "status", label: "Status", options: ["Planned", "In progress", "Completed"] }], emptyTitle: "No agency activities in this view", emptyDescription: "Create or connect a work item to coordinate SEO delivery from the agency workspace.", primaryAction: { label: "Open client activities", href: "/portal/activities" } }} />; }
+export default async function AdminActivitiesPage() {
+  await requireAdminAccess();
+  redirect("/admin/clients");
+}

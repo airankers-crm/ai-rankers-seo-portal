@@ -1,6 +1,6 @@
 import { PortalOverviewDashboard } from "../../components/portal-overview-dashboard";
 import { prisma } from "@ai-rankers/db";
-import type { DemoActivity, DemoMetric, DemoReport } from "@ai-rankers/core";
+import type { DemoMetric, DemoReport } from "@ai-rankers/core";
 import { requirePortalAccess } from "../../lib/auth/access";
 import type { PortalGoal } from "../../components/goal-highlights";
 import { unstable_cache } from "next/cache";
@@ -13,9 +13,8 @@ function getCachedPortalData(clientId: string) {
   return unstable_cache(async () => {
     const clientSettings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
     if (!clientSettings) return null;
-    const [metrics, activityRecords, reportRecords, goalRecords] = await Promise.all([
+    const [metrics, reportRecords, goalRecords] = await Promise.all([
       prisma.metric.findMany({ where: { clientId, isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: clientSettings.dataMode }, orderBy: { periodStart: "desc" }, take: 6 } }, orderBy: { position: "asc" } }),
-      prisma.activity.findMany({ where: { clientId, clientVisible: true }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.report.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 3 }),
       prisma.goal.findMany({
         where: { clientId, isVisible: true, status: { in: ["ACTIVE", "ACHIEVED"] } },
@@ -27,7 +26,6 @@ function getCachedPortalData(clientId: string) {
     return {
       dataMode: clientSettings.dataMode,
       metrics: metrics.map((metric) => ({ key: metric.key, name: metric.name, source: metric.source, updatedAt: metric.updatedAt.toISOString(), values: metric.values.map((value) => ({ periodStart: value.periodStart.toISOString(), value: Number(value.value) })) })),
-      activities: activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, completedAt: activity.completedAt?.toISOString() ?? null, status: activity.status })),
       reports: reportRecords.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.periodLabel })),
       goals: goalRecords.map((goal) => ({ id: goal.id, name: goal.name, description: goal.description, target: Number(goal.target), current: goal.metric?.values[0] ? Number(goal.metric.values[0].value) : null, metricName: goal.metric?.name ?? null, valueFormat: goal.metric?.valueFormat ?? null, condition: goal.condition, status: goal.status, startDate: goal.startDate.toISOString(), endDate: goal.endDate.toISOString(), annotations: goal.annotations.map((annotation) => ({ id: annotation.id, title: annotation.title, body: annotation.body, happenedAt: annotation.happenedAt.toISOString() })) })),
     };
@@ -42,11 +40,11 @@ export default async function PortalPage() {
     select: { id: true, businessName: true, brandMark: true, brandAccent: true },
   });
 
-  if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, activities: [], reports: [], goals: [] }} />;
+  if (!client) return <PortalOverviewDashboard databaseData={{ businessName: "Client workspace", brandMark: "CL", brandAccent: "#F26B38", lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, reports: [], goals: [] }} />;
 
   const portalData = await getCachedPortalData(client.id);
-  if (!portalData) return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, activities: [], reports: [], goals: [] }} />;
-  const { metrics, activities: activityRecords, reports: reportRecords, goals: goalRecords } = portalData;
+  if (!portalData) return <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: "Not connected", defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: {}, reports: [], goals: [] }} />;
+  const { metrics, reports: reportRecords, goals: goalRecords } = portalData;
 
   const metricByKey = new Map(metrics.map((metric) => [metric.key, metric]));
   const mapMetric = (key: string): DemoMetric | undefined => {
@@ -66,7 +64,6 @@ export default async function PortalPage() {
   const gbpWebsiteClicks = mapMetric("gbp-website-clicks");
   const gbpDirections = mapMetric("gbp-directions");
   const gbpReviews = mapMetric("gbp-reviews");
-  const activities: DemoActivity[] = activityRecords.map((activity) => ({ id: activity.id, title: activity.title, category: activity.category, date: activity.completedAt ? new Date(activity.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : activity.status === "PLANNED" ? "Planned" : "In progress", status: activity.status }));
   const reports: DemoReport[] = reportRecords.map((report) => ({ id: report.id, title: report.title, type: report.type, period: report.period }));
   const latestUpdatedAt = metrics.reduce((latest, metric) => new Date(metric.updatedAt) > latest ? new Date(metric.updatedAt) : latest, new Date(0)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const goals: PortalGoal[] = goalRecords;
@@ -75,7 +72,7 @@ export default async function PortalPage() {
 
   return (
     <>
-      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: { organicTraffic, searchClicks, impressions, searchCtr, averagePosition, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, activities, reports, goals }} />
+      <PortalOverviewDashboard databaseData={{ businessName: client.businessName, brandMark: client.brandMark, brandAccent: client.brandAccent, lastUpdated: latestUpdatedAt, defaultReportingWindow: workspaceSettings.defaultReportingWindow, metrics: { organicTraffic, searchClicks, impressions, searchCtr, averagePosition, topTen, calls, gbpViews, gbpWebsiteClicks, gbpDirections, gbpReviews }, reports, goals }} />
       {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} screen="overview" /></div>}
     </>
   );

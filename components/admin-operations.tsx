@@ -19,6 +19,7 @@ export type AdminOperationConfig = {
   emptyDescription: string;
   primaryAction?: { label: string; href: string };
   rowAction?: { label: string; hrefPrefix: string; hrefSuffix?: string; menu?: Array<{ label: string; hrefSuffix: string }> };
+  showContext?: boolean;
 };
 
 export function AdminOperationsPage({ config }: { config: AdminOperationConfig }) {
@@ -43,11 +44,11 @@ export function AdminOperationsPage({ config }: { config: AdminOperationConfig }
           {config.primaryAction ? <div className="heading-actions"><a className="button primary" href={config.primaryAction.href}>{config.primaryAction.label} <ArrowUpRight size={14} /></a></div> : null}
         </div>
 
-        <section className="ops-context card">
+        {config.showContext !== false ? <section className="ops-context card">
           <div className="ops-context-icon"><Database size={17} /></div>
           <div><strong>{config.sourceLabel}</strong><p>{config.sourceDescription}</p></div>
           <span className="status progress">Readiness tracked</span>
-        </section>
+        </section> : null}
 
         <section className="card ops-workspace" aria-label={`${config.title} workspace`}>
           <div className="ops-toolbar">

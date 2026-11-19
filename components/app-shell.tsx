@@ -8,7 +8,6 @@ import { SignOutButton } from "./sign-out-button";
 import { PortalLiveSync } from "./portal-live-sync";
 import { PortalPreferenceEffects } from "./portal-preference-effects";
 import {
-  Activity,
   BarChart3,
   Building2,
   ChevronDown,
@@ -50,10 +49,6 @@ const portalNavGroups: NavGroup[] = [
       { label: "Analytics", href: "/portal/analytics", icon: LineChart, service: "analytics" },
       { label: "GBP", href: "/portal/gbp", icon: Building2, service: "gbp" },
     ],
-  },
-  {
-    label: "Delivery",
-    items: [{ label: "Activities", href: "/portal/activities", icon: Activity }],
   },
   {
     label: "Support",
