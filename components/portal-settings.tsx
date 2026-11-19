@@ -26,10 +26,11 @@ type PortalSettingsProps = {
 type Notice = { kind: "success" | "error"; text: string } | null;
 
 function formatTimezone(value: string) {
-  const normalized = value.replaceAll("_", " ");
+  const canonical = value === "America/New York" ? "America/New_York" : value;
+  const normalized = canonical.replaceAll("_", " ");
   try {
-    const label = new Intl.DateTimeFormat("en-US", { timeZone: value, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((part) => part.type === "timeZoneName")?.value;
-    return label && label !== normalized ? `${label} (${value})` : normalized;
+    const label = new Intl.DateTimeFormat("en-US", { timeZone: canonical, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((part) => part.type === "timeZoneName")?.value;
+    return label && label !== normalized ? `${label} (${canonical})` : normalized;
   } catch {
     return normalized;
   }
