@@ -12,7 +12,7 @@ import { ClientPublishControls } from "../../../../components/client-publish-con
 import { ClientDataSourceToggle } from "../../../../components/client-data-source-toggle";
 import { ClientBusinessProfileStep, ClientReviewStep, ClientSetupWizard, ClientSourceChecklist, ClientSourceToolbar, getClientSetupStep } from "../../../../components/client-setup-wizard";
 import { requireAdminAccess } from "../../../../lib/auth/access";
-import { provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
+import { provisionGoogleMetrics, provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +21,11 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
   const { id } = await params;
   const query = await searchParams;
   const currentStep = getClientSetupStep(query?.step ?? (query?.section === "website" ? "website" : query?.section === "analytics" ? "analytics" : query?.section === "gbp" ? "gbp" : undefined));
-  if (currentStep === "website") {
+  if (currentStep === "website" || currentStep === "analytics" || currentStep === "gbp") {
     const clientExists = await prisma.client.findUnique({ where: { id }, select: { id: true } });
     if (!clientExists) notFound();
-    await provisionWebsiteGscMetrics(id);
+    await provisionGoogleMetrics(id);
+    if (currentStep === "website") await provisionWebsiteGscMetrics(id);
   }
   const client = await prisma.client.findUnique({
     where: { id },

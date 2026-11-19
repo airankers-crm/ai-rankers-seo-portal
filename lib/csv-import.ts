@@ -257,7 +257,7 @@ export function parseCsv(text: string, options: { screen?: ImportScreen } = {}):
 export function parseXlsx(buffer: ArrayBuffer | Uint8Array, options: { screen?: ImportScreen } = {}): { rows: CsvRow[]; errors: CsvRowError[] } {
   try {
     const workbook = XLSX.read(buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer), { type: "array", cellDates: false, raw: false });
-    const dataSheets = workbook.SheetNames.filter((sheetName) => sheetName.toLowerCase() !== "instructions");
+    const dataSheets = workbook.SheetNames.filter((sheetName) => sheetName.toLowerCase() !== "instructions" && !sheetName.toLowerCase().includes("summary"));
     if (!dataSheets.length) return { rows: [], errors: [{ line: 1, field: "file", message: "The Excel workbook must contain at least one data worksheet." }] };
     const results = dataSheets.map((sheetName) => parseCsv(XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName], { blankrows: false }), options));
     return {
@@ -436,60 +436,250 @@ function monthWindow(offset: number) {
   };
 }
 
-export function generateCsvTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): string {
-  const header = "metric_key,metric_name,period_start,period_end,value,source,unit,note";
-  const definitions = screen === "all"
-    ? ALL_METRIC_DEFINITIONS
-    : IMPORT_SCREEN_CONFIG[screen].metricKeys.map((key) => METRIC_BY_KEY.get(key)).filter((definition): definition is (typeof ALL_METRIC_DEFINITIONS)[number] => Boolean(definition));
-  const windows = options.includePreviousPeriod ? [monthWindow(-1), monthWindow(0)] : [{ start: currentMonthStart(), end: currentMonthEnd() }];
-  const rows = windows.flatMap(({ start, end }) => definitions.map((definition) => [definition.key, definition.name, start, end, "", definition.source, importUnit(definition.valueFormat), ""].map(csvCell).join(",")));
-  return [header, ...rows].join("\n");
+type TemplateOptions = { includePreviousPeriod?: boolean; months?: number };
+
+function templateWindows(options: TemplateOptions) {
+  const requestedMonths = Number.isFinite(options.months) ? Math.max(1, Math.floor(options.months as number)) : 0;
+  if (requestedMonths > 0) return Array.from({ length: requestedMonths }, (_, index) => monthWindow(index - requestedMonths + 1));
+  if (options.includePreviousPeriod) return [monthWindow(-1), monthWindow(0)];
+  return [{ start: currentMonthStart(), end: currentMonthEnd() }];
 }
 
-export function generateXlsxTemplate(screen: ImportScreen = "all", options: { includePreviousPeriod?: boolean } = {}): Uint8Array {
+function templateDefinitions(screen: ImportScreen): ReadonlyArray<(typeof ALL_METRIC_DEFINITIONS)[number]> {
+  return screen === "all"
+    ? ALL_METRIC_DEFINITIONS
+    : IMPORT_SCREEN_CONFIG[screen].metricKeys.map((key) => METRIC_BY_KEY.get(key)).filter((definition): definition is (typeof ALL_METRIC_DEFINITIONS)[number] => Boolean(definition));
+}
+
+function templateMetricName(definition: (typeof ALL_METRIC_DEFINITIONS)[number]) {
+  return definition.key === "ga4-organic-sessions" ? "Organic traffic" : definition.name;
+}
+
+function templateRows(screen: ImportScreen, options: TemplateOptions) {
+  const definitions = templateDefinitions(screen);
+  const windows = templateWindows(options);
+  return { definitions, windows, rows: windows.flatMap(({ start, end }) => definitions.map((definition) => [definition.key, templateMetricName(definition), start, end, "", definition.source, importUnit(definition.valueFormat), ""])) };
+}
+
+function monthLabel(periodStart: string, latest: boolean) {
+  const [year, month] = periodStart.split("-").map(Number);
+  const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+  return `${label} ${latest ? "Latest period" : "Historical period"}`;
+}
+
+function inputValueFormula(sheetName: string, inputRow: number) {
+  const escapedSheetName = sheetName.replace(/'/g, "''");
+  const reference = "'" + escapedSheetName + "'!$E$" + inputRow;
+  return `=IF(${reference}="","—",${reference})`;
+}
+
+function setFormula(sheet: XLSX.WorkSheet, address: string, formula: string, numberFormat?: string) {
+  sheet[address] = { f: formula, ...(numberFormat ? { z: numberFormat } : {}) } as XLSX.CellObject;
+}
+
+type SummaryMetric = {
+  key: string;
+  name: string;
+  source: string;
+  valueFormat: string;
+};
+
+function summaryMetricName(screen: Exclude<ImportScreen, "all" | "overview">, definition: (typeof ALL_METRIC_DEFINITIONS)[number]) {
+  if (screen === "website") return templateMetricName(definition);
+  if (screen === "gbp") {
+    return ({
+      "gbp-views": "Search & Maps impressions",
+      "gbp-calls": "Call clicks",
+      "gbp-website-clicks": "Website clicks",
+      "gbp-directions": "Direction requests",
+      "gbp-reviews": "Reviews received",
+    } as Record<string, string>)[definition.key] ?? definition.name;
+  }
+  return definition.name;
+}
+
+function summaryMetricsForScreen(screen: Exclude<ImportScreen, "all" | "overview">): SummaryMetric[] {
+  return templateDefinitions(screen).map((definition) => ({
+    key: definition.key,
+    name: summaryMetricName(screen, definition),
+    source: definition.source,
+    valueFormat: definition.valueFormat,
+  }));
+}
+
+function excelColumnName(index: number) {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+  return result;
+}
+
+function summarySheet(
+  screen: Exclude<ImportScreen, "all" | "overview">,
+  inputSheetName: string,
+  windows: Array<{ start: string; end: string }>,
+  inputRows: Map<string, number>,
+) {
+  const latestIndex = windows.length - 1;
+  const previousIndex = Math.max(0, latestIndex - 1);
+  const metrics = summaryMetricsForScreen(screen);
+  const screenLabel = IMPORT_SCREEN_CONFIG[screen].label;
+  const cardSource = inputSheetName + " · yellow Value column";
+  const monthlyHeaderRow = 10 + metrics.length;
+  const monthlyFirstDataRow = monthlyHeaderRow + 1;
+  const summaryRows: Array<Array<string | null>> = [
+    [screen === "website" ? "Website GSC performance" : screenLabel + " performance"],
+    ["Edit the yellow Value cells on the " + inputSheetName + " sheet. These cards and the monthly report update from those entries."],
+    [],
+    ["Client portal cards"],
+    ["Metric", "Source", "Latest period", "Latest value", "Previous period", "Previous value", "Change vs previous", "Edit source"],
+    ...metrics.map((metric) => [metric.name, metric.source, monthLabel(windows[latestIndex].start, true), null, monthLabel(windows[previousIndex].start, false), null, null, cardSource]),
+    [],
+    ["Results by month"],
+    ["Latest six-month reporting window"],
+    [],
+    ["Month", ...metrics.map((metric) => metric.name)],
+    ...windows.map((window, index) => [monthLabel(window.start, index === latestIndex), ...metrics.map(() => null)]),
+  ];
+  const summary = XLSX.utils.aoa_to_sheet(summaryRows);
+  const latestValueColumn = "D";
+  const previousValueColumn = "F";
+  for (const [metricIndex, metric] of metrics.entries()) {
+    const row = 6 + metricIndex;
+    const latestInputRow = inputRows.get(`${windows[latestIndex].start}|${metric.key}`);
+    const previousInputRow = inputRows.get(`${windows[previousIndex].start}|${metric.key}`);
+    if (latestInputRow && previousInputRow) {
+      const numberFormat = metric.valueFormat === "PERCENT" ? "0.0\"%\"" : metric.valueFormat === "DECIMAL" ? "0.0" : "#,##0";
+      setFormula(summary, `${latestValueColumn}${row}`, inputValueFormula(inputSheetName, latestInputRow), numberFormat);
+      setFormula(summary, `${previousValueColumn}${row}`, inputValueFormula(inputSheetName, previousInputRow), numberFormat);
+      setFormula(summary, `G${row}`, `=IF(OR(${latestValueColumn}${row}="—",${previousValueColumn}${row}="—"),"Awaiting comparison",IF(${previousValueColumn}${row}=0,"—",(${latestValueColumn}${row}-${previousValueColumn}${row})/ABS(${previousValueColumn}${row})))`, "0.0%;[Red]-0.0%");
+    }
+  }
+  for (const [monthIndex, window] of windows.entries()) {
+    const row = monthlyFirstDataRow + monthIndex;
+    for (const [metricIndex, metric] of metrics.entries()) {
+      const inputRow = inputRows.get(`${window.start}|${metric.key}`);
+      if (!inputRow) continue;
+      const numberFormat = metric.valueFormat === "PERCENT" ? "0.0\"%\"" : metric.valueFormat === "DECIMAL" ? "0.0" : "#,##0";
+      setFormula(summary, `${excelColumnName(metricIndex + 1)}${row}`, inputValueFormula(inputSheetName, inputRow), numberFormat);
+    }
+  }
+  const columnCount = Math.max(8, metrics.length + 1);
+  summary["!cols"] = Array.from({ length: columnCount }, (_, columnIndex) => ({ wch: columnIndex === 0 ? 25 : columnIndex === 1 ? 20 : 18 }));
+  summary["!rows"] = [{ hpt: 28 }, { hpt: 24 }, {}, { hpt: 22 }, { hpt: 22 }, ...metrics.map(() => ({ hpt: 22 }))];
+  summary["!autofilter"] = { ref: "A" + monthlyHeaderRow + ":" + excelColumnName(metrics.length) + (monthlyFirstDataRow + windows.length - 1) };
+  return summary;
+}
+
+export function generateCsvTemplate(screen: ImportScreen = "all", options: TemplateOptions = {}): string {
+  const header = "metric_key,metric_name,period_start,period_end,value,source,unit,note";
+  const { rows } = templateRows(screen, options);
+  return [header, ...rows.map((row) => row.map((value) => csvCell(value)).join(","))].join("\n");
+}
+
+export function generateXlsxTemplate(screen: ImportScreen = "all", options: TemplateOptions = {}): Uint8Array {
   const workbook = XLSX.utils.book_new();
-  const screens: ImportScreen[] = screen === "all" ? ["overview", "analytics", "website", "gbp"] : [screen];
+  type TemplateScreen = Exclude<ImportScreen, "all">;
+  const screens: TemplateScreen[] = screen === "all" ? ["overview", "analytics", "website", "gbp"] : [screen as TemplateScreen];
   const selectedConfig = IMPORT_SCREEN_CONFIG[screen];
+  const selectedSheetMessage = screen === "all"
+    ? "Open each screen input sheet and edit the yellow Value cells for the reporting fields you want to import."
+    : "Open the " + selectedConfig.label + " sheet and edit the yellow Value cells for the reporting fields you want to import.";
+  const summaryMessage = screen === "all"
+    ? "Use each screen Summary tab to review its cards and Results by month. Each Summary is calculated from its matching input sheet."
+    : screen === "website" || screen === "analytics" || screen === "gbp"
+      ? "Use the Summary sheet to review the cards and Results by month. It is calculated from the matching input sheet."
+      : "Use the input sheet to review the values before uploading.";
+  const guideScreens: TemplateScreen[] = screen === "all"
+    ? ["analytics", "website", "gbp"]
+    : screen === "overview"
+      ? ["overview"]
+      : [screen as TemplateScreen];
   const instructionRows = [
     ["AI Rankers", "Client reporting import workbook"],
     ["Selected scope", selectedConfig.label],
     ["Purpose", selectedConfig.description],
-    ["Step 1", "Open the screen tab and enter values only in the blank value column."],
+    ["Step 1", selectedSheetMessage],
     ["Step 2", "Keep metric_key, metric_name, period dates, source, and unit unchanged."],
-    ["Step 3", "Save the workbook as .xlsx and upload it from the matching admin screen."],
-    ["Step 4", "After a successful import, the client portal uses Managed DB data so the imported values are visible."],
-    ["Important", "Blank value rows are skipped. Use 1.7 for 1.7% CTR. Counts must be whole numbers; average position may use decimals."],
+    ["Step 3", summaryMessage],
+    ["Step 4", "Save the workbook as .xlsx and upload it from the matching admin screen."],
+    ["Step 5", "After a successful import, the client portal uses Managed DB data so the imported cards are visible."],
+    ["Important", "Blank value rows are skipped. Use percentage points for CTR or engagement rate, for example 1.7 for 1.7%. Counts must be whole numbers; average position may use decimals."],
     [],
     ["Import contract", "Required", "What to enter", "Example"],
     ["metric_key", "Yes", "System key. Do not edit.", "gsc-clicks"],
     ["metric_name", "Reference", "Human-readable field name. Do not edit.", "Search clicks"],
     ["period_start", "Yes", "First day of the reporting period in YYYY-MM-DD format.", "2026-11-01"],
     ["period_end", "Yes", "Last day of the reporting period in YYYY-MM-DD format.", "2026-11-30"],
-    ["value", "Yes", "Enter the approved numeric result. This is the only required field you normally change.", "2100"],
+    ["value", "Yes", "Enter the approved numeric result. This is the editable Value column.", "2100"],
     ["source", "Reference", "Provider label. Do not edit.", "GSC"],
     ["unit", "Reference", "Expected unit for the value.", "whole number"],
     ["note", "Optional", "Optional context saved with the reporting value.", "November approved"],
-    [],
-    ["Website GSC field guide", "Source", "Unit", "Example", "Entry rule"],
-    ["Organic traffic", "GA4", "whole number", "8426", "Sessions attributed to organic search."],
-    ["Search clicks", "GSC", "whole number", "2100", "Search result clicks."],
-    ["Search impressions", "GSC", "whole number", "124800", "Search result impressions."],
-    ["Search CTR", "GSC", "%", "1.7", "Enter percentage points, not 0.017."],
-    ["Average position", "GSC", "number", "7.4", "Lower position is better; decimals are allowed."],
-    ["Keywords in top 10", "DATAFORSEO", "count", "68", "Tracked keywords ranking in positions 1–10."],
+    ...guideScreens.flatMap((guideScreen) => [
+      [],
+      [IMPORT_SCREEN_CONFIG[guideScreen].label + " field guide", "Source", "Unit", "Example", "Entry rule"],
+      ...templateDefinitions(guideScreen).map((definition) => [
+        guideScreen === "overview" ? templateMetricName(definition) : summaryMetricName(guideScreen, definition),
+        definition.source,
+        importUnit(definition.valueFormat),
+        definition.valueFormat === "PERCENT" ? "1.7" : definition.valueFormat === "DECIMAL" ? "7.4" : "1000",
+        definition.valueFormat === "PERCENT" ? "Enter percentage points, not a decimal fraction." : "Edit the Value cell for the selected month.",
+      ]),
+    ]),
   ];
   const instructions = XLSX.utils.aoa_to_sheet(instructionRows);
-  instructions["!cols"] = [{ wch: 24 }, { wch: 92 }, { wch: 22 }, { wch: 22 }, { wch: 48 }];
+  instructions["!cols"] = [{ wch: 24 }, { wch: 110 }, { wch: 22 }, { wch: 22 }, { wch: 52 }];
   instructions["!rows"] = [{ hpt: 26 }, { hpt: 22 }];
   XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
+
+  const builtSheets = new Map<TemplateScreen, {
+    sheetName: string;
+    windows: Array<{ start: string; end: string }>;
+    definitions: ReadonlyArray<(typeof ALL_METRIC_DEFINITIONS)[number]>;
+    inputRows: Map<string, number>;
+  }>();
   for (const currentScreen of screens) {
-    const rows = generateCsvTemplate(currentScreen, options).split("\n").map((line) => parseCsvLine(line));
+    const screenOptions = currentScreen === "website" || currentScreen === "analytics" || currentScreen === "gbp"
+      ? { ...options, months: options.months ?? 6 }
+      : options;
+    const built = templateRows(currentScreen, screenOptions);
+    const rows = [["metric_key", "metric_name", "period_start", "period_end", "value", "source", "unit", "note"], ...built.rows];
     const sheet = XLSX.utils.aoa_to_sheet(rows);
     const dataRowCount = rows.length;
-    sheet["!cols"] = [{ wch: 26 }, { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 14 }, { wch: 42 }];
+    sheet["!cols"] = [{ wch: 26 }, { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 14 }, { wch: 42 }, { wch: 3 }, { wch: 24 }, { wch: 30 }];
     sheet["!rows"] = [{ hpt: 24 }];
     sheet["!autofilter"] = { ref: `A1:H${dataRowCount}` };
-    XLSX.utils.book_append_sheet(workbook, sheet, IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31));
+    if (currentScreen !== "overview") {
+      sheet["J1"] = { t: "s", v: "Editable inputs" };
+      sheet["J2"] = { t: "s", v: "Edit only the yellow cells in column E (Value). The Summary tab reads these cells." };
+      sheet["J4"] = { t: "s", v: "Card" };
+      sheet["K4"] = { t: "s", v: "Where to edit" };
+      templateDefinitions(currentScreen).forEach((definition, definitionIndex) => {
+        sheet[`J${5 + definitionIndex}`] = { t: "s", v: templateMetricName(definition) };
+        sheet[`K${5 + definitionIndex}`] = { t: "s", v: `Column E · ${2 + (built.windows.length - 1) * built.definitions.length + definitionIndex} row` };
+      });
+    }
+    const sheetName = IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31);
+    XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+    const inputRows = new Map<string, number>();
+    built.windows.forEach((window, windowIndex) => built.definitions.forEach((definition, definitionIndex) => inputRows.set(`${window.start}|${definition.key}`, 2 + windowIndex * built.definitions.length + definitionIndex)));
+    builtSheets.set(currentScreen, { sheetName, windows: built.windows, definitions: built.definitions, inputRows });
   }
+
+  const summaryNames: string[] = [];
+  for (const summaryScreen of ["website", "analytics", "gbp"] as const) {
+    const built = builtSheets.get(summaryScreen);
+    if (!built) continue;
+    const summaryName = screen === "all" && summaryScreen !== "website"
+      ? IMPORT_SCREEN_CONFIG[summaryScreen].label + " Summary"
+      : "Summary";
+    XLSX.utils.book_append_sheet(workbook, summarySheet(summaryScreen, built.sheetName, built.windows, built.inputRows), summaryName);
+    summaryNames.push(summaryName);
+  }
+  workbook.SheetNames = ["Instructions", ...summaryNames, ...screens.map((currentScreen) => IMPORT_SCREEN_CONFIG[currentScreen].label.slice(0, 31))];
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Uint8Array;
 }

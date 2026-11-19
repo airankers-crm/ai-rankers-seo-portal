@@ -91,11 +91,36 @@ describe("CSV metric import", () => {
 
   it("creates a focused Excel workbook with a separate instructions sheet", () => {
     const workbook = generateXlsxTemplate("website", { includePreviousPeriod: true });
+    const workbookView = XLSX.read(workbook, { type: "buffer", raw: false });
     const result = parseXlsx(workbook, { screen: "website" });
 
     expect(workbook.length).toBeGreaterThan(0);
+    expect(workbookView.SheetNames).toEqual(["Instructions", "Summary", "Website GSC"]);
+    const summaryRows = XLSX.utils.sheet_to_json(workbookView.Sheets.Summary, { header: 1, defval: "", raw: false }) as string[][];
+    expect(summaryRows[12]?.[0]).toBe("Results by month");
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([]);
+  });
+
+  it("creates screen-specific summaries for Analytics and GBP", () => {
+    const workbook = generateXlsxTemplate("all", { includePreviousPeriod: true });
+    const workbookView = XLSX.read(workbook, { type: "buffer", raw: false });
+    const analyticsSummaryRows = XLSX.utils.sheet_to_json(workbookView.Sheets["Analytics Summary"], { header: 1, defval: "", raw: false }) as string[][];
+    const gbpSummaryRows = XLSX.utils.sheet_to_json(workbookView.Sheets["GBP Summary"], { header: 1, defval: "", raw: false }) as string[][];
+
+    expect(workbookView.SheetNames).toEqual([
+      "Instructions",
+      "Summary",
+      "Analytics Summary",
+      "GBP Summary",
+      "Overview",
+      "Analytics",
+      "Website GSC",
+      "GBP",
+    ]);
+    expect(analyticsSummaryRows[17]?.[0]).toBe("Results by month");
+    expect(gbpSummaryRows[11]?.[0]).toBe("Results by month");
+    expect(parseXlsx(workbook, { screen: "all" }).errors).toEqual([]);
   });
 
   it("imports all six Website GSC fields from a filled workbook", () => {
@@ -115,7 +140,7 @@ describe("CSV metric import", () => {
 
     const result = parseXlsx(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }), { screen: "website" });
     expect(result.errors).toEqual([]);
-    expect(result.rows).toHaveLength(12);
+    expect(result.rows).toHaveLength(36);
     expect([...new Set(result.rows.map((row) => row.metricKey))]).toEqual([
       "ga4-organic-sessions",
       "gsc-clicks",

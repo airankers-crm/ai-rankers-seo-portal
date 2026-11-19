@@ -179,7 +179,7 @@ export function CsvImportPanel({ clientId, screen = "all" }: { clientId: string;
       </div>
 
       <div className="csv-import-template">
-        <div className="csv-import-template-copy"><CalendarRange size={15} /><span><strong>Two reporting periods included</strong><small>Fill the previous month and current month to unlock comparisons on the client screen.</small></span></div>
+        <div className="csv-import-template-copy"><CalendarRange size={15} /><span><strong>{["website", "analytics", "gbp"].includes(activeScreen) ? "Six reporting periods included" : "Reporting periods included"}</strong><small>{["website", "analytics", "gbp"].includes(activeScreen) ? "Edit the yellow Value column for each month. The screen Summary tab shows the cards and Results by month." : "Fill the reporting periods to unlock comparisons on the client screen."}</small></span></div>
         <div className="csv-import-template-actions">
           <a href={`/api/admin/clients/${clientId}/import-csv/template?screen=${activeScreen}&include_previous=1&format=xlsx`} download className="button csv-import-download csv-import-excel">
             <FileSpreadsheet size={14} /> Download Excel template
