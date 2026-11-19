@@ -61,9 +61,11 @@ export function AdminDashboard({ databaseClients, summary }: { databaseClients?:
       <div className="content">
         <div className="page-heading">
           <div>
+            <p className="eyebrow">CRM workspace</p>
             <h1>Workspace overview</h1>
+            <p>Monitor client coverage, publishing readiness, and the next action for your agency.</p>
           </div>
-          <div className="heading-actions"><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
+          <div className="heading-actions"><Link className="button" href="/admin/clients"><UsersRound size={14} /> View clients</Link><Link className="button primary" href="/admin/clients/new"><Plus size={14} /> Add client</Link></div>
         </div>
 
         <AgencyPulse clients={clients} summary={liveSummary} />
@@ -71,7 +73,7 @@ export function AdminDashboard({ databaseClients, summary }: { databaseClients?:
         <AdminWorkflow previewClient={previewClient} />
 
         <section className="card panel" id="clients">
-          <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has an isolated dashboard, activity log, and publishing state.</p></div><Link className="button" href="/admin/users"><UsersRound size={14} /> Manage users</Link></div>
+          <div className="panel-heading"><div><h2>Client workspaces</h2><p>Every client has isolated reporting services, portal access, and publishing state.</p></div><div className="panel-heading-actions"><Link className="button" href="/admin/clients">View all clients <ArrowUpRight size={12} /></Link><Link className="button" href="/admin/users"><UsersRound size={14} /> Manage users</Link></div></div>
           <div className="table-scroll"><table className="client-table"><thead><tr><th>Client</th><th>Portal coverage</th><th>Content</th><th>Last published</th><th>State</th><th /></tr></thead><tbody>{clients.map((client) => <tr key={client.id}><td><div className="client-name"><span className="client-logo">{client.initials}</span><span><strong>{client.businessName}</strong><small>{client.portalUsers ?? 0} portal users</small></span></div></td><td>{client.services.length ? client.services.map((service) => <span className="service-tag" key={service}>{service}</span>) : <span className="table-muted">Not configured</span>}</td><td><strong className="table-number">{client.publishedMetrics ?? 0}</strong><span className="table-muted"> published metrics</span></td><td>{client.lastPublished}</td><td><span className={`status ${client.status === "Paused" ? "progress" : client.draftCount ? "progress" : "complete"}`}>{client.status === "Paused" ? "Paused" : client.draftCount ? `${client.draftCount} to review` : "Ready"}</span></td><td><Link className="table-action" href={`/admin/clients/${client.id}`}>Manage client <ArrowUpRight size={12} style={{ verticalAlign: "-2px" }} /></Link></td></tr>)}</tbody></table></div>
         </section>
 

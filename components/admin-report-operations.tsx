@@ -122,7 +122,7 @@ export function AdminReportOperations({ clients, reports: startingReports }: { c
 
   return <AppShell mode="admin" clientName="AI Rankers" brandMark="AR" brandAccent="#f26b38" activeNav="Reports">
     <div className="content admin-report-page">
-      <div className="admin-report-heading"><div><p className="eyebrow">Reporting & content / Reports</p><h1>Report operations</h1><p>Upload, review, and deliver a client-ready PDF from one controlled workflow.</p></div><div className="admin-report-heading-note"><ShieldCheck size={17} /><span>Private client delivery</span></div></div>
+      <div className="admin-report-heading"><div><p className="eyebrow">Reporting & content / Reports</p><h1>Report operations</h1><p>Upload, review, and deliver a client-ready PDF from one controlled workflow.</p></div><div className="admin-report-heading-actions"><a className="button" href="/admin">Workspace overview</a><div className="admin-report-heading-note"><ShieldCheck size={17} /><span>Private client delivery</span></div></div></div>
 
       {error ? <div className="admin-report-alert error" role="alert"><X size={15} /> {error}<button type="button" onClick={() => setError(null)} aria-label="Dismiss error"><X size={14} /></button></div> : null}
       {notice ? <div className="admin-report-alert success" role="status"><Check size={15} /> {notice}</div> : null}

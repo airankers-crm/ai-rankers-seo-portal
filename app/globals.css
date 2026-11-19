@@ -642,6 +642,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .dashboard-grid > *, .bottom-grid > *, .seo-bottom-grid > *, .communication-layout > * { min-width: 0; }
 .panel { padding: 20px; }
 .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.panel-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .panel-heading h2 { margin: 0; color: var(--navy); font-family: "Manrope", sans-serif; font-size: 15px; letter-spacing: -.025em; }
 .panel-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
 .panel-link { color: var(--orange); font-size: 11px; font-weight: 800; }
@@ -848,8 +849,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .admin-settings-page { padding-top: 30px; }
 .admin-settings-heading { align-items: center; margin-bottom: 17px; }
 .admin-settings-heading .eyebrow { margin-bottom: 6px; }
+.admin-settings-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
 .admin-settings-heading-status { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #dce9e5; border-radius: 999px; color: #247c63; background: #f4fbf9; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .admin-settings-section-nav { position: sticky; z-index: 8; top: 12px; display: flex; align-items: center; gap: 4px; padding: 4px; margin-bottom: 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; background: rgba(248,250,252,.93); box-shadow: 0 8px 20px rgba(18,36,63,.06); backdrop-filter: blur(12px); scrollbar-width: thin; }
+.admin-settings-nav-title { padding: 0 7px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .admin-settings-section-nav a { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; padding: 8px 10px; border-radius: 7px; color: var(--muted); font-size: 10px; font-weight: 800; white-space: nowrap; }
 .admin-settings-section-nav a:hover, .admin-settings-section-nav a:focus-visible { color: var(--brand-purple); background: white; outline: 0; }
 .admin-settings-page section[id] { scroll-margin-top: 78px; }
@@ -2524,6 +2527,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
   .overview-list-row .status { grid-column: 2; justify-self: start; }
   .admin-settings-page { padding-top: 20px; }
   .admin-settings-heading { display: grid; gap: 12px; }
+  .admin-settings-heading-actions { justify-content: flex-start; }
   .admin-settings-heading-status { width: fit-content; }
   .admin-settings-section-nav { position: static; }
   .admin-settings-summary { align-items: flex-start; grid-template-columns: auto minmax(0, 1fr); }
@@ -3134,6 +3138,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 /* Report operations: one controlled upload workflow for agency operators. */
 .admin-report-page { display: grid; gap: 18px; max-width: 1480px; }
 .admin-report-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.admin-report-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
 .admin-report-heading h1 { margin: 0; color: var(--navy); font-family: "Manrope", sans-serif; font-size: clamp(28px, 3vw, 40px); letter-spacing: -.05em; }
 .admin-report-heading p:not(.eyebrow) { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
 .admin-report-heading-note { display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid #c9ebe1; border-radius: 999px; background: #f2fbf8; color: #128577; font-size: 11px; font-weight: 800; white-space: nowrap; }

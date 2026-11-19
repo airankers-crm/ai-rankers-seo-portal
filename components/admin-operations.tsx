@@ -18,6 +18,7 @@ export type AdminOperationConfig = {
   emptyTitle: string;
   emptyDescription: string;
   primaryAction?: { label: string; href: string };
+  secondaryAction?: { label: string; href: string };
   rowAction?: { label: string; hrefPrefix: string; hrefSuffix?: string; menu?: Array<{ label: string; hrefSuffix: string }> };
   showContext?: boolean;
 };
@@ -41,7 +42,7 @@ export function AdminOperationsPage({ config }: { config: AdminOperationConfig }
             <h1>{config.title}</h1>
             {config.description ? <p>{config.description}</p> : null}
           </div>
-          {config.primaryAction ? <div className="heading-actions"><a className="button primary" href={config.primaryAction.href}>{config.primaryAction.label} <ArrowUpRight size={14} /></a></div> : null}
+          {config.primaryAction || config.secondaryAction ? <div className="heading-actions">{config.secondaryAction ? <a className="button" href={config.secondaryAction.href}>{config.secondaryAction.label}</a> : null}{config.primaryAction ? <a className="button primary" href={config.primaryAction.href}>{config.primaryAction.label} <ArrowUpRight size={14} /></a> : null}</div> : null}
         </div>
 
         {config.showContext !== false ? <section className="ops-context card">

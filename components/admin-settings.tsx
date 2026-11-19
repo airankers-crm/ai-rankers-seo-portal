@@ -116,10 +116,11 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
             <h1>Workspace settings</h1>
             <p>Manage the defaults and controls that shape every client workspace.</p>
           </div>
-          <div className="admin-settings-heading-status"><span className="dot" /> {preview ? "Preview mode" : "Workspace ready"}</div>
+          <div className="admin-settings-heading-actions"><Link className="button" href="/admin/clients">Manage clients</Link><Link className="button" href="/admin">Workspace overview</Link><div className="admin-settings-heading-status"><span className="dot" /> {preview ? "Preview mode" : "Workspace ready"}</div></div>
         </div>
 
         <nav className="admin-settings-section-nav" aria-label="Settings sections">
+          <span className="admin-settings-nav-title">Jump to</span>
           {settingsSections.map((section) => {
             const Icon = section.icon;
             return <a href={`#${section.id}`} key={section.id}><Icon size={13} />{section.label}</a>;
@@ -134,6 +135,7 @@ export function AdminSettings({ initialSettings, preview = false }: { initialSet
             <h2>One place for workspace-wide defaults</h2>
             <p>These controls define the agency experience. Client-specific values remain managed from each client workspace.</p>
           </div>
+          <div className="admin-settings-summary-score"><strong>{settingsSections.length}</strong><span>Control areas</span></div>
         </section>
 
         {notice ? <p className={notice.kind === "error" ? "auth-error admin-settings-notice" : "auth-success admin-settings-notice"} role="status">{notice.text}</p> : null}
