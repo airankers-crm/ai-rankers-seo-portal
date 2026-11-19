@@ -29,7 +29,7 @@ function formatTimezone(value: string) {
   const normalized = value.replaceAll("_", " ");
   try {
     const label = new Intl.DateTimeFormat("en-US", { timeZone: value, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((part) => part.type === "timeZoneName")?.value;
-    return label && label !== normalized ? `${label} (${normalized})` : normalized;
+    return label && label !== normalized ? `${label} (${value})` : normalized;
   } catch {
     return normalized;
   }
