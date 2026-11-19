@@ -103,6 +103,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .breadcrumb strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-status { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #dce9e5; border-radius: 999px; color: #26796d; background: #f4fbf9; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .topbar-help { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: white; transition: border-color .2s var(--ease-standard), color .2s var(--ease-standard), background .2s var(--ease-standard), transform .2s var(--ease-standard); }
+.topbar-notification-badge { position: absolute; top: -6px; right: -6px; display: grid; min-width: 17px; height: 17px; padding: 0 4px; place-items: center; border: 2px solid white; border-radius: 999px; color: white; background: #d94b4b; font-size: 8px; font-weight: 900; line-height: 1; }
+.topbar-help:has(.topbar-notification-badge) { position: relative; color: #a33232; border-color: #efcaca; background: #fff8f8; }
 .topbar-help:hover { border-color: #cbd3e0; color: var(--navy); background: #fbfcfe; transform: translateY(-1px); }
 .topbar-account { position: relative; }
 .topbar-account-trigger { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 4px 7px 4px 5px; border: 1px solid transparent; border-radius: 10px; color: var(--muted); background: transparent; text-align: left; }
