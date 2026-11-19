@@ -25,6 +25,16 @@ type PortalSettingsProps = {
 
 type Notice = { kind: "success" | "error"; text: string } | null;
 
+function formatTimezone(value: string) {
+  const normalized = value.replaceAll("_", " ");
+  try {
+    const label = new Intl.DateTimeFormat("en-US", { timeZone: value, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((part) => part.type === "timeZoneName")?.value;
+    return label && label !== normalized ? `${label} (${normalized})` : normalized;
+  } catch {
+    return normalized;
+  }
+}
+
 function Toggle({ checked, label, description, onChange, disabled = false }: { checked: boolean; label: string; description: string; onChange: () => void; disabled?: boolean }) {
   return (
     <button className="portal-setting-toggle" type="button" role="switch" aria-checked={checked} onClick={onChange} disabled={disabled}>
@@ -122,7 +132,7 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
                 <div><span>Phone</span><strong>{businessPhone || "Not provided"}</strong></div>
                 <div><span>Service area</span><strong>{serviceArea || "Not provided"}</strong></div>
                 <div><span>Business hours</span><strong>{businessHours || "Not provided"}</strong></div>
-                <div><span>Reporting timezone</span><strong>{clientTimezone.replace("_", " ")}</strong></div>
+                <div><span>Reporting timezone</span><strong>{formatTimezone(clientTimezone)}</strong></div>
               </div>
               <div className="portal-settings-inline-note"><ShieldCheck size={13} /><span>Business identity changes are managed by the AI Rankers team so reports stay consistent.</span><Link href="/portal/feedback">Request an update <ChevronRight size={12} /></Link></div>
             </section>
@@ -146,7 +156,7 @@ export function PortalSettings({ clientName, brandMark, brandAccent, clientTimez
                   <label>Full name<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" disabled={!canEditProfile} /></label>
                   <label>Email address<span className="label-hint">Managed by your sign-in</span><input value={userEmail || "Not available"} readOnly /></label>
                   <label>Client workspace<span className="label-hint">Assigned by your agency</span><input value={clientName} readOnly /></label>
-                  <label>Reporting timezone<span className="label-hint">Used for report periods</span><input value={clientTimezone.replace("_", " ")} readOnly /></label>
+                  <label>Reporting timezone<span className="label-hint">Used for report periods</span><input value={formatTimezone(clientTimezone)} readOnly /></label>
                 </div>
                 {profileNotice ? <p className={profileNotice.kind === "error" ? "auth-error" : "auth-success"} role="status">{profileNotice.text}</p> : null}
                 <div className="portal-settings-form-footer"><span className="portal-settings-readonly"><LockKeyhole size={12} /> Email and workspace access are controlled securely.</span><button className="button primary" type="submit" disabled={savingName || !profileDirty || name.trim().length < 2}>{savingName ? "Saving…" : profileDirty ? "Save profile" : "Profile saved"}</button></div>

@@ -26,19 +26,21 @@ function statusClass(status: RecentRequest["status"]) {
   return status === "REVIEWED" ? "in-progress" : status === "RESOLVED" ? "resolved" : "open";
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+function formatDateInZone(value: string, timeZone = "UTC") {
+  return new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+function formatDateTimeInZone(value: string, timeZone = "UTC") {
+  return new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
 function subjectFromMessage(message: string, fallback: string) {
   return message.split("\n")[0].replace(/^Subject:\s*/, "") || fallback;
 }
 
-export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentRequest[] }) {
+export function PortalFeedbackPage({ recentRequests, timeZone = "UTC" }: { recentRequests: RecentRequest[]; timeZone?: string }) {
+  const formatDate = (value: string) => formatDateInZone(value, timeZone);
+  const formatDateTime = (value: string) => formatDateTimeInZone(value, timeZone);
   const [requests, setRequests] = useState(recentRequests);
   const [activeSection, setActiveSection] = useState<"new" | "history">(recentRequests.length ? "history" : "new");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(recentRequests[0]?.id ?? null);
@@ -174,7 +176,7 @@ export function PortalFeedbackPage({ recentRequests }: { recentRequests: RecentR
       <section className="card feedback-help-card">
         <div className="feedback-card-heading"><div className="feedback-card-icon teal"><Headphones size={19} /></div><div><h2>How can we help?</h2><p>We keep every request connected to your client workspace.</p></div></div>
         <div className="feedback-support-item teal"><Clock3 size={18} /><div><strong>Typical response within 1 business day</strong><span>We will follow up in the client portal.</span></div></div>
-        <div className="feedback-support-item blue"><Clock3 size={18} /><div><strong>Support hours</strong><span>Mon - Fri, 9:00 AM - 5:00 PM (ET)</span></div></div>
+        <div className="feedback-support-item blue"><Clock3 size={18} /><div><strong>Support hours</strong><span>Mon - Fri, 9:00 AM - 5:00 PM (agency time)</span></div></div>
       </section>
 
       <section className="card feedback-recent-card" aria-labelledby="recent-requests-title">

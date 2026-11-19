@@ -3680,6 +3680,9 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .analytics-reference-heading p { margin: 6px 0 0; color: #5f6d84; font-size: 14px; }
 .analytics-reference-accent { display: inline-block; width: 4px; height: 38px; margin-right: 10px; vertical-align: middle; border-radius: 99px; background: #f26b38; }
 .analytics-reference-heading-actions { display: flex; align-items: center; gap: 18px; padding-top: 5px; }
+.analytics-reference-heading-links { display: flex; align-items: center; gap: 10px; }
+.analytics-reference-heading-links a { color: #2167d9; font-size: 10px; font-weight: 800; text-decoration: none; }
+.analytics-reference-heading-links a:hover { text-decoration: underline; }
 .analytics-reference-connected { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 13px; color: #0d7a4b; background: #dff7e9; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .analytics-reference-period { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; border: 1px solid #c4cddd; border-radius: 8px; color: #1f2d49; background: #fff; font-size: 12px; font-weight: 800; }
 .analytics-reference-period select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }

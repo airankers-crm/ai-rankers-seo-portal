@@ -9,7 +9,7 @@ export default async function FeedbackPage() {
   const access = await requirePortalAccess();
   const client = await prisma.client.findUnique({
     where: { id: access.user?.clientId ?? "__no_client__" },
-    select: { businessName: true, brandMark: true, brandAccent: true },
+    select: { businessName: true, brandMark: true, brandAccent: true, timezone: true },
   });
   const recentFeedback = access.user?.clientId ? await prisma.feedback.findMany({
     where: { clientId: access.user.clientId },
@@ -27,7 +27,7 @@ export default async function FeedbackPage() {
           <p>Send a question, request, or update directly to The AI Rankers team.</p>
         </div>
       </div>
-      <PortalFeedbackPage recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), replies: item.replies.map((reply) => ({ id: reply.id, message: reply.message, createdAt: reply.createdAt.toISOString(), authorName: reply.author.name || reply.author.email })) }))} />
+      <PortalFeedbackPage timeZone={client?.timezone} recentRequests={recentFeedback.map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), replies: item.replies.map((reply) => ({ id: reply.id, message: reply.message, createdAt: reply.createdAt.toISOString(), authorName: reply.author.name || reply.author.email })) }))} />
     </div>
   </AppShell>;
 }

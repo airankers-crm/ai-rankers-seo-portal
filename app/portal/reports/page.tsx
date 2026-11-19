@@ -26,5 +26,5 @@ export default async function ReportsPage() {
   }
 
   const reports: ReportListItem[] = client.reports.map((report) => ({ id: report.id, title: report.title, type: report.type, service: getReportService(report.type, report.title), kind: getReportKind(report.periodLabel, report.type), periodLabel: report.periodLabel, status: report.deliveryStatus === "SENT" ? "SENT" : report.status, publishedAt: report.createdAt.toISOString(), updatedAt: report.updatedAt.toISOString(), freshness: "PRESENTATION", hasFile: Boolean(report.storageKey), originalFileName: report.originalFileName, fileSizeBytes: report.sizeBytes }));
-  return <ReportCenter clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} reports={reports} />;
+  return <ReportCenter clientName={client.businessName} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} timeZone={client.timezone} reports={reports} />;
 }

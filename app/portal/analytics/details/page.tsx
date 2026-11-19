@@ -24,7 +24,7 @@ export default async function AnalyticsDetailsPage() {
 
   const metricsWithValues = client?.metrics.filter((metric) => metric.values.length > 0) ?? [];
   const reportingPeriods = new Set(metricsWithValues.flatMap((metric) => metric.values.map((value) => value.periodStart.toISOString())));
-  const latestPeriod = metricsWithValues.flatMap((metric) => metric.values.map((value) => value.periodEnd)).sort((left, right) => right.getTime() - left.getTime())[0];
+  const latestPeriod = metricsWithValues.flatMap((metric) => metric.values.map((value) => value.periodStart)).sort((left, right) => right.getTime() - left.getTime())[0];
   const trackedEventLabels = new Map([
     ["ga4-phone-clicks", "phone_click"],
     ["ga4-form-submissions", "form_submit"],
@@ -39,7 +39,7 @@ export default async function AnalyticsDetailsPage() {
     availableMetricCount={metricsWithValues.length}
     expectedMetricCount={11}
     reportingPeriodCount={reportingPeriods.size}
-    latestPeriodLabel={latestPeriod?.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) ?? null}
+    latestPeriodLabel={latestPeriod?.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" }) ?? null}
     trackedEvents={trackedEvents}
   />;
 }

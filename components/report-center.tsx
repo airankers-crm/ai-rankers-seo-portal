@@ -37,8 +37,8 @@ function statusLabel(status: ReportStatus) {
   if (status === "FAILED") return "Delivery failed";
   return "Draft";
 }
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+function formatDate(date: string, timeZone = "UTC") {
+  return new Date(date).toLocaleDateString("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatPeriod(date: Date) {
@@ -63,7 +63,7 @@ type ReportFilters = {
 
 const defaultFilters: ReportFilters = { kind: "MONTHLY", service: "ALL", period: "ALL", status: "ALL", query: "" };
 
-export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { clientName: string; brandMark: string; brandAccent: string; reports: ReportListItem[] }) {
+export function ReportCenter({ clientName, brandMark, brandAccent, reports, timeZone = "UTC" }: { clientName: string; brandMark: string; brandAccent: string; reports: ReportListItem[]; timeZone?: string }) {
   useEffect(() => {
     void fetch("/api/portal/reports/read", { method: "POST" })
       .then(() => window.dispatchEvent(new Event("portal-report-seen")))
@@ -125,7 +125,7 @@ export function ReportCenter({ clientName, brandMark, brandAccent, reports }: { 
           <div className="report-list-main">
             <div className="report-list-top"><span className={"report-service-pill report-service-pill-" + serviceSlug}>{reportServiceLabel(report.service)}</span><div className="report-list-badges"><span className={"report-status " + statusClass}><CheckCircle2 size={12} /> {statusLabel(report.status)}</span><span className="report-coverage-pill"><Layers3 size={12} /> Source coverage included</span></div></div>
             <h3>{report.title}</h3>
-            <div className="report-list-meta"><span><CalendarDays size={12} /> Period: {report.periodLabel}</span><span>Published: {formatDate(report.publishedAt)}</span><span>Comparison: {comparisonLabel(report.periodLabel)}</span></div>
+            <div className="report-list-meta"><span><CalendarDays size={12} /> Period: {report.periodLabel}</span><span>Published: {formatDate(report.publishedAt, timeZone)}</span><span>Comparison: {comparisonLabel(report.periodLabel)}</span></div>
           </div>
           <div className="report-list-action">{report.hasFile ? <div className="report-file-actions"><a className="button primary" href={`/api/reports/${encodeURIComponent(report.id)}/file`} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a><a className="report-download-link" href={`/api/reports/${encodeURIComponent(report.id)}/file?download=1`}>Download <Download size={13} /></a></div> : <Link className="button primary" href={"/portal/reports/" + report.id}>View report <ArrowRight size={14} /></Link>}</div>
         </article>;
