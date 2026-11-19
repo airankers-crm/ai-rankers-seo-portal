@@ -10,7 +10,7 @@ import { CsvImportPanel } from "../../../../components/csv-import-panel";
 import { ClientSectionEditor } from "../../../../components/client-section-editor";
 import { ClientPublishControls } from "../../../../components/client-publish-controls";
 import { ClientDataSourceToggle } from "../../../../components/client-data-source-toggle";
-import { ClientBusinessProfileStep, ClientReviewStep, ClientSetupWizard, ClientSourceChecklist, ClientSourceToolbar, getClientSetupStep } from "../../../../components/client-setup-wizard";
+import { ClientBusinessProfileStep, ClientReviewStep, ClientSourceChecklist, ClientSourceToolbar, getClientSetupStep } from "../../../../components/client-setup-wizard";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 import { getWorkspaceSettings } from "../../../../lib/admin-settings";
 import { provisionGoogleMetrics, provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
@@ -126,12 +126,11 @@ export default async function ClientWorkspacePage({ params, searchParams }: { pa
             <Link className="back-link" href="/admin"><ArrowLeft size={13} /> Back to workspace overview</Link>
             <p className="eyebrow">Client workspace</p>
             <h1>{client.businessName}</h1>
-            <p>Set up this client workspace one step at a time, review the presentation, then publish only approved changes.</p>
           </div>
           <span className="status complete">{client.status}</span>
         </div>
 
-        <ClientSetupWizard clientId={client.id} currentStep={currentStep}>{stepContent}</ClientSetupWizard>
+        <div className="client-setup-content">{stepContent}</div>
       </div>
     </AppShell>
   );
