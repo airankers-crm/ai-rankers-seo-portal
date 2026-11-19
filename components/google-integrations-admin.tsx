@@ -133,12 +133,6 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage }: { clients: In
         <span className="integration-page-status"><span className="integration-live-dot" /> Provider status</span>
       </div>
 
-      <section className="integration-trust-banner card">
-        <span className="integration-trust-icon"><ShieldCheck size={18} /></span>
-        <div><strong>Secure connection management</strong><p>Google credentials stay server-side. Client users only see approved reporting in their portal.</p></div>
-        <span className="integration-scope-badge">Admin controlled</span>
-      </section>
-
       <section className="integration-workspace-picker card">
         <div className="integration-picker-intro"><span className="integration-picker-icon"><Building2 size={18} /></span><div><p className="eyebrow">Workspace</p><h2>Select a client workspace</h2><p>Choose the client whose Google resources you want to manage.</p></div></div>
         <label className="integration-workspace-field"><span>Client workspace</span><div className="integration-select-shell"><select value={selectedId} onChange={(event) => selectClient(event.target.value)}>{clients.map((client) => <option key={client.id} value={client.id}>{client.businessName}</option>)}</select></div></label>

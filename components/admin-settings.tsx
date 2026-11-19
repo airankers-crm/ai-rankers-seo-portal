@@ -151,7 +151,6 @@ export function AdminSettings({ initialSettings, preview = false, sources = prev
             <h2>One place for workspace-wide defaults</h2>
             <p>These controls define the agency experience. Client-specific values remain managed from each client workspace.</p>
           </div>
-          <div className="admin-settings-summary-score"><strong>{sources.filter((source) => source.tone === "ready").length} / {sources.length}</strong><span>sources connected</span></div>
         </section>
 
         {notice ? <p className={notice.kind === "error" ? "auth-error admin-settings-notice" : "auth-success admin-settings-notice"} role="status">{notice.text}</p> : null}
