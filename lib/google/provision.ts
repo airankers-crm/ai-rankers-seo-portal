@@ -31,44 +31,85 @@ const SECTION_DEFAULTS = {
   GBP: { name: "GBP Performance", position: 2 },
 } as const;
 
+const REPORTING_SECTION_KINDS = ["OVERVIEW", "WEBSITE", "GBP"] as const;
+type ReportingSectionKind = (typeof REPORTING_SECTION_KINDS)[number];
+
+type ProvisionSection = {
+  id: string;
+  kind: ReportingSectionKind;
+  presentationId: string | null;
+};
+
 const WEBSITE_GSC_METRIC_DEFINITIONS = [
   ...GOOGLE_METRIC_DEFINITIONS.filter((definition) => ["ga4-organic-sessions", "gsc-clicks", "gsc-impressions", "gsc-ctr", "gsc-position"].includes(definition.key)),
   { key: "kw-top10", name: "Keywords in top 10", description: "Tracked keywords currently appearing within the first ten organic results.", source: "DATAFORSEO" as const, section: "WEBSITE" as const, displayType: "NUMBER_CARD" as const, valueFormat: "RANK" as const },
 ] as const;
 
+async function ensureReportingSections(database: Database, clientId: string) {
+  const existing = await database.section.findMany({
+    where: { clientId, kind: { in: [...REPORTING_SECTION_KINDS] } },
+    select: { id: true, kind: true, presentation: { select: { id: true } } },
+  });
+  const sections = new Map<ReportingSectionKind, ProvisionSection>(existing.map((section) => [section.kind as ReportingSectionKind, { id: section.id, kind: section.kind as ReportingSectionKind, presentationId: section.presentation?.id ?? null }]));
+
+  for (const kind of REPORTING_SECTION_KINDS) {
+    if (sections.has(kind)) continue;
+    const created = await database.section.create({
+      data: { clientId, kind, ...SECTION_DEFAULTS[kind], isVisible: true, isDraft: false },
+      select: { id: true },
+    });
+    sections.set(kind, { id: created.id, kind, presentationId: null });
+  }
+
+  return sections;
+}
+
 export async function provisionWebsiteGscMetrics(clientId: string, database?: Database) {
   database ??= (await import("@ai-rankers/db")).prisma;
-  const existing = await database.section.findFirst({ where: { clientId, kind: "WEBSITE" }, select: { id: true } });
-  const section = existing ?? await database.section.create({ data: { clientId, kind: "WEBSITE", ...SECTION_DEFAULTS.WEBSITE, isVisible: true, isDraft: false }, select: { id: true } });
+  const section = (await ensureReportingSections(database, clientId)).get("WEBSITE");
+  if (!section) return;
 
-  for (const definition of WEBSITE_GSC_METRIC_DEFINITIONS) {
-    await database.metric.upsert({
-      where: { clientId_key: { clientId, key: definition.key } },
-      update: definition.source === "GSC" ? { sectionId: section.id } : {},
-      create: { clientId, sectionId: section.id, key: definition.key, name: definition.name, description: definition.description, source: definition.source, displayType: definition.displayType, valueFormat: definition.valueFormat, isVisible: true, isDraft: false },
-    });
-  }
+  const existingMetrics = await database.metric.findMany({
+    where: { clientId, key: { in: WEBSITE_GSC_METRIC_DEFINITIONS.map((definition) => definition.key) } },
+    select: { key: true, sectionId: true },
+  });
+  const existingByKey = new Map(existingMetrics.map((metric) => [metric.key, metric]));
+  const writes = WEBSITE_GSC_METRIC_DEFINITIONS.flatMap((definition) => {
+    const existing = existingByKey.get(definition.key);
+    if (!existing) {
+      return [database!.metric.create({
+        data: { clientId, sectionId: section.id, key: definition.key, name: definition.name, description: definition.description, source: definition.source, displayType: definition.displayType, valueFormat: definition.valueFormat, isVisible: true, isDraft: false },
+      })];
+    }
+    return definition.source === "GSC" && existing.sectionId !== section.id
+      ? [database!.metric.update({ where: { clientId_key: { clientId, key: definition.key } }, data: { sectionId: section.id } })]
+      : [];
+  });
+  await Promise.all(writes);
 }
 
 export async function provisionGoogleMetrics(clientId: string, database?: Database) {
   database ??= (await import("@ai-rankers/db")).prisma;
-  const sections = new Map<string, { id: string }>();
-  for (const kind of ["OVERVIEW", "WEBSITE", "GBP"] as const) {
-    const existing = await database.section.findFirst({ where: { clientId, kind }, select: { id: true } });
-    const section = existing ?? await database.section.create({ data: { clientId, kind, ...SECTION_DEFAULTS[kind], isVisible: true, isDraft: false }, select: { id: true } });
-    sections.set(kind, section);
-  }
+  const sections = await ensureReportingSections(database, clientId);
 
   const gbpSection = sections.get("GBP");
-  if (gbpSection) await database.gbpPresentation.upsert({ where: { sectionId: gbpSection.id }, update: {}, create: { sectionId: gbpSection.id } });
+  if (gbpSection && !gbpSection.presentationId) await database.gbpPresentation.create({ data: { sectionId: gbpSection.id } });
 
-  for (const definition of GOOGLE_METRIC_DEFINITIONS) {
+  const existingMetrics = await database.metric.findMany({
+    where: { clientId, key: { in: GOOGLE_METRIC_DEFINITIONS.map((definition) => definition.key) } },
+    select: { key: true, sectionId: true },
+  });
+  const existingByKey = new Map(existingMetrics.map((metric) => [metric.key, metric]));
+  const writes = GOOGLE_METRIC_DEFINITIONS.flatMap((definition) => {
     const section = sections.get(definition.section);
-    if (!section) continue;
-    await database.metric.upsert({
-      where: { clientId_key: { clientId, key: definition.key } },
-      update: definition.source === "GSC" ? { sectionId: section.id } : {},
-      create: {
+    const existing = existingByKey.get(definition.key);
+    if (!section || existing) {
+      return existing && definition.source === "GSC" && section && existing.sectionId !== section.id
+        ? [database!.metric.update({ where: { clientId_key: { clientId, key: definition.key } }, data: { sectionId: section.id } })]
+        : [];
+    }
+    return [database!.metric.create({
+      data: {
         clientId,
         sectionId: section.id,
         key: definition.key,
@@ -80,8 +121,9 @@ export async function provisionGoogleMetrics(clientId: string, database?: Databa
         isVisible: true,
         isDraft: false,
       },
-    });
-  }
+    })];
+  });
+  await Promise.all(writes);
 }
 
 export async function writeGoogleMetricValue(input: {

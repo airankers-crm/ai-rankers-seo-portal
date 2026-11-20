@@ -32,6 +32,7 @@ export type GoogleRealtimeList = Array<{ label: string; value: number }>;
 
 export type GoogleRealtimeResult = {
   capturedAt: string;
+  isManaged?: boolean;
   activeUsers30Minutes: number;
   activeUsers5Minutes: number;
   activeUsersPerMinute: Array<{ label: string; value: number }>;

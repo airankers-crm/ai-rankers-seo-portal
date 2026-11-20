@@ -20,7 +20,6 @@ The repository is a pnpm workspace with a PostgreSQL/Neon database layer and Neo
 - `/admin/clients` — client management
 - `/admin/clients/[id]` — client workspace settings, goals, members, and invitations
 - `/admin/users` — role and access management
-- `/admin/activities` — agency activity operations
 - `/admin/goals` — goal operations
 - `/admin/reports` — report operations
 - `/admin/integrations` — provider readiness boundary

@@ -24,15 +24,16 @@ type Resources = {
   gbpLocations: Array<{ id: string; label: string; accountId: string }>;
 };
 
-function statusLabel(status: string) {
-  if (status === "CONNECTED") return "Connected";
+function statusLabel(status: string, configuredResourceCount: number) {
+  if (status === "CONNECTED") return configuredResourceCount === 4 ? "Connected" : "Connected · setup incomplete";
   if (status === "CONNECTING") return "Connecting";
   if (status === "RECONNECT_REQUIRED") return "Reconnect required";
   if (status === "ERROR") return "Error";
   return "Not connected";
 }
 
-function statusClass(status: string) {
+function statusClass(status: string, configuredResourceCount: number) {
+  if (status === "CONNECTED" && configuredResourceCount < 4) return "is-warning";
   if (status === "CONNECTED") return "is-connected";
   if (status === "ERROR" || status === "RECONNECT_REQUIRED") return "is-warning";
   return "is-pending";
@@ -141,7 +142,7 @@ export function GoogleIntegrationsAdmin({ clients, queryMessage, workspaceTimezo
       {selected ? <section className="integration-connection-card card">
         <div className="integration-card-header">
           <div className="integration-client-identity"><span className="integration-client-mark">{selected.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><p className="eyebrow">Google connection</p><h2>{selected.businessName}</h2><p className="integration-account"><Globe2 size={13} /> {selected.googleAccountEmail ?? "No Google account connected"}</p></div></div>
-          <span className={`integration-status ${statusClass(selected.status)}`}><span className="integration-status-dot" />{statusLabel(selected.status)}</span>
+          <span className={`integration-status ${statusClass(selected.status, configuredResourceCount)}`}><span className="integration-status-dot" />{statusLabel(selected.status, configuredResourceCount)}</span>
         </div>
 
         {selected.status === "CONNECTED" ? <>

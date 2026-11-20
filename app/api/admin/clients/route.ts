@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@ai-rankers/db";
 import { requireAdminAccess } from "../../../../lib/auth/access";
 import { getWorkspaceSettings } from "../../../../lib/admin-settings";
+import { provisionGoogleMetrics, provisionWebsiteGscMetrics } from "../../../../lib/google/provision";
 import { parseSafeHttpUrl } from "../../../../lib/security/urls";
 
 export const dynamic = "force-dynamic";
@@ -51,28 +52,33 @@ export async function POST(request: Request) {
   const slug = await getUniqueSlug(baseSlug);
   const workspaceSettings = await getWorkspaceSettings();
 
-  const client = await prisma.client.create({
-    data: {
-      businessName,
-      slug,
-      websiteUrl,
-      contactEmail,
-      timezone: workspaceSettings.defaultTimezone,
-      sections: {
-        create: [
-          { name: "Overview", kind: "OVERVIEW", position: 0 },
-          { name: "Website SEO", kind: "WEBSITE", position: 1 },
-          { name: "GBP Performance", kind: "GBP", position: 2 },
-        ],
-      },
-      auditLogs: {
-        create: {
-          actorId: access.user.id,
-          action: "CLIENT_CREATED",
-          entityType: "Client",
+  const client = await prisma.$transaction(async (transaction) => {
+    const created = await transaction.client.create({
+      data: {
+        businessName,
+        slug,
+        websiteUrl,
+        contactEmail,
+        timezone: workspaceSettings.defaultTimezone,
+        sections: {
+          create: [
+            { name: "Overview", kind: "OVERVIEW", position: 0 },
+            { name: "Website SEO", kind: "WEBSITE", position: 1 },
+            { name: "GBP Performance", kind: "GBP", position: 2 },
+          ],
+        },
+        auditLogs: {
+          create: {
+            actorId: access.user.id,
+            action: "CLIENT_CREATED",
+            entityType: "Client",
+          },
         },
       },
-    },
+    });
+    await provisionGoogleMetrics(created.id, transaction);
+    await provisionWebsiteGscMetrics(created.id, transaction);
+    return created;
   });
 
   return NextResponse.json({ id: client.id, slug: client.slug }, { status: 201 });
