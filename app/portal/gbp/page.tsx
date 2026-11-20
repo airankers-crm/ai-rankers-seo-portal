@@ -64,12 +64,13 @@ export default async function GbpPage({ searchParams }: { searchParams?: Promise
 
   const rows = [...rowMap.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
   const hasGbpSource = client.metrics.some((metric) => metric.source === "GBP");
+  const connectionStatus = client.dataMode === "MANAGED" ? "manual" : hasGbpSource && rows.length > 0 ? "connected" : "not-connected";
 
   const isSuperAdmin = access.user?.role === "SUPER_ADMIN";
 
   return (
     <>
-      <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={hasGbpSource && rows.length > 0 ? "connected" : "not-connected"} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />
+      <GbpPerformanceDashboard clientName={client.businessName} presentation={presentation} isSectionPublished={sectionIsPublished} connectionStatus={connectionStatus} brandMark={client.brandMark ?? client.businessName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} brandAccent={client.brandAccent} metrics={metrics} rows={rows} />
       {isSuperAdmin && <div className="content" style={{ marginTop: "1.5rem" }}><CsvImportPanel clientId={client.id} screen="gbp" /></div>}
     </>
   );

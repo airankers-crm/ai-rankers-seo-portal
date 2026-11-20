@@ -1,4 +1,5 @@
 import { prisma } from "@ai-rankers/db";
+import { unstable_cache } from "next/cache";
 import { requirePortalService } from "../../../lib/auth/access";
 import { AnalyticsDashboard, type AnalyticsMetric, type AnalyticsRow } from "../../../components/analytics-dashboard";
 import { CsvImportPanel } from "../../../components/csv-import-panel";
@@ -21,13 +22,15 @@ const metricConfig = [
 
 type MetricKey = typeof metricConfig[number]["viewKey"];
 
-async function getAnalyticsClient(clientId: string) {
-  const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
-  if (!settings) return null;
-  return prisma.client.findUnique({
-    where: { id: clientId },
-    include: { metrics: { where: { source: "GA4", isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 12 } }, orderBy: { position: "asc" } } },
-  });
+function getCachedAnalyticsClient(clientId: string) {
+  return unstable_cache(async () => {
+    const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+    if (!settings) return null;
+    return prisma.client.findUnique({
+      where: { id: clientId },
+      include: { metrics: { where: { source: "GA4", isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 12 } }, orderBy: { position: "asc" } } },
+    });
+  }, ["portal-analytics", clientId], { revalidate: 60, tags: [`portal-analytics:${clientId}`] })();
 }
 
 function formatPeriod(date: Date) {
@@ -37,7 +40,7 @@ function formatPeriod(date: Date) {
 export default async function AnalyticsPage() {
   const access = await requirePortalService("analytics");
   const clientId = access.user?.clientId;
-  const client = clientId ? await getAnalyticsClient(clientId) : null;
+  const client = clientId ? await getCachedAnalyticsClient(clientId) : null;
 
   if (!client) return <AnalyticsDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 

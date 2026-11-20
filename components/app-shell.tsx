@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { SignOutButton } from "./sign-out-button";
 import { PortalLiveSync } from "./portal-live-sync";
 import { PortalPreferenceEffects } from "./portal-preference-effects";
+import { getPortalClientJson, invalidatePortalClientCache } from "../lib/portal-client-cache";
 import {
   BarChart3,
   Building2,
@@ -114,20 +115,19 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
     let active = true;
 
     if (mode === "portal") {
-      void fetch("/api/portal/services", { cache: "no-store" }).then(async (response) => {
-        if (!active || !response.ok) return;
-        const payload = await response.json() as Partial<PortalServiceEntitlements>;
+      void getPortalClientJson<Partial<PortalServiceEntitlements>>("/api/portal/services", { ttlMs: 60_000 }).then((payload) => {
+        if (!active) return;
         setPortalServices({ website: payload.website !== false, analytics: payload.analytics !== false, gbp: payload.gbp !== false });
       }).catch(() => {
         // Keep navigation available if entitlement lookup is temporarily unavailable.
       });
     }
 
-    async function refreshNotifications() {
+    async function refreshNotifications(force = false) {
       try {
-        const response = await fetch(mode === "portal" ? "/api/portal/notifications" : "/api/admin/notifications", { cache: "no-store" });
-        if (!active || !response.ok) return;
-        const payload = await response.json() as { reports?: number; feedback?: number };
+        const endpoint = mode === "portal" ? "/api/portal/notifications" : "/api/admin/notifications";
+        const payload = await getPortalClientJson<{ reports?: number; feedback?: number }>(endpoint, { ttlMs: 15_000, force });
+        if (!active) return;
         if (mode === "portal") setUnreadReports(Number.isFinite(payload.reports) ? Math.max(0, payload.reports ?? 0) : 0);
         else setUnreadFeedback(Number.isFinite(payload.feedback) ? Math.max(0, payload.feedback ?? 0) : 0);
       } catch {
@@ -135,25 +135,34 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
       }
     }
 
-    async function markAdminFeedbackViewed() {
-      if (mode !== "admin" || pathname !== "/admin/feedback") return;
-      try {
-        await fetch("/api/admin/notifications", { method: "POST" });
-        if (active) setUnreadFeedback(0);
-      } catch {
-        // The inbox remains usable if marking notifications read fails.
-      }
-    }
-
     void refreshNotifications();
-    void markAdminFeedbackViewed();
     const interval = window.setInterval(() => void refreshNotifications(), 30_000);
-    const onReportSeen = () => void refreshNotifications();
+    const onReportSeen = () => {
+      if (mode === "portal") invalidatePortalClientCache("/api/portal/notifications");
+      void refreshNotifications(true);
+    };
     window.addEventListener("portal-report-seen", onReportSeen);
     return () => {
       active = false;
       window.clearInterval(interval);
       window.removeEventListener("portal-report-seen", onReportSeen);
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "admin" || pathname !== "/admin/feedback") return;
+    let active = true;
+    void fetch("/api/admin/notifications", { method: "POST" })
+      .then(() => {
+        if (!active) return;
+        invalidatePortalClientCache("/api/admin/notifications");
+        setUnreadFeedback(0);
+      })
+      .catch(() => {
+        // The inbox remains usable if marking notifications read fails.
+      });
+    return () => {
+      active = false;
     };
   }, [mode, pathname]);
   const navGroups: NavGroup[] = mode === "admin" ? adminNavGroups : portalNavGroups;
@@ -202,7 +211,7 @@ export function AppShell({ children, mode, clientName, brandMark, brandAccent, a
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <aside id="portal-navigation" className={`sidebar${mobileOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}>
         <div className="brand">
-          {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} priority /></div>}
+          {collapsed ? <div className="brand-mark-image"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={52} height={17} style={{ width: "48px", height: "auto" }} priority /></div> : <div className="brand-logo-panel"><Image src="/branding/ai-rankers/brand_logo.png" alt="The AI Rankers" width={146} height={47} style={{ width: "146px", height: "auto" }} priority /></div>}
           <span className="brand-sub">SEO intelligence</span>
         </div>
 

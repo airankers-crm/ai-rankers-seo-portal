@@ -1,4 +1,5 @@
 import { prisma } from "@ai-rankers/db";
+import { unstable_cache } from "next/cache";
 
 export type PortalService = "website" | "analytics" | "gbp";
 
@@ -9,7 +10,9 @@ export type PortalServiceEntitlements = {
 };
 
 export async function getPortalServiceEntitlements(clientId: string): Promise<PortalServiceEntitlements | null> {
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { hasWebsiteSeo: true, hasAnalytics: true, hasGbpSeo: true } });
-  if (!client) return null;
-  return { website: client.hasWebsiteSeo, analytics: client.hasAnalytics, gbp: client.hasGbpSeo };
+  return unstable_cache(async () => {
+    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { hasWebsiteSeo: true, hasAnalytics: true, hasGbpSeo: true } });
+    if (!client) return null;
+    return { website: client.hasWebsiteSeo, analytics: client.hasAnalytics, gbp: client.hasGbpSeo };
+  }, ["portal-services", clientId], { revalidate: 60, tags: [`portal-services:${clientId}`] })();
 }

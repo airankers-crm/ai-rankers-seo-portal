@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { getPortalClientJson } from "../lib/portal-client-cache";
 
 const SYNC_INTERVAL_MS = 60_000;
 
@@ -17,16 +18,11 @@ export function PortalLiveSync() {
       if (document.visibilityState === "hidden") return;
 
       try {
-        const response = await fetch("/api/portal/sync", { cache: "no-store" });
+        const payload = await getPortalClientJson<{ changedAt?: string | null }>("/api/portal/sync", { ttlMs: 15_000 });
         if (!active) return;
-        if (!response.ok) {
-          setSyncLabel("Updates temporarily unavailable");
-          return;
-        }
 
         setSyncLabel("Portal up to date");
 
-        const payload = await response.json() as { changedAt?: string | null };
         if (!payload.changedAt) return;
 
         if (latestChangeRef.current && latestChangeRef.current !== payload.changedAt) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getPortalClientJson } from "../lib/portal-client-cache";
 import {
   applyPortalPreferences,
   defaultPortalPreferences,
@@ -21,8 +22,7 @@ export function PortalPreferenceEffects() {
       applyPortalPreferences(defaultPortalPreferences);
     }
 
-    void fetch("/api/portal/account", { cache: "no-store" })
-      .then(async (response) => response.ok ? response.json() as Promise<{ preferences?: unknown }> : null)
+    void getPortalClientJson<{ preferences?: unknown }>("/api/portal/account", { ttlMs: 60_000 })
       .then((payload) => {
         if (!active || !payload) return;
         persistPortalPreferences(parsePortalPreferences(payload.preferences));

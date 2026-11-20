@@ -3,6 +3,7 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createAuthClient } from "@neon/auth/next";
+import { invalidatePortalClientCache } from "../lib/portal-client-cache";
 
 const authClient = createAuthClient();
 
@@ -10,6 +11,7 @@ export function SignOutButton({ compact = false, variant = "profile" }: { compac
   const router = useRouter();
 
   async function signOut() {
+    invalidatePortalClientCache();
     await authClient.signOut();
     const adminSession = window.location.pathname === "/admin" || window.location.pathname.startsWith("/admin/");
     router.push(adminSession ? "/admin/login" : "/client/login");

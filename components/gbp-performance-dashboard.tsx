@@ -53,6 +53,7 @@ export const defaultGbpPresentation: GbpPresentationSettings = {
 type GbpMetricKey = "calls" | "views" | "clicks" | "directions" | "reviews";
 type GbpChannelKey = "search-maps" | "search" | "maps";
 type GbpDisplayKey = "monthly" | "quarterly";
+type GbpConnectionStatus = "connected" | "manual" | "not-connected";
 
 const metricPresentation: Array<{ key: GbpMetricKey; label: string; icon: typeof Phone }> = [
   { key: "views", label: "Profile views", icon: MapPin },
@@ -137,7 +138,7 @@ function rowsForDisplay(rows: GbpPeriodRow[], display: GbpDisplayKey) {
   return [...grouped.values()].sort((left, right) => left.periodStart.localeCompare(right.periodStart));
 }
 
-export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, showDataUpdatedAt = false, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: "connected" | "not-connected"; dataUpdatedAt?: string | null; showDataUpdatedAt?: boolean; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
+export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, metrics, rows, presentation = defaultGbpPresentation, connectionStatus = "not-connected", dataUpdatedAt = null, showDataUpdatedAt = false, isDraftPreview = false, isSectionPublished = true }: { clientName: string; brandMark: string; brandAccent: string; metrics: GbpMetric[]; rows: GbpPeriodRow[]; presentation?: GbpPresentationSettings; connectionStatus?: GbpConnectionStatus; dataUpdatedAt?: string | null; showDataUpdatedAt?: boolean; isDraftPreview?: boolean; isSectionPublished?: boolean }) {
   const [query, setQuery] = useState("");
   const [metricFilter, setMetricFilter] = useState<"all" | GbpMetricKey>("all");
   const [activeMetricKey, setActiveMetricKey] = useState<GbpMetricKey>("views");
@@ -169,6 +170,11 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
   const displayTrendData = trendData.length > 1 ? trendData : trendData.length === 1 ? [{ ...trendData[0] }, { label: "Now", value: trendData[0].value }] : emptyTrendData;
   const latestAvailableRow = displayRows.at(-1);
   const hasPublishedData = displayRows.length > 0;
+  const connectionLabel = connectionStatus === "connected"
+    ? "Connected to Google Business Profile"
+    : connectionStatus === "manual"
+      ? "Manual data"
+      : "Google Business Profile not connected";
   const zeroTableRow: GbpPeriodRow = { periodStart: "empty", periodLabel: "No published data", calls: null, views: null, clicks: null, directions: null, reviews: null };
   const tableRows = visibleRows.length ? visibleRows : query ? [] : [zeroTableRow];
   const totalFor = (key: keyof Pick<GbpPeriodRow, "views" | "calls" | "clicks" | "directions" | "reviews">) => {
@@ -202,7 +208,7 @@ export function GbpPerformanceDashboard({ clientName, brandMark, brandAccent, me
         <div>
           <h1>{presentation.pageTitle}</h1>
           <p>{clientName} · {presentation.pageSubtitle}</p>
-          <p className={`gbp-data-status ${connectionStatus === "connected" ? "is-connected" : "is-pending"}`}><span className="gbp-data-dot" /> {connectionStatus === "connected" ? "Connected to Google Business Profile" : "Google Business Profile not connected"}{showDataUpdatedAt ? dataUpdatedAt ? ` · Updated ${formatUpdatedAt(dataUpdatedAt)}` : " · Awaiting first published result" : ""}</p>
+          {connectionStatus !== "manual" ? <p className={`gbp-data-status is-${connectionStatus}`}><span className="gbp-data-dot" /> {connectionLabel}{showDataUpdatedAt ? dataUpdatedAt ? ` · Updated ${formatUpdatedAt(dataUpdatedAt)}` : " · Awaiting first published result" : ""}</p> : null}
         </div>
         <div className="heading-actions">{isDraftPreview ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Draft preview · not client-visible</span> : !isSectionPublished ? <span className="data-confidence data-confidence-preview"><BarChart3 size={13} /> Section not published</span> : null}</div>
       </div>

@@ -1222,7 +1222,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(111,63,181,.28);
 .data-confidence-preview { color: #6f3fb5; border-color: rgba(111,63,181,.22); background: #f3edff; }
 .gbp-data-status { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .gbp-data-status.is-connected { color: var(--teal); }
-.gbp-data-status.is-pending { color: var(--orange); }
+.gbp-data-status.is-not-connected, .gbp-data-status.is-pending { color: var(--orange); }
 .gbp-data-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px rgba(242,107,56,.1); }
 .gbp-data-status.is-connected .gbp-data-dot { box-shadow: 0 0 0 4px var(--teal-soft); }
 .client-portal-tabs { display: flex; gap: 5px; margin: 0 0 14px; padding: 4px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); }

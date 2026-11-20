@@ -1,15 +1,20 @@
 import { prisma } from "@ai-rankers/db";
+import { unstable_cache } from "next/cache";
 import { requirePortalService } from "../../../lib/auth/access";
 import { WebsiteSeoDashboard, type WebsiteSeoMetric, type WebsiteSeoRow } from "../../../components/website-seo-dashboard";
 import { CsvImportPanel } from "../../../components/csv-import-panel";
 
 export const dynamic = "force-dynamic";
 
-function getWebsiteSeoClient(clientId: string) {
-  return prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } }).then(async (settings) => settings ? prisma.client.findUnique({
-    where: { id: clientId },
-    include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
-  }) : null);
+function getCachedWebsiteSeoClient(clientId: string) {
+  return unstable_cache(async () => {
+    const settings = await prisma.client.findUnique({ where: { id: clientId }, select: { dataMode: true } });
+    if (!settings) return null;
+    return prisma.client.findUnique({
+      where: { id: clientId },
+      include: { sections: { where: { kind: "WEBSITE" }, select: { name: true, isVisible: true, isDraft: true } }, metrics: { where: { isVisible: true, isDraft: false }, include: { values: { where: { dataOrigin: settings.dataMode }, orderBy: { periodStart: "desc" }, take: 24 } }, orderBy: { position: "asc" } } },
+    });
+  }, ["portal-website", clientId], { revalidate: 60, tags: [`portal-website:${clientId}`] })();
 }
 
 const metricConfig = [
@@ -28,7 +33,7 @@ function formatPeriod(date: Date) {
 export default async function WebsiteSeoPage() {
   const access = await requirePortalService("website");
   const clientId = access.user?.clientId;
-  const client = clientId ? await getWebsiteSeoClient(clientId) : null;
+  const client = clientId ? await getCachedWebsiteSeoClient(clientId) : null;
 
   if (!client) return <WebsiteSeoDashboard clientName="Client workspace" brandMark="CL" brandAccent="#F26B38" metrics={[]} rows={[]} />;
 
